@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10947b4fcf79a504898f899d9f4dfb01, type: 3}
+  m_Name: SoundCatalog
+  m_EditorClassIdentifier: 
+  _sounds:
+  - _id: 1
+    _type: 1
+    _event:
+      Guid:
+        Data1: 461163530
+        Data2: 1147479832
+        Data3: 735220412
+        Data4: 1865606939
+      Path: event:/Test/TestFootsteps
+  - _id: 2
+    _type: 0
+    _event:
+      Guid:
+        Data1: 213216736
+        Data2: 1167419970
+        Data3: -606255725
+        Data4: -1357935490
+      Path: event:/Test/TestAmbience
+  _bgmBusPath: bus:/BGM_Bus
+  _effectBusPath: bus:/SFX_Bus

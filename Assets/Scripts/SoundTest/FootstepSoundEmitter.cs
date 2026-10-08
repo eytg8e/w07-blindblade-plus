@@ -6,7 +6,7 @@ using FMODUnity;
 
 namespace SoundTest
 {
-    public class Footstep : MonoBehaviour
+    public class FootstepSoundEmitter : MonoBehaviour
     {
         [Header("Footstep")]
         [SerializeField] private EventReference _footstepEvent;
@@ -52,7 +52,7 @@ namespace SoundTest
             _lastStepFrame = Time.frameCount;
             if (_footstepEvent.IsNull)
             {
-                Debug.LogWarning("[FMOD] Footstep EventReference를 할당하세요.", this);
+                Debug.LogWarning("[FMOD] Assign a footstep EventReference.", this);
                 return;
             }
             try
@@ -60,7 +60,7 @@ namespace SoundTest
                 var description = RuntimeManager.GetEventDescription(_footstepEvent);
                 if (description.is3D(out bool is3D) != FMOD.RESULT.OK || !is3D || description.isOneshot(out bool isOneShot) != FMOD.RESULT.OK || !isOneShot)
                 {
-                    Debug.LogWarning("[FMOD] 발소리에는 3D 단발 이벤트를 할당하세요.", this);
+                    Debug.LogWarning("[FMOD] Assign a 3D one-shot event for footsteps.", this);
                     return;
                 }
                 var instance = RuntimeManager.CreateInstance(_footstepEvent);
@@ -68,7 +68,7 @@ namespace SoundTest
                 FMOD.RESULT result = instance.start();
                 if (result != FMOD.RESULT.OK)
                 {
-                    Debug.LogError("[FMOD] 발소리 시작 실패: " + result, this);
+                    Debug.LogError("[FMOD] Failed to start footstep playback: " + result, this);
                     ReleaseFootstep(instance);
                     return;
                 }
@@ -77,7 +77,7 @@ namespace SoundTest
             }
             catch (EventNotFoundException exception)
             {
-                Debug.LogWarning("[FMOD] Footstep 이벤트를 Bank에서 찾을 수 없습니다: " + exception.Message, this);
+                Debug.LogWarning("[FMOD] Footstep event not found in loaded banks: " + exception.Message, this);
             }
         }
 

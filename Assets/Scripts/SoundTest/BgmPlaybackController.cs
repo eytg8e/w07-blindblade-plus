@@ -4,7 +4,7 @@ using FMODUnity;
 
 namespace SoundTest
 {
-    public class Bgm : MonoBehaviour
+    public class BgmPlaybackController : MonoBehaviour
     {
         [Header("BGM")]
         [SerializeField] private EventReference _bgmEvent;
@@ -50,7 +50,7 @@ namespace SoundTest
             }
             if (_bgmEvent.IsNull)
             {
-                Debug.LogWarning("[FMOD] BGM EventReference를 할당하세요.", this);
+                Debug.LogWarning("[FMOD] Assign a BGM EventReference.", this);
                 return;
             }
             try
@@ -58,7 +58,7 @@ namespace SoundTest
                 var description = RuntimeManager.GetEventDescription(_bgmEvent);
                 if (description.is3D(out bool is3D) != FMOD.RESULT.OK || is3D)
                 {
-                    Debug.LogWarning("[FMOD] BGM에는 2D 이벤트를 할당하세요.", this);
+                    Debug.LogWarning("[FMOD] Assign a 2D event for BGM playback.", this);
                     return;
                 }
                 description.isOneshot(out bool isOneShot);
@@ -66,13 +66,13 @@ namespace SoundTest
                 FMOD.RESULT result = _instance.start();
                 if (result != FMOD.RESULT.OK)
                 {
-                    Debug.LogError("[FMOD] BGM 시작 실패: " + result, this);
+                    Debug.LogError("[FMOD] Failed to start BGM: " + result, this);
                     ReleaseBgm();
                 }
             }
             catch (EventNotFoundException exception)
             {
-                Debug.LogWarning("[FMOD] BGM 이벤트를 Bank에서 찾을 수 없습니다: " + exception.Message, this);
+                Debug.LogWarning("[FMOD] BGM event not found in loaded banks: " + exception.Message, this);
                 ReleaseBgm();
             }
         }

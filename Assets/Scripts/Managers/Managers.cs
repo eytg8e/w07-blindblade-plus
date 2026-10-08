@@ -45,7 +45,7 @@ public class Managers : MonoSingleton<Managers>
 
         _pool = new PoolManager(transform);
         _resource = new ResourceManager(_pool);
-        _sound = new SoundManager(transform, _resource);
+        _sound = new SoundManager(_resource.Load<SoundCatalog>("Sound/SoundCatalog"));
         _scene = new SceneManagerEx();
         _initialized = true;
     }

@@ -3,13 +3,13 @@ using UnityEngine.InputSystem;
 
 namespace SoundTest
 {
-    public class Environment : MonoBehaviour
+    public class SoundTestController : MonoBehaviour
     {
         [Header("Connections")]
         [SerializeField] private Transform _listener;
         [SerializeField] private CharacterController _characterController;
-        [SerializeField] private Bgm _bgm;
-        [SerializeField] private Footstep _footstep;
+        [SerializeField] private BgmPlaybackController _bgm;
+        [SerializeField] private FootstepSoundEmitter _footstep;
         [SerializeField] private Renderer _sourceRenderer;
 
         [Header("Test Controls")]
