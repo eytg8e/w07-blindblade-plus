@@ -3,12 +3,15 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class FootstepTestDriver : MonoBehaviour
 {
-    [Header("테스트 씬 연결")]
+    [Header("시연 씬 연결")]
     [SerializeField] private Transform _character;
     [SerializeField] private Transform _observer;
+    [SerializeField] private Transform _alternateObserver;
     [SerializeField] private FootstepEmitter _emitter;
-    [SerializeField, Tooltip("선택적 파동 시연용 독립 프리팹")]
-    private FootstepWave _wavePrefab;
+    [SerializeField] private SensoryEmitter _sensoryEmitter;
+    [SerializeField] private SensorySource _soundSource;
+    [SerializeField] private Rigidbody _collisionBody;
+
     [Header("자동 시연")]
     [SerializeField, Min(0.01f), Tooltip("자동 이동 속도(미터/초)")]
     private float _moveSpeed = 2f;
@@ -16,23 +19,29 @@ public sealed class FootstepTestDriver : MonoBehaviour
     private float _travelRadius = 6f;
     [SerializeField, Min(0.01f), Tooltip("관측자가 멀어졌다 돌아오는 주기(초)")]
     private float _observerPeriod = 12f;
+    private Vector3 _collisionStart;
     private float _elapsed;
     private int _eventCount;
-    private bool _playWaves = true;
     private bool _move = true;
     private bool _varyDistance = true;
 
     void Start()
     {
-        if (_wavePrefab != null)
-            Managers.Pool.CreatePool(_wavePrefab.gameObject);
+        if (_character == null || _observer == null || _alternateObserver == null
+            || _sensoryEmitter == null || _soundSource == null || _collisionBody == null)
+        {
+            Debug.LogError("감각 시연 씬의 캐릭터·관측자·공통 Emitter·소리·충돌 참조를 연결해야 합니다.", this);
+            enabled = false;
+            return;
+        }
+        _collisionStart = _collisionBody.position;
     }
 
     void OnEnable()
     {
         if (_emitter == null)
         {
-            Debug.LogError("FootstepTestDriver에 해당 캐릭터의 FootstepEmitter를 연결해야 합니다.", this);
+            Debug.LogError("FootstepTestDriver에 캐릭터의 FootstepEmitter를 연결해야 합니다.", this);
             enabled = false;
             return;
         }
@@ -53,54 +62,84 @@ public sealed class FootstepTestDriver : MonoBehaviour
             float z = Mathf.PingPong(_elapsed * _moveSpeed, _travelRadius * 2f) - _travelRadius;
             _character.position = new Vector3(0f, 0.05f, z);
         }
-        if (_varyDistance)
-            _observer.position = new Vector3(Mathf.PingPong(_elapsed / _observerPeriod * 40f, 20f), 0f, 0f);
+        if (_varyDistance && _sensoryEmitter.Observer != null)
+            _sensoryEmitter.Observer.position = new Vector3(
+                Mathf.PingPong(_elapsed / _observerPeriod * 40f, 20f), 0f, 0f);
     }
 
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(15f, 15f, 360f, 280f), GUI.skin.box);
-        GUILayout.Label("Footstep system test scene");
-        _move = GUILayout.Toggle(_move, "Automatic character movement");
-        _emitter.enabled = GUILayout.Toggle(_emitter.enabled, "Emit footsteps");
-        _playWaves = GUILayout.Toggle(_playWaves, "Play independent waves on contact");
-        if (_wavePrefab != null && GUILayout.Button("Play wave without a footstep"))
-            PlayWave(new Vector3(_character.position.x, 0.01f, _character.position.z));
-        _varyDistance = GUILayout.Toggle(_varyDistance, "Near / far observer sweep (0 - 20 m)");
-        GUILayout.Label("Footstep events: " + _eventCount);
-        GUILayout.Label("Blue: left / Orange: right / Cyan: wave");
-        if (GUILayout.Button("Teleport character (+10 m)"))
+        GUILayout.BeginArea(new Rect(15f, 15f, 380f, 520f), GUI.skin.box);
+        GUILayout.Label("감각 표현: 걸음 / 충돌 / 소리");
+        _move = GUILayout.Toggle(_move, "캐릭터 자동 이동");
+        _emitter.enabled = GUILayout.Toggle(_emitter.enabled, "걸음 감지");
+        _varyDistance = GUILayout.Toggle(_varyDistance, "관측자 거리 왕복 (0~20m)");
+        GUILayout.Label("걸음 접촉: " + _eventCount + " / 활성 효과: " + _sensoryEmitter.ActiveEffectCount);
+        GUILayout.Label("거리 기준: 완전 표시 5m / 최대 15m");
+        if (GUILayout.Button("일반 소리 재생 (발자국 없음)"))
+            _soundSource.PlaySound();
+        if (GUILayout.Button("충돌 물체 다시 떨어뜨리기"))
+        {
+            _collisionBody.position = _collisionStart;
+            _collisionBody.linearVelocity = Vector3.zero;
+            _collisionBody.angularVelocity = Vector3.zero;
+            _collisionBody.WakeUp();
+        }
+        if (GUILayout.Button("순간이동 (+10m)"))
         {
             _move = false;
             _character.position += Vector3.forward * 10f;
         }
-        if (GUILayout.Button("Return observer to center"))
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("가까움"))
+            MoveObserver(0f);
+        if (GUILayout.Button("감쇠 10m"))
+            MoveObserver(10f);
+        if (GUILayout.Button("경계 15m"))
+            MoveObserver(15f);
+        if (GUILayout.Button("범위 밖"))
+            MoveObserver(20f);
+        GUILayout.EndHorizontal();
+        if (GUILayout.Button("관측자 교체"))
         {
-            _varyDistance = false;
-            _observer.position = Vector3.zero;
+            Transform next = _sensoryEmitter.Observer == _observer ? _alternateObserver : _observer;
+            _sensoryEmitter.SetObserver(next);
+        }
+        if (GUILayout.Button("관측자 해제 (남은 효과 숨김)"))
+        {
+            _emitter.enabled = false;
+            _sensoryEmitter.ClearObserver();
+        }
+        if (GUILayout.Button("세션 종료 (효과 반환)"))
+        {
+            _emitter.enabled = false;
+            _sensoryEmitter.EndSession();
+        }
+        if (GUILayout.Button("관측자 복구 / 세션 재시작"))
+        {
+            _sensoryEmitter.SetObserver(_observer);
+            if (_sensoryEmitter.Initialize())
+                _emitter.enabled = true;
         }
         GUILayout.EndArea();
     }
 
     /// <summary>
-    /// 해당 캐릭터의 지면 접촉 위치를 받아 발생 횟수를 증가시키고 선택한 경우 독립 파동을 재생한다.
+    /// 소리 발생점에서 지정한 거리로 현재 관측자를 이동하여 거리 경계를 시연한다.
+    /// </summary>
+    private void MoveObserver(float distance)
+    {
+        _varyDistance = false;
+        if (_sensoryEmitter.Observer != null)
+            _sensoryEmitter.Observer.position = _soundSource.transform.position + Vector3.right * distance;
+    }
+
+    /// <summary>
+    /// 캐릭터의 지면 접촉 이벤트를 받아 표시 횟수만 갱신하고 시각 효과는 생성하지 않는다.
     /// </summary>
     private void HandleFootstep(Transform character, Vector3 position)
     {
-        if (character != _character)
-            return;
-        _eventCount++;
-        if (_playWaves && _wavePrefab != null)
-            PlayWave(position + Vector3.up * 0.01f);
-    }
-    /// <summary>
-    /// 지정한 월드 위치에 독립 파동 프리팹을 생성하여 자체 수명으로 재생한다.
-    /// </summary>
-    private void PlayWave(Vector3 position)
-    {
-        GameObject instance = Managers.Resource.Instantiate(_wavePrefab.gameObject,
-            position, Quaternion.identity);
-        if (instance != null)
-            instance.GetComponent<FootstepWave>().Play();
+        if (character == _character)
+            _eventCount++;
     }
 }

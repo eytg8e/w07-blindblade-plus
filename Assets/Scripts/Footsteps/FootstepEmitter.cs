@@ -6,10 +6,7 @@ using UnityEngine;
 public sealed class FootstepEmitter : MonoBehaviour
 {
     public event Action<Transform, Vector3> OnFootstepEmitted;
-    [Header("연결")]
-    [SerializeField] private FootstepObject _footstepPrefab;
-    [SerializeField, Tooltip("가시성 기준 플레이어 또는 카메라")]
-    private Transform _observer;
+    private SensoryEmitter _sensoryEmitter;
 
     [Header("걸음")]
     [SerializeField, Min(0.01f), Tooltip("발자국 사이 이동 거리(미터)")]
@@ -18,6 +15,8 @@ public sealed class FootstepEmitter : MonoBehaviour
     private float _footOffset = 0.15f;
     [SerializeField, Min(0.01f), Tooltip("프레임 이동이 이 거리 이상이면 순간이동으로 처리(미터)")]
     private float _teleportDistance = 5f;
+    [SerializeField, Range(0f, 1f), Tooltip("공통 감각 표현에 전달할 걸음 강도")]
+    private float _intensity = 1f;
     private Vector3 _previousPosition;
     private float _accumulatedDistance;
     private bool _isLeft = true;
@@ -28,35 +27,26 @@ public sealed class FootstepEmitter : MonoBehaviour
     private float _rayHeight = 0.5f;
     [SerializeField, Min(0.01f), Tooltip("발 위치 아래까지 검사할 깊이(미터)")]
     private float _rayDepth = 0.5f;
-    [SerializeField, Min(0f), Tooltip("지면 겹침을 방지할 법선 방향 간격(미터)")]
-    private float _surfaceOffset = 0.01f;
-
-    [Header("관측 거리")]
-    [SerializeField, Min(0f), Tooltip("완전히 표시하는 거리(미터)")]
-    private float _visibleDistance = 5f;
-    [SerializeField, Min(0.01f), Tooltip("생성과 표시를 중단하는 거리(미터)")]
-    private float _maximumDistance = 15f;
-
-    private void OnEnable()
+    void OnEnable()
     {
         _previousPosition = transform.position;
         _accumulatedDistance = 0f;
         _isLeft = true;
     }
 
-    private void Start()
+    void Start()
     {
-        if (_footstepPrefab == null || _observer == null || _groundLayers.value == 0
-            || _stepDistance <= 0f || _maximumDistance <= _visibleDistance)
+        if (_groundLayers.value == 0 || _stepDistance <= 0f || _teleportDistance <= _stepDistance
+            || !Game.IsInitialized || Game.Instance.Emitter == null)
         {
-            Debug.LogError("FootstepEmitter의 프리팹, 관측자, 지면 레이어 및 거리 설정을 확인해야 합니다.", this);
+            Debug.LogError("FootstepEmitter의 지면·걸음 거리 설정과 Game의 공통 Emitter 연결을 확인해야 합니다.", this);
             enabled = false;
             return;
         }
-        Managers.Pool.CreatePool(_footstepPrefab.gameObject);
+        _sensoryEmitter = Game.Instance.Emitter;
     }
 
-    private void LateUpdate()
+    void LateUpdate()
     {
         Vector3 currentPosition = transform.position;
         Vector3 previousPosition = _previousPosition;
@@ -71,12 +61,6 @@ public sealed class FootstepEmitter : MonoBehaviour
         float distance = movement.magnitude;
         if (distance <= Mathf.Epsilon)
             return;
-        if (_observer == null)
-        {
-            Debug.LogError("FootstepEmitter의 관측자가 파괴되었습니다. 발자국 생성을 중단합니다.", this);
-            enabled = false;
-            return;
-        }
         Vector3 direction = movement / distance;
         float stepDistance = Mathf.Max(0.01f, _stepDistance);
         float nextDistance = stepDistance - _accumulatedDistance;
@@ -90,7 +74,7 @@ public sealed class FootstepEmitter : MonoBehaviour
     }
 
     /// <summary>
-    /// 이동 경로의 발 위치와 진행 방향으로 지면을 검사하고 발자국 생성 및 위치 이벤트를 발행한다.
+    /// 이동 경로의 발 위치와 방향으로 지면을 검사하고 공통 사건과 캐릭터 접촉 이벤트를 전달한다.
     /// </summary>
     private void EmitFootstep(Vector3 position, Vector3 direction)
     {
@@ -105,17 +89,13 @@ public sealed class FootstepEmitter : MonoBehaviour
             return;
 
         OnFootstepEmitted?.Invoke(transform, hit.point);
-        if (FootstepObject.CalculateVisibility(Vector3.Distance(hit.point, _observer.position),
-                _visibleDistance, _maximumDistance) <= 0f)
+        if (_sensoryEmitter == null)
+        {
+            Debug.LogError("공통 감각 Emitter가 파괴되어 걸음 전달을 중단합니다.", this);
+            enabled = false;
             return;
-        Vector3 forward = Vector3.ProjectOnPlane(direction, hit.normal).normalized;
-        if (forward.sqrMagnitude < 0.001f)
-            return;
-        Quaternion rotation = Quaternion.LookRotation(forward, hit.normal);
-        GameObject instance = Managers.Resource.Instantiate(_footstepPrefab.gameObject,
-            hit.point + hit.normal * _surfaceOffset, rotation);
-        if (instance == null)
-            return;
-        instance.GetComponent<FootstepObject>().Play(isLeft, _observer, _visibleDistance, _maximumDistance);
+        }
+        _sensoryEmitter.Emit(SensoryEvent.CreateFootstep(transform, hit.point, hit.normal,
+            direction, _intensity, isLeft));
     }
 }

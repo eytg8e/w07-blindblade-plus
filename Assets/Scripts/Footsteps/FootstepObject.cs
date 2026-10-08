@@ -1,12 +1,10 @@
-using System.Collections;
-
 using UnityEngine;
 
 using ReusableManagers;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Poolable))]
-public sealed class FootstepObject : MonoBehaviour
+public sealed class FootstepObject : SensoryEffect
 {
     [Header("발자국 표시")]
     [SerializeField] private SpriteRenderer _leftRenderer;
@@ -15,22 +13,19 @@ public sealed class FootstepObject : MonoBehaviour
     private Color _rightColor;
     private SpriteRenderer _activeRenderer;
     private Color _activeColor;
+    private bool _isConfigured;
 
     [Header("수명")]
-    [SerializeField, Min(0.01f), Tooltip("발자국 표시 수명(초)")]
+    [SerializeField, Min(0.01f), Tooltip("직접 재생할 때의 표시 수명(초)")]
     private float _lifetime = 3f;
-    [SerializeField, Min(0.01f), Tooltip("수명 종료 직전 페이드 시간(초)")]
+    [SerializeField, Min(0.01f), Tooltip("직접 재생할 때의 종료 직전 페이드 시간(초)")]
     private float _fadeDuration = 1f;
-    private Coroutine _lifetimeRoutine;
-    private Transform _observer;
-    private float _visibleDistance;
-    private float _maximumDistance;
-    private bool _isConfigured;
+    private float _playingLifetime;
+    private float _playingFade;
 
     void Awake()
     {
-        _isConfigured = _leftRenderer != null && _rightRenderer != null
-            && _leftRenderer != _rightRenderer;
+        _isConfigured = _leftRenderer != null && _rightRenderer != null && _leftRenderer != _rightRenderer;
         if (!_isConfigured)
         {
             Debug.LogError("FootstepObject에 서로 다른 좌/우 렌더러를 연결해야 합니다.", this);
@@ -38,79 +33,55 @@ public sealed class FootstepObject : MonoBehaviour
         }
         _leftColor = _leftRenderer.color;
         _rightColor = _rightRenderer.color;
+        _leftRenderer.enabled = false;
+        _rightRenderer.enabled = false;
     }
 
-    void OnDisable()
+    protected override void OnDisable()
     {
-        if (_lifetimeRoutine != null)
-        {
-            StopCoroutine(_lifetimeRoutine);
-            _lifetimeRoutine = null;
-        }
-        _observer = null;
+        base.OnDisable();
         if (_isConfigured)
         {
             _leftRenderer.enabled = false;
             _rightRenderer.enabled = false;
         }
+        _activeRenderer = null;
     }
 
     /// <summary>
-    /// 좌우 선택과 관측자 거리 설정을 받아 발자국 표시 수명을 시작한다.
+    /// 좌우 선택과 가시성에 인스펙터의 기본 수명을 적용해 발자국을 재생한다.
     /// </summary>
-    public void Play(bool isLeft, Transform observer, float visibleDistance, float maximumDistance)
+    public void Play(bool isLeft, float visibility = 1f)
+    {
+        Play(isLeft, visibility, _lifetime, _fadeDuration);
+    }
+
+    /// <summary>
+    /// 좌우 선택과 공통 가시성 및 수명 설정으로 독립 발자국 재생을 시작한다.
+    /// </summary>
+    public void Play(bool isLeft, float visibility, float lifetime, float fadeDuration)
     {
         if (!_isConfigured)
         {
             Managers.Resource.Destroy(gameObject);
             return;
         }
-        if (_lifetimeRoutine != null)
-            StopCoroutine(_lifetimeRoutine);
-        _observer = observer;
-        _visibleDistance = visibleDistance;
-        _maximumDistance = maximumDistance;
         _leftRenderer.enabled = isLeft;
         _rightRenderer.enabled = !isLeft;
         _activeRenderer = isLeft ? _leftRenderer : _rightRenderer;
         _activeColor = isLeft ? _leftColor : _rightColor;
-        _lifetimeRoutine = StartCoroutine(AnimateLifetime());
+        _playingLifetime = Mathf.Max(0.01f, lifetime);
+        _playingFade = Mathf.Clamp(fadeDuration, 0.01f, _playingLifetime);
+        BeginPlayback(_playingLifetime, visibility);
     }
 
     /// <summary>
-    /// 수명과 현재 관측자 거리에 따라 발자국 알파를 갱신하고 종료 시 풀로 반환한다.
+    /// 경과 시간과 외부 가시성을 사용하여 선택한 발자국의 페이드 알파를 갱신한다.
     /// </summary>
-    private IEnumerator AnimateLifetime()
+    protected override void ApplyFrame(float elapsed, float progress)
     {
-        float elapsed = 0f;
-        float lifetime = Mathf.Max(0.01f, _lifetime);
-        float fadeDuration = Mathf.Clamp(_fadeDuration, 0.01f, lifetime);
-        while (elapsed < lifetime)
-        {
-            float visibility = _observer != null
-                ? CalculateVisibility(Vector3.Distance(transform.position, _observer.position),
-                    _visibleDistance, _maximumDistance)
-                : 0f;
-            float fade = Mathf.Clamp01((lifetime - elapsed) / fadeDuration);
-            Color color = _activeColor;
-            color.a *= visibility * fade;
-            _activeRenderer.color = color;
-            yield return null;
-            elapsed += Time.deltaTime;
-        }
-        _lifetimeRoutine = null;
-        Managers.Resource.Destroy(gameObject);
-    }
-
-    /// <summary>
-    /// 관측 거리와 완전 표시 및 최대 거리를 사용해 0에서 1 사이의 가시성을 반환한다.
-    /// </summary>
-    public static float CalculateVisibility(float distance, float visibleDistance, float maximumDistance)
-    {
-        if (distance >= maximumDistance)
-            return 0f;
-        if (distance <= visibleDistance)
-            return 1f;
-        return 1f - Mathf.InverseLerp(visibleDistance, maximumDistance, distance);
+        Color color = _activeColor;
+        color.a *= Visibility * Mathf.Clamp01((_playingLifetime - elapsed) / _playingFade);
+        _activeRenderer.color = color;
     }
 }

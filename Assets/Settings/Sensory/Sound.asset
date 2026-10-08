@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cd2b2a2a871483db1d23072b1380739, type: 3}
+  m_Name: Sound
+  m_EditorClassIdentifier: 
+  _eventType: 2
+  _fullVisibilityDistance: 5
+  _maximumDistance: 15
+  _distanceVisibility:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: -1
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _footstepPrefab: {fileID: 0}
+  _footstepLifetime: 3
+  _footstepFadeDuration: 1
+  _footstepSurfaceOffset: 0.01
+  _wavePrefab: {fileID: 403, guid: 2363502e95a345d2b96fbe5cf9542e60, type: 3}
+  _waveDuration: 0.9
+  _waveStartRadius: 0.05
+  _waveEndRadius: 2.5
+  _lightPrefab: {fileID: 10000, guid: 3bef030f83b34d5a94ae701fb65dc5a7, type: 3}
+  _lightColor: {r: 0.6, g: 1, b: 0.4, a: 1}
+  _lightIntensity: 3
+  _lightRange: 4
+  _lightLifetime: 0.3
+  _lightFadeDuration: 0.2
+  _lightSurfaceOffset: 0.4
