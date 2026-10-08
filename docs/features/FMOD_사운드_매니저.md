@@ -22,6 +22,123 @@
 - 중복 또는 충돌 사항: 협업자에게 반환하던 재생 핸들과 지속 효과음 전용 API는 제거했다. 현재 저장소에는 해당 API를 사용하는 게임 스크립트가 없다. 다른 브랜치의 사용 여부는 미확인이다.
 - 승인 필요 사항 및 결과: 사용자가 불필요한 재생 핸들 제거와 스크립트/문서 단순화를 요청했다. 기존에 승인한 Catalog 에셋 경로를 유지한다. 새 Editor 폴더나 에셋 폴더는 만들지 않는다.
 
+#### 새 씬에서 Unity Editor로 환경 구성하기
+
+아래 절차는 같은 프로젝트 안에 새 씬을 추가하는 경우다. FMOD 플러그인과 기존 Catalog를 재사용한다. 씬을 만들고 Listener만 추가해도 소리가 자동 재생되지는 않으므로 마지막에 게임 코드의 재생 호출까지 연결한다.
+
+##### 1. 씬 생성과 카메라 준비
+
+1. `File > New Scene`에서 Empty 씬을 생성한다. 기존 씬에 미저장 변경이 있으면 먼저 직접 저장한다.
+2. `File > Save As`로 프로젝트에서 합의한 씬 폴더에 저장한다. 씬 이름과 용도는 담당자가 정한다.
+3. Hierarchy에서 우클릭하여 `Camera`를 생성하고 `Main Camera`로 이름을 지정한다. Inspector의 Tag를 `MainCamera`로 설정한다.
+4. 위치 확인용 초기 배치로 Camera의 Position을 `(0, 1.6, -5)`, Rotation을 `(0, 0, 0)`으로 설정할 수 있다. 실제 게임에서는 플레이어가 사용하는 카메라의 위치와 방향을 따른다.
+5. 소리 발생 오브젝트를 화면에서도 확인하려면 `GameObject > Light > Directional Light`로 조명을 추가한다.
+
+##### 2. 청취 위치에 FMOD Listener 추가
+
+1. Main Camera를 선택하고 Inspector의 `Add Component`에서 `FMOD Studio Listener`를 검색해 추가한다. 메뉴 분류는 `FMOD Studio > FMOD Studio Listener`다.
+2. 단일 플레이어 씬에서는 의도한 Listener가 하나인지 확인한다. 플레이어 프리팹에 이미 있다면 카메라에 중복 추가하지 않는다.
+3. Inspector의 Attenuation Object는 이 기본 구성에서는 비워 둔다. 그러면 해당 카메라 위치가 청취 위치가 된다.
+4. Unity의 AudioListener는 FMOD StudioListener와 다른 컴포넌트다. AudioListener만 있는 상태로 FMOD 청취 구성이 완료됐다고 판단하지 않는다.
+
+##### 3. 기존 FMOD 설정과 Catalog 확인
+
+1. Unity 상단의 `FMOD > Edit Settings`를 열고 Source Type이 Studio 프로젝트를 사용하는지 확인한다.
+2. 연결 파일이 `FMODProject/week06-blindblade/week06-blindblade.fspro`인지 확인한다. 새 씬을 추가하기 위해 프로젝트 연결이나 Bank 로딩 설정을 변경하지 않는다.
+3. `FMOD > Event Browser`에서 `event:/Test/TestFootsteps`, `event:/Test/TestAmbience`가 보이는지 확인한다. 표시되지 않으면 Studio의 Bank 빌드 및 연결 경로부터 확인한다.
+4. Project 창에서 `Assets/Resources/Sound/SoundCatalog.asset`을 선택한다. Inspector의 Events에 Footstep/Effect/발소리 이벤트와 Ambience/BGM/배경음 이벤트가 연결되어 있는지 확인한다.
+5. Mixer의 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SFX_Bus`를 확인한다. 이 에셋은 씬마다 복제하거나 Hierarchy에 배치하지 않는다.
+
+##### 4. Managers 배치에 대한 선택
+
+- 기본 구성에서는 Managers를 Hierarchy에 수동으로 추가할 필요가 없다. Play Mode에서 처음 `Managers.Sound`를 호출하면 기존 Managers를 찾고, 없으면 자동 생성한다.
+- 자동 생성된 오브젝트는 `@ReusableManagers`로 표시되고 씬 전환 이후에도 유지된다. 호출할 때마다 새 매니저를 생성하지 않는다.
+- 프로젝트의 기존 부트스트랩이나 프리팹이 이미 Managers를 제공한다면 그 구성을 그대로 사용한다. 새로운 씬마다 별도 매니저를 추가하지 않는다.
+- SoundManager는 일반 C# 클래스라 Add Component로 부착하는 대상이 아니다. SoundCatalog.asset을 Managers의 Inspector에 드래그할 필요도 없다. 현재 코드가 Resources 경로에서 로드한다.
+- 공통 Managers의 생성 코드와 `_sound.Update()`는 씬 준비를 이유로 수정하지 않는다. 변경이 필요하면 담당자와 합의한다.
+
+##### 5. 발음체와 실제 재생 호출 연결
+
+1. Hierarchy에서 `3D Object > Sphere`를 생성하고 소리 발생 위치를 나타내는 오브젝트로 사용한다. 초기 Position은 `(0, 1, 0)`으로 두면 위 카메라 정면에 놓인다. 실제 캐릭터가 있으면 해당 캐릭터를 사용한다.
+2. Hierarchy에서 `Create Empty`로 씬의 오디오 시작을 담당할 오브젝트를 만든다.
+3. 실제 게임에 씬 진입/BGM 실행 스크립트가 있다면 그 스크립트에 재생 호출을 연결한다. 처음부터 구성할 때는 아래처럼 일반 런타임 컴포넌트를 작성할 수 있다. 스크립트 저장 위치는 프로젝트 담당자와 합의한 게임 스크립트 폴더를 사용한다.
+4. 예시를 사용할 경우 파일명과 클래스명을 모두 `SceneAudioController`로 작성하고 Unity 컴파일을 기다린다. 아래 코드는 문서 예시이며 저장소에 실제 파일을 추가한 상태가 아니다.
+
+```csharp
+using UnityEngine;
+
+public class SceneAudioController : MonoBehaviour
+{
+    [Header("Sound")]
+    [SerializeField] private SoundId _bgmId = SoundId.Ambience;
+    [SerializeField] private SoundId _footstepId = SoundId.Footstep;
+    [SerializeField] private GameObject _footstepSource;
+
+    void Start()
+    {
+        PlayBgm();
+    }
+
+    void OnDisable()
+    {
+        if (Managers.IsInitialized)
+            Managers.Sound.StopFor(gameObject);
+    }
+
+    /// <summary>
+    /// Inspector의 _bgmId를 재생하고 이 오브젝트를 소유자로 지정한다.
+    /// Play Mode의 활성 컴포넌트에서 Managers.Sound에 BGM 시작을 요청한다.
+    /// </summary>
+    [ContextMenu("Sound/Play BGM")]
+    public void PlayBgm()
+    {
+        if (Application.isPlaying && isActiveAndEnabled)
+            Managers.Sound.PlayBgm(_bgmId, gameObject);
+    }
+
+    /// <summary>
+    /// Inspector의 _footstepId를 _footstepSource 위치에서 한 번 재생한다.
+    /// Play Mode에서 부착 효과음을 요청하며 발음체 연결과 오류 처리는 매니저가 담당한다.
+    /// </summary>
+    [ContextMenu("Sound/Play Footstep")]
+    public void PlayFootstep()
+    {
+        if (Application.isPlaying && isActiveAndEnabled)
+            Managers.Sound.PlayAttached(_footstepId, _footstepSource);
+    }
+
+    /// <summary>
+    /// 이 오브젝트가 소유한 BGM을 Fade Out 허용으로 정지한다.
+    /// 초기화된 매니저에 정지를 요청하며 다른 소유자의 음악은 유지한다.
+    /// </summary>
+    [ContextMenu("Sound/Stop BGM")]
+    public void StopBgm()
+    {
+        if (Application.isPlaying && Managers.IsInitialized)
+            Managers.Sound.StopFor(gameObject, allowFadeOut: true);
+    }
+}
+```
+
+5. 빈 오브젝트를 선택하고 위 컴포넌트를 `Add Component` 또는 Project 창의 스크립트 드래그로 부착한다.
+6. Inspector에서 Bgm Id=Ambience, Footstep Id=Footstep으로 지정하고 Footstep Source 필드에 Sphere 또는 실제 발음체를 드래그한다. EventReference를 이 컴포넌트에 할당하지 않는다.
+7. 씬을 저장한다. 실제 게임의 발소리는 캐릭터 담당 코드에서 발 접촉 시점마다 `Managers.Sound.PlayAttached(SoundId.Footstep, gameObject)`를 호출하도록 연결한다. 위 예시는 씬 진입 BGM과 수동 호출을 보여주며 캐릭터 이동·애니메이션을 구현하지 않는다.
+8. 동일한 소리에 별도의 AudioSource나 StudioEventEmitter를 추가해 자동 재생을 켜면 중복 재생될 수 있다. 이 매니저 호출 방식에서 추가 재생 컴포넌트는 필요하지 않다.
+
+##### 6. Play Mode에서 확인
+
+1. Play를 누르면 예시 컴포넌트의 Start가 BGM을 재생한다. Managers 오브젝트가 생성되고 Console에 오류가 없는지 확인한다.
+2. 해당 컴포넌트 오른쪽 위 메뉴에서 `Sound > Stop BGM`을 선택한다. 발소리를 확인할 때 먼저 음악을 정지한다.
+3. 같은 메뉴의 `Sound > Play Footstep`으로 발소리를 한 번 재생한다. 메뉴 호출은 Play Mode에서 수행한다. Game View의 키보드 입력은 이 예시에서 사용하지 않는다.
+4. 발음체를 카메라 왼쪽/오른쪽으로 옮긴 뒤 다시 호출하고, 가까운 거리와 먼 거리에서 크기를 비교한다. 카메라를 회전했을 때 청취 방향도 바뀌는지 확인한다.
+5. `Sound > Play BGM`으로 음악을 다시 시작하고 끝 지점 이후에도 반복되는지 확인한다. 반복은 Studio 이벤트에 설정되어 있어야 한다.
+6. Play Mode를 종료한다. Play Mode 중 변경한 Transform이나 연결 값이 씬에 저장됐다고 가정하지 않는다. 필요한 최종 배치는 Edit Mode에서 설정하고 다시 저장한다.
+7. 이후 실제 게임 행동에 연결한 상태에서 [수동 검증 절차](FMOD_사운드_검증.md)의 나머지 항목을 수행한다.
+
+새 씬 구성의 완료 기준은 카메라/Listener, 기존 Catalog, Managers 실행 주체, 실제 재생 호출이 모두 연결된 상태다. 현재 프로젝트에서 새 게임 씬을 이 절차대로 생성·실행한 결과는 별도 검증 전까지 미확인으로 기록한다.
+
+문서의 SceneAudioController 예시는 현재 Unity의 Pipeline에서 컴파일만 검증했으며 성공했다. Inspector에서 할당하는 Footstep Source 필드에 대한 CS0649 경고가 있었으므로 위 드래그 연결 단계를 빠뜨리지 않는다. 예시 코드를 실행하거나 새 씬과 스크립트를 저장소에 생성하지 않았다.
+
 #### 협업자가 알아야 할 기본 사용법
 
 `using FMODUnity` 또는 FMOD 이벤트 경로를 작성할 필요가 없다. Play Mode의 게임 코드에서 다음처럼 호출한다.
