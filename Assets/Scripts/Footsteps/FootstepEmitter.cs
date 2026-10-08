@@ -93,6 +93,6 @@ public sealed class FootstepEmitter : MonoBehaviour
             enabled = false;
             return;
         }
-        _sensoryManager.Emit(new SensoryEvent(hit.point, hit.normal, direction, isLeft));
+        _sensoryManager.EmitFootstep(new SensoryEvent(hit.point, hit.normal, direction), isLeft);
     }
 }

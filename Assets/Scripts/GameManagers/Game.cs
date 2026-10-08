@@ -5,8 +5,6 @@ using UnityEngine;
 /// </summary>
 public class Game : MonoSingleton<Game>
 {
-    private const string SENSORY_MANAGER_PATH = "GameManagers/SensoryManager";
-
     private SensoryManager _sensoryManager;
     public SensoryManager SensoryManager => _sensoryManager;
 
@@ -15,10 +13,9 @@ public class Game : MonoSingleton<Game>
         base.Awake();
         if (CurrentInstance != this)
             return;
-        GameObject instance = Managers.Resource.Instantiate(SENSORY_MANAGER_PATH, transform, usePool: false);
-        if (instance == null)
-            return;
-        _sensoryManager = instance.GetComponent<SensoryManager>();
+        
+        var sensoryManagerGo = Managers.Resource.Instantiate(ResourcePaths.SENSORY_MANAGER_PATH, transform, usePool: false);
+        _sensoryManager = sensoryManagerGo.GetComponent<SensoryManager>();
         _sensoryManager.Initialize();
     }
 }

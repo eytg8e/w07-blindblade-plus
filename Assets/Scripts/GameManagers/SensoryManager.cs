@@ -4,14 +4,24 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 걸음 정보를 받아 관측 거리에 맞는 독립 시각 효과를 생성한다.
+/// 사건 정보를 받아 관측 거리에 맞는 독립 시각 효과를 생성한다.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class SensoryManager : MonoBehaviour
 {
     [Header("세션 연결")]
     [SerializeField] private Transform _observer;
-    [SerializeField] private SensoryPresentationSettings _settings;
+
+    [Header("관측 거리")]
+    [SerializeField, Min(0f), Tooltip("효과를 완전히 표시하는 거리(미터)")]
+    private float _fullVisibilityDistance = 5f;
+    [SerializeField, Min(0.01f), Tooltip("효과를 숨기는 거리(미터), 완전 표시 거리보다 커야 함")]
+    private float _maximumDistance = 15f;
+
+    [Header("독립 효과")]
+    [SerializeField] private FootstepObject _footstepPrefab;
+    [SerializeField] private FootstepWave _wavePrefab;
+    [SerializeField] private GameObject _lightPrefab;
     private readonly List<ActiveEffect> _activeEffects = new List<ActiveEffect>(64);
     private bool _initialized;
     private bool _reportedUnavailable;
@@ -34,6 +44,12 @@ public sealed class SensoryManager : MonoBehaviour
             Version = effect.PlaybackVersion;
             Position = position;
         }
+    }
+
+    void OnValidate()
+    {
+        if (_maximumDistance <= _fullVisibilityDistance)
+            Debug.LogError("Maximum Distance는 Full Visibility Distance보다 커야 합니다.", this);
     }
 
     void OnEnable()
@@ -66,22 +82,17 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 표시 설정·프리팹 연결을 확인하고 세션에서 사용할 기존 풀을 준비한다.
+    /// 연결된 효과 프리팹으로 세션에서 사용할 기존 풀을 준비한다.
     /// </summary>
     public bool Initialize()
     {
         _initialized = false;
-        if (_settings == null)
-        {
-            Debug.LogError("SensoryManager 프리팹에 표시 설정을 연결해야 합니다.", this);
-            return false;
-        }
-        if (_settings.FootstepPrefab != null)
-            Managers.Pool.CreatePool(_settings.FootstepPrefab.gameObject);
-        if (_settings.WavePrefab != null)
-            Managers.Pool.CreatePool(_settings.WavePrefab.gameObject);
-        if (_settings.LightPrefab != null)
-            Managers.Pool.CreatePool(_settings.LightPrefab);
+        if (_footstepPrefab != null)
+            Managers.Pool.CreatePool(_footstepPrefab.gameObject);
+        if (_wavePrefab != null)
+            Managers.Pool.CreatePool(_wavePrefab.gameObject);
+        if (_lightPrefab != null)
+            Managers.Pool.CreatePool(_lightPrefab);
         _initialized = true;
         _reportedUnavailable = false;
         return true;
@@ -106,9 +117,25 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 걸음 위치와 관측자 거리를 판정하고 거리 안에서 독립 효과를 생성했는지 반환한다.
+    /// 사건 위치와 관측자 거리로 웨이브·빛을 생성하고 생성 성공 여부를 반환한다.
     /// </summary>
     public bool Emit(SensoryEvent sensoryEvent)
+    {
+        return EmitEffects(sensoryEvent, false);
+    }
+
+    /// <summary>
+    /// 사건 위치와 좌우 선택으로 발자국·웨이브·빛을 생성하고 생성 성공 여부를 반환한다.
+    /// </summary>
+    public bool EmitFootstep(SensoryEvent sensoryEvent, bool isLeft)
+    {
+        return EmitEffects(sensoryEvent, true, isLeft);
+    }
+
+    /// <summary>
+    /// 공통 거리 정책으로 효과를 재생하며 발자국 요청일 때만 좌우 선택을 적용한다.
+    /// </summary>
+    private bool EmitEffects(SensoryEvent sensoryEvent, bool showFootstep, bool isLeft = false)
     {
         if (!IsReady)
         {
@@ -124,21 +151,21 @@ public sealed class SensoryManager : MonoBehaviour
             return false;
         Quaternion rotation = Quaternion.LookRotation(sensoryEvent.Direction, sensoryEvent.SurfaceNormal);
         bool spawned = false;
-        if (_settings.FootstepPrefab != null)
+        if (showFootstep && _footstepPrefab != null)
         {
-            GameObject instance = Managers.Resource.Instantiate(_settings.FootstepPrefab.gameObject,
-                sensoryEvent.Position + rotation * _settings.FootstepPrefab.transform.localPosition, rotation);
+            GameObject instance = Managers.Resource.Instantiate(_footstepPrefab.gameObject,
+                sensoryEvent.Position + rotation * _footstepPrefab.transform.localPosition, rotation);
             if (instance != null)
             {
                 FootstepObject effect = instance.GetComponent<FootstepObject>();
-                effect.Play(sensoryEvent.IsLeft, visibility);
+                effect.Play(isLeft, visibility);
                 spawned |= Track(effect, sensoryEvent.Position);
             }
         }
-        if (_settings.WavePrefab != null)
+        if (_wavePrefab != null)
         {
-            GameObject instance = Managers.Resource.Instantiate(_settings.WavePrefab.gameObject,
-                sensoryEvent.Position + rotation * _settings.WavePrefab.transform.localPosition, rotation);
+            GameObject instance = Managers.Resource.Instantiate(_wavePrefab.gameObject,
+                sensoryEvent.Position + rotation * _wavePrefab.transform.localPosition, rotation);
             if (instance != null)
             {
                 FootstepWave effect = instance.GetComponent<FootstepWave>();
@@ -146,10 +173,10 @@ public sealed class SensoryManager : MonoBehaviour
                 spawned |= Track(effect, sensoryEvent.Position);
             }
         }
-        if (_settings.LightPrefab != null)
+        if (_lightPrefab != null)
         {
-            GameObject instance = Managers.Resource.Instantiate(_settings.LightPrefab,
-                sensoryEvent.Position + rotation * _settings.LightPrefab.transform.localPosition, rotation);
+            GameObject instance = Managers.Resource.Instantiate(_lightPrefab,
+                sensoryEvent.Position + rotation * _lightPrefab.transform.localPosition, rotation);
             if (instance != null)
             {
                 SensoryLight effect = instance.GetComponent<SensoryLight>();
@@ -196,11 +223,11 @@ public sealed class SensoryManager : MonoBehaviour
     /// </summary>
     private float CalculateVisibility(float distance)
     {
-        if (distance >= _settings.MaximumDistance)
+        if (distance >= _maximumDistance)
             return 0f;
-        if (distance <= _settings.FullVisibilityDistance)
+        if (distance <= _fullVisibilityDistance)
             return 1f;
-        float progress = Mathf.InverseLerp(_settings.FullVisibilityDistance, _settings.MaximumDistance, distance);
+        float progress = Mathf.InverseLerp(_fullVisibilityDistance, _maximumDistance, distance);
         return 1f - progress;
     }
 
