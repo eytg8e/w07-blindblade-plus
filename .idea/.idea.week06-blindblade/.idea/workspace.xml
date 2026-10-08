@@ -3,31 +3,134 @@
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
+  <component name="CMakeProjectFlavorService">
+    <option name="flavorId" value="CMakePlainProjectFlavor" />
+  </component>
+  <component name="CMakeSettings">
+    <configurations />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="d4e56f78-704a-419d-8dc1-4a83f2dd9a13" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/AGENTS.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/FEATURE_SPEC.md" afterDir="false" />
+    <list default="true" id="d4e56f78-704a-419d-8dc1-4a83f2dd9a13" name="Changes" comment="feat: efwefwekfe">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Constants.meta" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Packages/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/Packages/manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Packages/packages-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/Packages/packages-lock.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Assets/Plugins.meta" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Assets/Plugins/FMOD.meta" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Assets/Scenes/EnemyTest.unity" root0="FORCE_HIGHLIGHTING" />
+  </component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="false" />
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "dart.analysis.tool.window.visible": "false",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)"
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0432689836445048" />
+      <entry key="MS500" value="1.9240231385532747" />
+      <entry key="S2" value="2.648467117560495" />
+      <entry key="S5" value="2.851147710208755" />
+      <entry key="S10" value="2.9241283052712066" />
+      <entry key="S30" value="2.9743811913680687" />
+      <entry key="S60" value="2.987149119152982" />
+      <entry key="M2" value="2.993564156687518" />
+      <entry key="M5" value="2.997423162454563" />
+      <entry key="M10" value="2.9988009649036034" />
+      <entry key="M15" value="3.0034623530455775" />
+      <entry key="M30" value="3.2113861563183783" />
+      <entry key="H1" value="4.659522210307419" />
+      <entry key="H2" value="8.414367095051844" />
+      <entry key="H4" value="13.567572682662874" />
+      <entry key="D1" value="22.37907760656791" />
+      <entry key="W1" value="24.602474952719366" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="1.3084989356420678E-303" />
+      <entry key="S30" value="1.0937660977488014E-101" />
+      <entry key="S60" value="3.3072134762497603E-51" />
+      <entry key="M2" value="5.750837744407121E-26" />
+      <entry key="M5" value="8.014795502171639E-11" />
+      <entry key="M10" value="8.9525390265397E-6" />
+      <entry key="M15" value="4.311524072767348E-4" />
+      <entry key="M30" value="0.020764209767692457" />
+      <entry key="H1" value="0.14409791729130736" />
+      <entry key="H2" value="0.37960231465483363" />
+      <entry key="H4" value="0.6161187504489971" />
+      <entry key="D1" value="0.9224526248575692" />
+      <entry key="W1" value="0.9885349080882334" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.9257462881077675" />
+      <entry key="MS500" value="1.8199524651148267" />
+      <entry key="S2" value="2.6029894453248588" />
+      <entry key="S5" value="2.830670737009572" />
+      <entry key="S10" value="2.9134734237499345" />
+      <entry key="S30" value="2.9707335168066886" />
+      <entry key="S60" value="2.9853130501212886" />
+      <entry key="M2" value="2.9926430470619914" />
+      <entry key="M5" value="2.997053978449903" />
+      <entry key="M10" value="2.9986251840055225" />
+      <entry key="M15" value="3.0037697613724053" />
+      <entry key="M30" value="3.232074937227072" />
+      <entry key="H1" value="4.803540565062477" />
+      <entry key="H2" value="8.793887678749503" />
+      <entry key="H4" value="14.183628109824088" />
+      <entry key="D1" value="23.301514470852553" />
+      <entry key="W1" value="25.59100744110495" />
+    </decayedShown>
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/enemy&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;
   }
-}]]></component>
+}</component>
+  <component name="RunManager">
+    <configuration name="Start Unity" type="RunUnityExe" factoryName="Unity Executable">
+      <option name="EXE_PATH" value="C:\Program Files\Unity\Hub\Editor\6000.0.55f1\Editor\Unity.exe" />
+      <option name="PROGRAM_PARAMETERS" value="-projectPath C:\Users\JUNGLE\Documents\GitHub\week06-blindblade -debugCodeOptimization" />
+      <option name="WORKING_DIRECTORY" value="C:\Users\JUNGLE\Documents\GitHub\week06-blindblade" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="ENV_FILE_PATHS" value="" />
+      <option name="REDIRECT_INPUT_PATH" value="" />
+      <option name="MIXED_MODE_DEBUG" value="0" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Unit Tests (batch mode)" type="RunUnityExe" factoryName="Unity Executable">
+      <option name="EXE_PATH" value="C:\Program Files\Unity\Hub\Editor\6000.0.55f1\Editor\Unity.exe" />
+      <option name="PROGRAM_PARAMETERS" value="-runTests -batchmode -projectPath C:\Users\JUNGLE\Documents\GitHub\week06-blindblade -testResults Logs/results.xml -logFile Logs/Editor.log -testPlatform EditMode -debugCodeOptimization" />
+      <option name="WORKING_DIRECTORY" value="C:\Users\JUNGLE\Documents\GitHub\week06-blindblade" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="ENV_FILE_PATHS" value="" />
+      <option name="REDIRECT_INPUT_PATH" value="" />
+      <option name="MIXED_MODE_DEBUG" value="0" />
+      <method v="2" />
+    </configuration>
+  </component>
   <component name="TaskManager">
     <servers />
   </component>
