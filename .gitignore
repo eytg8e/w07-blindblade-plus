@@ -107,3 +107,20 @@ InitTestScene*.unity*
 
 # VS Code
 .vscode
+
+# FMOD Studio
+/FMODProject/.cache/
+/FMODProject/.user/
+/FMODProject/.unsaved/
+
+# FMOD for Unity
+/Assets/Plugins/FMOD/Cache/
+/Assets/Plugins/FMOD/Cache.meta
+
+# Generated StreamingAssets bank copies
+/Assets/StreamingAssets/**/*.bank
+/Assets/StreamingAssets/**/*.bank.meta
+
+# FMOD logs
+fmod_editor.log
+fmod.log
