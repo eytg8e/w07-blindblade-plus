@@ -8,15 +8,13 @@ public sealed class FootstepWave : SensoryEffect
 {
     [Header("파동 표시")]
     [SerializeField] private SpriteRenderer _ringRenderer;
-    [SerializeField, Min(0.01f), Tooltip("직접 재생할 때의 확산 및 표시 수명(초)")]
+    [SerializeField, Min(0.01f), Tooltip(" 확산 및 표시 수명(초)")]
     private float _duration = 0.6f;
     [SerializeField, Min(0f), Tooltip("시작 반경(미터), 원본 링 지름은 1미터 기준")]
     private float _startRadius = 0.05f;
     [SerializeField, Min(0f), Tooltip("종료 반경(미터)")]
     private float _endRadius = 1.5f;
     private Color _baseColor;
-    private float _playingStartRadius;
-    private float _playingEndRadius;
     private bool _isConfigured;
 
     void Awake()
@@ -43,23 +41,13 @@ public sealed class FootstepWave : SensoryEffect
     /// </summary>
     public void Play(float visibility = 1f)
     {
-        Play(visibility, _duration, _startRadius, _endRadius);
-    }
-
-    /// <summary>
-    /// 가시성과 수명 및 시작·종료 반경으로 파동의 독립 확산을 시작한다.
-    /// </summary>
-    public void Play(float visibility, float duration, float startRadius, float endRadius)
-    {
         if (!_isConfigured)
         {
             Managers.Resource.Destroy(gameObject);
             return;
         }
-        _playingStartRadius = startRadius;
-        _playingEndRadius = endRadius;
         _ringRenderer.enabled = true;
-        BeginPlayback(duration, visibility);
+        BeginPlayback(_duration, visibility);
     }
 
     /// <summary>
@@ -68,7 +56,7 @@ public sealed class FootstepWave : SensoryEffect
     protected override void ApplyFrame(float elapsed, float progress)
     {
         _ringRenderer.transform.localScale = Vector3.one
-            * (Mathf.Lerp(_playingStartRadius, _playingEndRadius, progress) * 2f);
+            * (Mathf.Lerp(_startRadius, _endRadius, progress) * 2f);
         Color color = _baseColor;
         color.a *= (1f - progress) * Visibility;
         _ringRenderer.color = color;

@@ -5,20 +5,20 @@ using UnityEngine;
 /// </summary>
 public class Game : MonoSingleton<Game>
 {
-    [Header("감각 표현")]
-    [SerializeField] private SensoryEmitter _emitter;
-    public SensoryEmitter Emitter => _emitter;
+    private const string SENSORY_MANAGER_PATH = "GameManagers/SensoryManager";
+
+    private SensoryManager _sensoryManager;
+    public SensoryManager SensoryManager => _sensoryManager;
 
     protected override void Awake()
     {
         base.Awake();
         if (CurrentInstance != this)
             return;
-        if (_emitter == null || !_emitter.transform.IsChildOf(transform))
-        {
-            Debug.LogError("Game 자신 또는 자식에 배치한 SensoryEmitter를 연결해야 합니다.", this);
+        GameObject instance = Managers.Resource.Instantiate(SENSORY_MANAGER_PATH, transform, usePool: false);
+        if (instance == null)
             return;
-        }
-        _emitter.Initialize();
+        _sensoryManager = instance.GetComponent<SensoryManager>();
+        _sensoryManager.Initialize();
     }
 }

@@ -16,12 +16,10 @@ public sealed class FootstepObject : SensoryEffect
     private bool _isConfigured;
 
     [Header("수명")]
-    [SerializeField, Min(0.01f), Tooltip("직접 재생할 때의 표시 수명(초)")]
+    [SerializeField, Min(0.01f), Tooltip(" 표시 수명(초)")]
     private float _lifetime = 3f;
-    [SerializeField, Min(0.01f), Tooltip("직접 재생할 때의 종료 직전 페이드 시간(초)")]
+    [SerializeField, Min(0.01f), Tooltip(" 종료 직전 페이드 시간(초)")]
     private float _fadeDuration = 1f;
-    private float _playingLifetime;
-    private float _playingFade;
 
     void Awake()
     {
@@ -53,14 +51,6 @@ public sealed class FootstepObject : SensoryEffect
     /// </summary>
     public void Play(bool isLeft, float visibility = 1f)
     {
-        Play(isLeft, visibility, _lifetime, _fadeDuration);
-    }
-
-    /// <summary>
-    /// 좌우 선택과 공통 가시성 및 수명 설정으로 독립 발자국 재생을 시작한다.
-    /// </summary>
-    public void Play(bool isLeft, float visibility, float lifetime, float fadeDuration)
-    {
         if (!_isConfigured)
         {
             Managers.Resource.Destroy(gameObject);
@@ -70,9 +60,7 @@ public sealed class FootstepObject : SensoryEffect
         _rightRenderer.enabled = !isLeft;
         _activeRenderer = isLeft ? _leftRenderer : _rightRenderer;
         _activeColor = isLeft ? _leftColor : _rightColor;
-        _playingLifetime = Mathf.Max(0.01f, lifetime);
-        _playingFade = Mathf.Clamp(fadeDuration, 0.01f, _playingLifetime);
-        BeginPlayback(_playingLifetime, visibility);
+        BeginPlayback(_lifetime, visibility);
     }
 
     /// <summary>
@@ -81,7 +69,7 @@ public sealed class FootstepObject : SensoryEffect
     protected override void ApplyFrame(float elapsed, float progress)
     {
         Color color = _activeColor;
-        color.a *= Visibility * Mathf.Clamp01((_playingLifetime - elapsed) / _playingFade);
+        color.a *= Visibility * Mathf.Clamp01((_lifetime - elapsed) / Mathf.Min(_fadeDuration, _lifetime));
         _activeRenderer.color = color;
     }
 }

@@ -6,7 +6,7 @@ using UnityEngine;
 public sealed class FootstepEmitter : MonoBehaviour
 {
     public event Action<Transform, Vector3> OnFootstepEmitted;
-    private SensoryEmitter _sensoryEmitter;
+    private SensoryManager _sensoryManager;
 
     [Header("걸음")]
     [SerializeField, Min(0.01f), Tooltip("발자국 사이 이동 거리(미터)")]
@@ -15,8 +15,6 @@ public sealed class FootstepEmitter : MonoBehaviour
     private float _footOffset = 0.15f;
     [SerializeField, Min(0.01f), Tooltip("프레임 이동이 이 거리 이상이면 순간이동으로 처리(미터)")]
     private float _teleportDistance = 5f;
-    [SerializeField, Range(0f, 1f), Tooltip("공통 감각 표현에 전달할 걸음 강도")]
-    private float _intensity = 1f;
     private Vector3 _previousPosition;
     private float _accumulatedDistance;
     private bool _isLeft = true;
@@ -37,13 +35,13 @@ public sealed class FootstepEmitter : MonoBehaviour
     void Start()
     {
         if (_groundLayers.value == 0 || _stepDistance <= 0f || _teleportDistance <= _stepDistance
-            || !Game.IsInitialized || Game.Instance.Emitter == null)
+            || !Game.IsInitialized || Game.Instance.SensoryManager == null)
         {
             Debug.LogError("FootstepEmitter의 지면·걸음 거리 설정과 Game의 공통 Emitter 연결을 확인해야 합니다.", this);
             enabled = false;
             return;
         }
-        _sensoryEmitter = Game.Instance.Emitter;
+        _sensoryManager = Game.Instance.SensoryManager;
     }
 
     void LateUpdate()
@@ -62,7 +60,7 @@ public sealed class FootstepEmitter : MonoBehaviour
         if (distance <= Mathf.Epsilon)
             return;
         Vector3 direction = movement / distance;
-        float stepDistance = Mathf.Max(0.01f, _stepDistance);
+        float stepDistance = _stepDistance;
         float nextDistance = stepDistance - _accumulatedDistance;
         while (nextDistance <= distance)
         {
@@ -89,13 +87,12 @@ public sealed class FootstepEmitter : MonoBehaviour
             return;
 
         OnFootstepEmitted?.Invoke(transform, hit.point);
-        if (_sensoryEmitter == null)
+        if (_sensoryManager == null)
         {
             Debug.LogError("공통 감각 Emitter가 파괴되어 걸음 전달을 중단합니다.", this);
             enabled = false;
             return;
         }
-        _sensoryEmitter.Emit(SensoryEvent.CreateFootstep(transform, hit.point, hit.normal,
-            direction, _intensity, isLeft));
+        _sensoryManager.Emit(new SensoryEvent(hit.point, hit.normal, direction, isLeft));
     }
 }

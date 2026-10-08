@@ -131,7 +131,6 @@ GameObject:
   - component: {fileID: 1002}
   - component: {fileID: 1003}
   - component: {fileID: 1004}
-  - component: {fileID: 1005}
   m_Layer: 0
   m_Name: Ground
   m_TagString: Untagged
@@ -228,27 +227,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1005
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f9cedb38bd154eb3b49063da029fcc24, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _reportCollisions: 1
-  _collisionLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  _minimumImpulse: 0.1
-  _fullIntensityImpulse: 5
-  _collisionInterval: 0.1
-  _soundClip: {fileID: 0}
-  _soundIntensity: 1
 --- !u!1 &2000
 GameObject:
   m_ObjectHideFlags: 0
@@ -297,7 +275,6 @@ MonoBehaviour:
   _stepDistance: 0.7
   _footOffset: 0.15
   _teleportDistance: 5
-  _intensity: 1
   _groundLayers:
     serializedVersion: 2
     m_Bits: 1
@@ -523,9 +500,6 @@ MonoBehaviour:
   _observer: {fileID: 3001}
   _alternateObserver: {fileID: 6001}
   _emitter: {fileID: 2004}
-  _sensoryEmitter: {fileID: 5003}
-  _soundSource: {fileID: 7002}
-  _collisionBody: {fileID: 8005}
   _moveSpeed: 2
   _travelRadius: 6
   _observerPeriod: 12
@@ -539,7 +513,6 @@ GameObject:
   m_Component:
   - component: {fileID: 5001}
   - component: {fileID: 5002}
-  - component: {fileID: 5003}
   m_Layer: 0
   m_Name: Game
   m_TagString: Untagged
@@ -574,24 +547,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8dc8f8a10cea4da98948ed6142ecc397, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _emitter: {fileID: 5003}
---- !u!114 &5003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 24460d55f2c9f4738bcecb63c071453a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _observer: {fileID: 3001}
-  _profiles:
-  - {fileID: 11400000, guid: e79a63f30ba046bc9e45181fd875b73e, type: 2}
-  - {fileID: 11400000, guid: 90422e13501c4176a9943a511673fb82, type: 2}
-  - {fileID: 11400000, guid: 28d612d8f001459c9bbb147976a72814, type: 2}
 --- !u!1 &6000
 GameObject:
   m_ObjectHideFlags: 0
@@ -687,7 +642,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7001}
-  - component: {fileID: 7002}
   - component: {fileID: 7003}
   - component: {fileID: 7004}
   m_Layer: 0
@@ -712,27 +666,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f9cedb38bd154eb3b49063da029fcc24, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _reportCollisions: 0
-  _collisionLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  _minimumImpulse: 0.1
-  _fullIntensityImpulse: 5
-  _collisionInterval: 0.1
-  _soundClip: {fileID: 8300000, guid: ab09ca556a7741cba97ff6d1c6e6c6ee, type: 3}
-  _soundIntensity: 1
 --- !u!33 &7003
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -799,7 +732,6 @@ GameObject:
   - component: {fileID: 8003}
   - component: {fileID: 8004}
   - component: {fileID: 8005}
-  - component: {fileID: 8006}
   m_Layer: 0
   m_Name: Collision Source
   m_TagString: Untagged
@@ -923,27 +855,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &8006
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f9cedb38bd154eb3b49063da029fcc24, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _reportCollisions: 1
-  _collisionLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  _minimumImpulse: 0.1
-  _fullIntensityImpulse: 5
-  _collisionInterval: 0.1
-  _soundClip: {fileID: 0}
-  _soundIntensity: 1
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0

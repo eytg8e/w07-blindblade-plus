@@ -8,9 +8,9 @@ public sealed class SensoryLight : SensoryEffect
 {
     [Header("순간 빛")]
     [SerializeField] private Light _light;
+    [SerializeField, Min(0.01f), Tooltip("순간 빛 표시 수명(초)")]
+    private float _lifetime = 0.3f;
     private float _intensity;
-    private float _lifetime;
-    private float _fadeDuration;
     private bool _isConfigured;
 
     void Awake()
@@ -21,6 +21,7 @@ public sealed class SensoryLight : SensoryEffect
             Debug.LogError("SensoryLight에 Point Light를 연결해야 합니다.", this);
             return;
         }
+        _intensity = _light.intensity;
         _light.enabled = false;
     }
 
@@ -32,20 +33,15 @@ public sealed class SensoryLight : SensoryEffect
     }
 
     /// <summary>
-    /// 공통 가시성과 빛 색상·강도·범위·수명으로 독립적인 순간 빛을 재생한다.
+    /// 프리팹의 빛 속성과 수명에 공통 가시성을 적용하여 독립 재생한다.
     /// </summary>
-    public void Play(float visibility, Color color, float intensity, float range, float lifetime, float fadeDuration)
+    public void Play(float visibility = 1f)
     {
         if (!_isConfigured)
         {
             Managers.Resource.Destroy(gameObject);
             return;
         }
-        _light.color = color;
-        _light.range = range;
-        _intensity = intensity;
-        _lifetime = Mathf.Max(0.01f, lifetime);
-        _fadeDuration = Mathf.Clamp(fadeDuration, 0.01f, _lifetime);
         _light.enabled = true;
         BeginPlayback(_lifetime, visibility);
     }
@@ -55,6 +51,6 @@ public sealed class SensoryLight : SensoryEffect
     /// </summary>
     protected override void ApplyFrame(float elapsed, float progress)
     {
-        _light.intensity = _intensity * Visibility * Mathf.Clamp01((_lifetime - elapsed) / _fadeDuration);
+        _light.intensity = _intensity * Visibility * (1f - progress);
     }
 }
