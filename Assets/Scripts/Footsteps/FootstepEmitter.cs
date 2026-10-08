@@ -2,167 +2,120 @@ using System;
 
 using UnityEngine;
 
-/// <summary>
-/// 이동하는 오브젝트에 부착되어 이동 거리를 누적 감지하고 지면에 발자국을 생성한다.
-/// </summary>
-public class FootstepEmitter : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed class FootstepEmitter : MonoBehaviour
 {
-    public static event Action<Vector3, float> OnFootstepEmitted;
+    public event Action<Transform, Vector3> OnFootstepEmitted;
+    [Header("연결")]
+    [SerializeField] private FootstepObject _footstepPrefab;
+    [SerializeField, Tooltip("가시성 기준 플레이어 또는 카메라")]
+    private Transform _observer;
 
-    [Header("Footstep Prefab")]
-    [SerializeField] private GameObject _footstepPrefab;
-    [SerializeField] private string _footstepResourcePath = "Prefabs/Footstep";
-
-    [Header("Step Settings")]
-    [SerializeField] private float _stepDistance = 1.2f;
-    [SerializeField] private float _footSpacing = 0.25f;
-    [SerializeField] private LayerMask _groundLayer = ~0;
-    [SerializeField] private float _rayDistance = 1.5f;
-    [SerializeField] private float _rayHeightOffset = 0.5f;
-
-    [Header("Visibility & Distance")]
-    [SerializeField] private bool _enableFootsteps = true;
-    [SerializeField] private Transform _targetObserver;
-    [SerializeField] private float _minVisibilityDistance = 15f;
-    [SerializeField] private float _maxVisibilityDistance = 25f;
-    [SerializeField] private float _waveRadius = 2.5f;
-
-    private Vector3 _lastPosition;
+    [Header("걸음")]
+    [SerializeField, Min(0.01f), Tooltip("발자국 사이 이동 거리(미터)")]
+    private float _stepDistance = 0.7f;
+    [SerializeField, Min(0f), Tooltip("중심에서 각 발까지의 거리(미터)")]
+    private float _footOffset = 0.15f;
+    [SerializeField, Min(0.01f), Tooltip("프레임 이동이 이 거리 이상이면 순간이동으로 처리(미터)")]
+    private float _teleportDistance = 5f;
+    private Vector3 _previousPosition;
     private float _accumulatedDistance;
-    private bool _isNextLeftFoot = true;
+    private bool _isLeft = true;
 
-    public bool EnableFootsteps
+    [Header("지면")]
+    [SerializeField] private LayerMask _groundLayers;
+    [SerializeField, Min(0f), Tooltip("발 위치 위에서 레이를 시작하는 높이(미터)")]
+    private float _rayHeight = 0.5f;
+    [SerializeField, Min(0.01f), Tooltip("발 위치 아래까지 검사할 깊이(미터)")]
+    private float _rayDepth = 0.5f;
+    [SerializeField, Min(0f), Tooltip("지면 겹침을 방지할 법선 방향 간격(미터)")]
+    private float _surfaceOffset = 0.01f;
+
+    [Header("관측 거리")]
+    [SerializeField, Min(0f), Tooltip("완전히 표시하는 거리(미터)")]
+    private float _visibleDistance = 5f;
+    [SerializeField, Min(0.01f), Tooltip("생성과 표시를 중단하는 거리(미터)")]
+    private float _maximumDistance = 15f;
+
+    private void OnEnable()
     {
-        get => _enableFootsteps;
-        set => _enableFootsteps = value;
+        _previousPosition = transform.position;
+        _accumulatedDistance = 0f;
+        _isLeft = true;
     }
 
-    public Transform TargetObserver
+    private void Start()
     {
-        get => _targetObserver;
-        set => _targetObserver = value;
+        if (_footstepPrefab == null || _observer == null || _groundLayers.value == 0
+            || _stepDistance <= 0f || _maximumDistance <= _visibleDistance)
+        {
+            Debug.LogError("FootstepEmitter의 프리팹, 관측자, 지면 레이어 및 거리 설정을 확인해야 합니다.", this);
+            enabled = false;
+            return;
+        }
+        Managers.Pool.CreatePool(_footstepPrefab.gameObject);
     }
 
-    void Start()
-    {
-        _lastPosition = transform.position;
-    }
-
-    void Update()
+    private void LateUpdate()
     {
         Vector3 currentPosition = transform.position;
-        float moveDelta = Vector3.Distance(currentPosition, _lastPosition);
-
-        // 움직임이 감지되면 이동 거리를 누적한다.
-        if (moveDelta > 0.001f)
+        Vector3 previousPosition = _previousPosition;
+        _previousPosition = currentPosition;
+        Vector3 movement = currentPosition - previousPosition;
+        if (movement.magnitude >= _teleportDistance)
         {
-            _accumulatedDistance += moveDelta;
-            _lastPosition = currentPosition;
-
-            if (_accumulatedDistance >= _stepDistance)
-            {
-                _accumulatedDistance = 0f;
-                TryEmitFootstep();
-            }
+            _accumulatedDistance = 0f;
+            return;
         }
+        movement.y = 0f;
+        float distance = movement.magnitude;
+        if (distance <= Mathf.Epsilon)
+            return;
+        if (_observer == null)
+        {
+            Debug.LogError("FootstepEmitter의 관측자가 파괴되었습니다. 발자국 생성을 중단합니다.", this);
+            enabled = false;
+            return;
+        }
+        Vector3 direction = movement / distance;
+        float stepDistance = Mathf.Max(0.01f, _stepDistance);
+        float nextDistance = stepDistance - _accumulatedDistance;
+        while (nextDistance <= distance)
+        {
+            Vector3 stepPosition = Vector3.Lerp(previousPosition, currentPosition, nextDistance / distance);
+            EmitFootstep(stepPosition, direction);
+            nextDistance += stepDistance;
+        }
+        _accumulatedDistance = Mathf.Repeat(_accumulatedDistance + distance, stepDistance);
     }
 
     /// <summary>
-    /// 지면을 향해 레이를 발사하고 관측자와의 거리에 따라 발자국을 스폰한다.
-    /// 누적된 위치와 방향을 사용하여 좌/우 오프셋 및 가시성 알파를 계산한다.
+    /// 이동 경로의 발 위치와 진행 방향으로 지면을 검사하고 발자국 생성 및 위치 이벤트를 발행한다.
     /// </summary>
-    public void TryEmitFootstep()
+    private void EmitFootstep(Vector3 position, Vector3 direction)
     {
-        if (!_enableFootsteps)
+        Vector3 right = Vector3.Cross(Vector3.up, direction);
+        position += right * (_isLeft ? -_footOffset : _footOffset);
+        bool isLeft = _isLeft;
+        _isLeft = !_isLeft;
+        
+        if (!Physics.Raycast(position + Vector3.up * _rayHeight, Vector3.down,
+                out RaycastHit hit, _rayHeight + _rayDepth, _groundLayers,
+                QueryTriggerInteraction.Ignore))
             return;
 
-        Vector3 observerPos = GetObserverPosition();
-        float distanceToObserver = Vector3.Distance(transform.position, observerPos);
-
-        // 최대 가시 거리를 초과하면 발자국 생성을 생략한다.
-        if (distanceToObserver > _maxVisibilityDistance)
+        OnFootstepEmitted?.Invoke(transform, hit.point);
+        if (FootstepObject.CalculateVisibility(Vector3.Distance(hit.point, _observer.position),
+                _visibleDistance, _maximumDistance) <= 0f)
             return;
-
-        // 거리에 따른 가시성 알파 비율 계산 (최소 가시 거리 이내면 1.0, 그 이상이면 점진적 감쇠)
-        float visibilityAlpha = 1f;
-        if (distanceToObserver > _minVisibilityDistance)
-        {
-            float range = _maxVisibilityDistance - _minVisibilityDistance;
-            if (range > 0f)
-            {
-                visibilityAlpha = 1f - Mathf.Clamp01((distanceToObserver - _minVisibilityDistance) / range);
-            }
-        }
-
-        Vector3 forward = transform.forward;
-        Vector3 right = transform.right;
-        float lateralOffset = _isNextLeftFoot ? -_footSpacing : _footSpacing;
-        Vector3 stepOrigin = transform.position + (right * lateralOffset) + (Vector3.up * _rayHeightOffset);
-
-        if (Physics.Raycast(stepOrigin, Vector3.down, out RaycastHit hit, _rayDistance, _groundLayer))
-        {
-            Vector3 spawnPosition = hit.point + (hit.normal * 0.005f);
-            Quaternion spawnRotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(forward, hit.normal), hit.normal);
-
-            SpawnFootstep(spawnPosition, spawnRotation, _isNextLeftFoot, visibilityAlpha);
-
-            // 외부 파동 연동을 위한 이벤트 발행
-            OnFootstepEmitted?.Invoke(spawnPosition, _waveRadius);
-
-            _isNextLeftFoot = !_isNextLeftFoot;
-        }
-    }
-
-    /// <summary>
-    /// 발자국 프리팹을 인스턴스화하고 상태를 초기화한다.
-    /// position, rotation, isLeft, visibilityAlpha를 인자로 받아 컴포넌트를 구성한다.
-    /// </summary>
-    private void SpawnFootstep(Vector3 position, Quaternion rotation, bool isLeft, float visibilityAlpha)
-    {
-        GameObject footstepObj = null;
-
-        if (Managers.IsInitialized)
-        {
-            if (_footstepPrefab != null)
-            {
-                footstepObj = Managers.Resource.Instantiate(_footstepPrefab, position, rotation);
-            }
-            else if (!string.IsNullOrEmpty(_footstepResourcePath))
-            {
-                footstepObj = Managers.Resource.Instantiate(_footstepResourcePath, position, rotation);
-            }
-        }
-        else
-        {
-            if (_footstepPrefab != null)
-            {
-                footstepObj = Instantiate(_footstepPrefab, position, rotation);
-            }
-        }
-
-        if (footstepObj == null)
+        Vector3 forward = Vector3.ProjectOnPlane(direction, hit.normal).normalized;
+        if (forward.sqrMagnitude < 0.001f)
             return;
-
-        FootstepItem item = footstepObj.GetComponent<FootstepItem>();
-        if (item != null)
-        {
-            item.Init(isLeft, visibilityAlpha, _waveRadius);
-        }
-    }
-
-    /// <summary>
-    /// 관측자 위치를 반환한다. 별도 지정이 없으면 메인 카메라 위치를 기준으로 한다.
-    /// 대상 Transform이 설정되어 있으면 해당 좌표를 반환하고, 없을 경우 Camera.main을 탐색한다.
-    /// </summary>
-    private Vector3 GetObserverPosition()
-    {
-        if (_targetObserver != null)
-            return _targetObserver.position;
-
-        Camera mainCam = Camera.main;
-        if (mainCam != null)
-            return mainCam.transform.position;
-
-        return transform.position;
+        Quaternion rotation = Quaternion.LookRotation(forward, hit.normal);
+        GameObject instance = Managers.Resource.Instantiate(_footstepPrefab.gameObject,
+            hit.point + hit.normal * _surfaceOffset, rotation);
+        if (instance == null)
+            return;
+        instance.GetComponent<FootstepObject>().Play(isLeft, _observer, _visibleDistance, _maximumDistance);
     }
 }
