@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objects serializationModel="Studio.02.03.00">
-	<object class="AudioFile" id="{6d0fa98b-d701-4d7c-885f-731755453930}">
+	<object class="AudioFile" id="{eeec9653-b95e-41d7-9935-656f63425b05}">
 		<property name="assetPath">
-			<value>Test/Test_Footstep4.wav</value>
+			<value>Test/Test.Footstep_05.wav</value>
 		</property>
 		<property name="frequencyInKHz">
-			<value>32</value>
+			<value>48</value>
 		</property>
 		<property name="channelCount">
 			<value>1</value>
 		</property>
 		<property name="length">
-			<value>0.99762499999999998</value>
+			<value>0.50997916666666665</value>
 		</property>
 		<relationship name="masterAssetFolder">
 			<destination>{eaacc823-8802-44ec-b35a-5bbed5c487d9}</destination>
