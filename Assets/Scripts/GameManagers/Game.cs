@@ -5,8 +5,8 @@ using UnityEngine;
 /// </summary>
 public class Game : MonoSingleton<Game>
 {
-    private SensoryManager _sensoryManager;
-    public SensoryManager SensoryManager => _sensoryManager;
+    private static SensoryManager _sensoryManager;
+    public static SensoryManager SensoryManager => _sensoryManager;
 
     protected override void Awake()
     {
