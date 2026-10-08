@@ -1,11 +1,9 @@
-using ReusableManagers;
-using System;
 using UnityEngine;
 
-public class Managers : MonoBehaviour
+using ReusableManagers;
+
+public class Managers : MonoSingleton<Managers>
 {
-    private static Managers _instance;
-    private static bool _quitting;
     private bool _initialized;
     private bool _clearing;
     private ResourceManager _resource;
@@ -17,55 +15,34 @@ public class Managers : MonoBehaviour
     public static PoolManager Pool => Instance._pool;
     public static SoundManager Sound => Instance._sound;
     public static SceneManagerEx Scene => Instance._scene;
-    public static bool IsInitialized => _instance != null && _instance._initialized;
-    public static bool IsQuitting => _quitting;
+    public new static bool IsInitialized => CurrentInstance != null && CurrentInstance._initialized;
+    protected override string SingletonObjectName => "@ReusableManagers";
+    protected override bool IncludeInactiveInstances => true;
 
-    public static Managers Instance
-    {
-        get
-        {
-            if (_instance != null)
-                return _instance;
-            if (_quitting || !Application.isPlaying)
-                throw new InvalidOperationException("Managers can only be created during Play Mode.");
-
-            foreach (Managers candidate in Resources.FindObjectsOfTypeAll<Managers>())
-            {
-                if (!candidate.gameObject.scene.IsValid())
-                    continue;
-                candidate.Initialize();
-                return _instance;
-            }
-
-            new GameObject("@ReusableManagers").AddComponent<Managers>();
-            return _instance;
-        }
-    }
-
+    /// <summary>
+    /// 싱글턴에 접근하여 매니저 서비스를 초기화한다.
+    /// </summary>
     public static void Init()
     {
         Managers instance = Instance;
     }
 
-    private void Awake()
+    /// <summary>
+    /// 싱글턴을 등록하고 풀, 리소스, 사운드, 씬 서비스를 초기화한다.
+    /// </summary>
+    protected override void InitializeSingleton()
     {
-        Initialize();
-    }
-
-    private void Initialize()
-    {
-        if (_instance != null && _instance != this)
+        if (CurrentInstance != null && CurrentInstance != this)
         {
-            Destroy(this);
+            base.InitializeSingleton();
             return;
         }
 
-        _instance = this;
+        transform.SetParent(null);
+        base.InitializeSingleton();
         if (_initialized)
             return;
 
-        transform.SetParent(null);
-        DontDestroyOnLoad(gameObject);
         _pool = new PoolManager(transform);
         _resource = new ResourceManager(_pool);
         _sound = new SoundManager(transform, _resource);
@@ -73,12 +50,18 @@ public class Managers : MonoBehaviour
         _initialized = true;
     }
 
+    /// <summary>
+    /// 초기화된 싱글턴의 사운드와 풀 서비스를 정리한다.
+    /// </summary>
     public static void Clear()
     {
         if (IsInitialized)
-            _instance.ClearServices();
+            CurrentInstance.ClearServices();
     }
 
+    /// <summary>
+    /// 중복 정리를 방지하며 사운드와 풀의 보유 자원을 해제한다.
+    /// </summary>
     private void ClearServices()
     {
         if (_clearing)
@@ -95,20 +78,22 @@ public class Managers : MonoBehaviour
         }
     }
 
-    private void OnApplicationQuit()
+    /// <summary>
+    /// 중복 매니저 컴포넌트만 제거하여 같은 오브젝트의 다른 컴포넌트를 유지한다.
+    /// </summary>
+    protected override void DestroyDuplicate()
     {
-        if (_instance == this)
-            _quitting = true;
+        Destroy(this);
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
-        if (_instance != this)
+        if (CurrentInstance != this)
             return;
 
         if (_initialized)
             ClearServices();
         _initialized = false;
-        _instance = null;
+        base.OnDestroy();
     }
 }
