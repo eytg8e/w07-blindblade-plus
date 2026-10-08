@@ -1,24 +1,24 @@
 ### FMOD 사운드 테스트
 
 - 기능 설명: BGM 반복 재생과 캐릭터 기준 3D 발소리를 독립 씬에서 확인한다. 고정 상단 카메라가 이동 영역 전체를 보여주며 투명 충돌벽이 캐릭터의 이탈을 막는다.
-- 동작 조건 및 처리 흐름: Inspector의 EventReference를 사용한다. BGM은 하나의 인스턴스를 유지하며 Studio의 Loop Region으로 반복한다. 발소리는 호출마다 인스턴스를 생성해 발음체에 연결하고 종료 후 해제한다. 주황색 Sphere가 진원지를 표시하며 발소리 시작 시 0.2초 동안 확대된다.
+- 동작 조건 및 처리 흐름: Inspector의 SoundId를 Managers.Sound에 전달한다. BGM 중복 및 수명 관리는 매니저가 처리하고 Studio의 Loop Region으로 반복한다. 발소리는 PlayAttached로 호출하며 진원지 Sphere를 0.2초 동안 확대한다. 비활성화 시 StopFor로 해당 오브젝트의 재생만 정리한다.
 - 구현 상태: Unity 컴파일, 실제 Play Mode의 벽 충돌, 화면 범위, 진원지 표시 및 BGM 반복 경계 통과 검증 완료. 청각적 방향 구분과 믹스 밸런스는 직접 청취 필요.
-- 로그 규칙: Debug.Log 계열 메시지는 영어로 작성한다. Bgm과 Footstep의 안내 및 오류 메시지를 영어로 변경했으며 주석과 실행 동작은 유지한다.
+- 로그 규칙: Debug.Log 계열 메시지는 영어로 작성하며 재생 오류 처리는 SoundManager에서 수행한다.
 
 #### 관련 코드
 
 | 파일 경로 | 클래스 / 메서드 | 역할 |
 | --- | --- | --- |
-| Assets/Scripts/SoundTest/Bgm.cs | Bgm / PlayBgm, StopBgm, ReleaseBgm | BGM 중복 방지, 정지 및 해제 |
-| Assets/Scripts/SoundTest/Footstep.cs | Footstep / PlayFootstep, ReleaseFootstep | 이동 발음체의 3D 재생, Sphere 표시 및 해제 |
-| Assets/Scripts/SoundTest/Environment.cs | Environment / ProcessInput, SetSourcePosition | CharacterController 이동, Listener 회전, 사운드 테스트 조작 |
+| Assets/Scripts/SoundTest/BgmPlaybackController.cs | BgmPlaybackController / PlayBgm, StopBgm | 매니저의 BGM 재생 요청 및 소유자별 정지 |
+| Assets/Scripts/SoundTest/FootstepSoundEmitter.cs | FootstepSoundEmitter / PlayFootstep | 매니저의 부착 단발음 호출 및 Sphere 표시 |
+| Assets/Scripts/SoundTest/SoundTestController.cs | SoundTestController / ProcessInput, SetSourcePosition | CharacterController 이동, Listener 회전, 사운드 테스트 조작 |
 | Assets/Scenes/SoundTestScene.unity | SoundTestScene | 카메라, 청취 캐릭터, 바닥, 투명벽, BGM 및 발소리 진원지 |
 | Assets/Scripts/SoundTest/Materials/*.mat | Listener, SoundSource, Floor | 청취 캐릭터와 발음체 구분 및 바닥 표시 |
 
 #### 연결 및 협업
 
-- 연결된 기능: FMOD RuntimeManager, StudioListener, Unity Input System, CharacterController.
-- 공유하는 코드 및 상태: 기존 FMOD 프로젝트와 Bank를 활용한다. 기존 SoundManager 및 다른 게임 서비스는 변경하지 않는다.
+- 연결된 기능: Managers.Sound, SoundCatalog, StudioListener, Unity Input System, CharacterController. 테스트 스크립트에는 FMOD using 또는 EventInstance가 없다.
+- 공유하는 코드 및 상태: 기존 FMOD 프로젝트와 Bank를 활용하며, SoundManager의 소유자별 정지와 수명 관리를 사용한다. 다른 게임 서비스는 변경하지 않는다.
 - 중복 또는 충돌 사항: 게임용 SoundManager와 분리된 테스트 컴포넌트이며 서비스 교체를 하지 않는다. 사용자가 변경한 SoundTest 네임스페이스와 파일명을 유지한다.
 - 승인 필요 사항 및 결과: 사용자의 현재 씬 수정, 투명벽 및 시각 표시 추가, BGM Loop 설정 요청에 따라 반영했다. 사용자가 삭제한 Editor 폴더를 다시 만들지 않는다. 일회성 Editor 작업은 Temp의 Pipeline 실행 스크립트로 처리한 뒤 제거한다.
 
@@ -40,7 +40,7 @@
 
 #### 직접 사용 방법
 
-1. `Assets/Scenes/SoundTestScene.unity`를 열고 Play Mode에서 Game View를 클릭한다. EventReference 및 신규 컴포넌트 참조는 이미 연결되어 있다.
+1. `Assets/Scenes/SoundTestScene.unity`를 열고 Play Mode에서 Game View를 클릭한다. BGM 컴포넌트의 Bgm Id=Ambience, 발음체의 Sound Id=Footstep이며 FMOD 연결은 Resources의 SoundCatalog에서 관리한다. 기존 시각화 및 이동 참조는 유지되어 있다.
 2. `WASD`: 파란 청취 캐릭터 이동. 좌우 방향키: 캐릭터 및 Listener 회전. `R`: 청취 캐릭터 위치와 방향 초기화.
 3. `B`: BGM 재생, `N`: BGM 정지. 자동 재생은 BGM 컴포넌트의 Play On Enable에 따른다.
 4. `Space`: 발소리 1회. `T`: 0.7초 간격의 자동 발걸음. 주황 Sphere의 확대를 확인한다.
@@ -57,3 +57,4 @@
 - BGM 타임라인을 27초로 이동시켜 끝을 통과시켰다. 이후 약 472ms로 돌아오고 동일 핸들의 PLAYING 상태가 유지됐다. StudioListener는 1개다.
 - 검증 중에만 런타임 Application.runInBackground를 true로 변경했고 종료 전에 false로 복구했다. 프로젝트 설정은 변경하지 않았다.
 - 검증 당시 Unity 컴파일 오류 및 Console 오류는 0건이었다. 실제 소리의 반복 경계 품질과 방향 및 거리 체감은 직접 청취 미확인이다.
+- 매니저 호출로 전환한 뒤 실제 BGM/발소리가 Managers.Sound에 등록되는 것을 확인했다. 발음체 비활성화 시 매니저 핸들이 해제되며, Sphere가 (0.8,0.8,0.8)로 확대됐다가 (0.4,0.4,0.4)로 복원됐다. 씬을 Editor API로 저장했다.

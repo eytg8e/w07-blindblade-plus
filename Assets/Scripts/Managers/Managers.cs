@@ -27,6 +27,11 @@ public class Managers : MonoSingleton<Managers>
         Managers instance = Instance;
     }
 
+    void Update()
+    {
+        _sound.Update();
+    }
+
     /// <summary>
     /// 싱글턴을 등록하고 풀, 리소스, 사운드, 씬 서비스를 초기화한다.
     /// </summary>

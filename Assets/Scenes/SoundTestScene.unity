@@ -455,13 +455,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fcdd78a5c15970c43aada42452868953, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _footstepEvent:
-    Guid:
-      Data1: 461163530
-      Data2: 1147479832
-      Data3: 735220412
-      Data4: 1865606939
-    Path: event:/Test/TestFootsteps
+  _soundId: 1
   _sourceMarker: {fileID: 85177270}
   _markerDuration: 0.2
 --- !u!33 &581794869
@@ -623,13 +617,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad672aad0fa9ca740851d91a966e917e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _bgmEvent:
-    Guid:
-      Data1: 213216736
-      Data2: 1167419970
-      Data3: -606255725
-      Data4: -1357935490
-    Path: event:/Test/TestAmbience
+  _bgmId: 2
   _playOnEnable: 1
   _allowFadeOut: 1
 --- !u!4 &1025792101
