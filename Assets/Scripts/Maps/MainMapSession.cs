@@ -21,6 +21,8 @@ public sealed class MainMapSession : MonoBehaviour
     void Start()
     {
         Game.Instance.SensoryManager.SetObserver(_player.transform);
+        if (!Game.Instance.SensoryManager.IsReady)
+            Game.Instance.SensoryManager.Initialize();
         _perceptionMask = Game.Instance.SensoryManager.GetComponent<SensoryPerceptionMask>();
         _perceptionMask.SetFootstepOnly(true);
         Game.Instance.SensoryManager.SetEffectsVisible(_showEnemyFootsteps);
