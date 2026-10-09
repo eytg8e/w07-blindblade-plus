@@ -27,10 +27,10 @@ public sealed class MainMapSession : MonoBehaviour
 
     /// <summary>
     /// step의 지면 위치와 소음 강도를 사용하여 기존 Footstep 소리를 한 번 요청한다.
-    /// 소리의 소유자는 플레이어이며 시각 효과 생성은 공통 FootstepEmitter가 담당한다.
+    /// 재생 중 위치는 플레이어를 따라가며 시각 효과는 이 메서드에서 생성하지 않는다.
     /// </summary>
     private void HandlePlayerFootstep(PlayerFootstepEvent step)
     {
-        Managers.Sound.Play(SoundId.Footstep, step.WorldPosition, step.NoiseStrength, _player.gameObject);
+        Managers.Sound.PlayAttached(SoundId.Footstep, _player.gameObject, step.NoiseStrength);
     }
 }

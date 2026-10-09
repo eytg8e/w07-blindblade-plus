@@ -277,3 +277,12 @@ flowchart LR
 - 개별 재생 배율 2와 SFX Bus 옵션 음량 0.7이 적용됐다. StopEffects는 효과음을 정지하면서 BGM을 유지했다. Clear 이후 다시 재생할 수 있었다.
 - 검증 중 사용한 런타임 음량, 발음체 위치 및 실행 상태를 복구했다. 일회성 관찰 스크립트는 제거했으며 Editor 폴더나 테스트 프레임워크 코드는 추가하지 않았다.
 - 현재 전용 검증 코드와 씬은 삭제된 상태다. 실제 게임의 재생 호출부와 StudioListener를 준비한 뒤 [수동 검증 절차](FMOD_사운드_검증.md)를 사용한다.
+
+#### MainMap 플레이어 발소리 연결
+
+- MainMapSession의 OnEnable/OnDisable에서 PlayerController.FootstepEmitted 구독을 연결·해제한다. 주석 처리되었던 재생 연결을 복구했다.
+- 착지 시 Managers.Sound.PlayAttached(SoundId.Footstep, _player.gameObject, step.NoiseStrength)를 호출한다. FMOD 인스턴스는 재생 중 플레이어 위치를 따라가며 일반·가드 음량 배율은 0.6, 충전 보행은 0.2다.
+- Player Camera의 활성 StudioListener 하나와 기존 Studio 프로젝트·Master/BGM/SFX Bank 자동 로딩을 확인했다. 중복 Listener나 별도 Managers를 추가하지 않았다.
+- SoundLibrary의 기존 event:/Test/TestFootsteps 연결을 유지한다. 새 event:/Footsteps도 Event Browser에 있지만 이번 설정에서 선택하지 않았다. 사용자가 편집한 Studio 음원·이벤트·Bank 파일은 수정하거나 커밋에 포함하지 않았다.
+- Unity 컴파일 성공. 현재 씬의 Step Move Duration 0.4초와 Step Pause Duration 0.08초를 사용한 Play 검증에서 실제 착지 1회 → FMOD 인스턴스 1개, PLAYING, 3D, 음량 0.6, WASAPI 출력 상태를 확인했다. 체감 음질·크기의 청취 검증은 미확인이다.
+- 런타임 검증 후 Play를 종료했다. 테스트 코드·씬 오브젝트를 추가하지 않았다.
