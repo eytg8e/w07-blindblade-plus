@@ -118,7 +118,7 @@ namespace BlindBlade.Enemies
                     : null;
                 float? approachDistance = approachRange.HasValue
                     ? Mathf.Max(0f, approachRange.Value - 0.2f)
-                    : (float?)null;
+                    : (_state == EnemyState.Searching ? 0.1f : (float?)null);
                 _motor.MoveTo(_lastKnownPosition, approachDistance);
             }
         }
@@ -176,7 +176,8 @@ namespace BlindBlade.Enemies
 
         /// <summary>
         /// nextState가 현재 상태와 다르면 상태를 변경하고 C# 이벤트와 파생 클래스의 상태 반응을 호출한다.
-        /// Idle에서는 이동을 중지하고 다른 상태에서는 다음 경로 갱신을 즉시 허용한다.
+        /// Idle에서는 이동을 중지하고 Searching에서는 이전 경로의 도착 상태를 초기화한다.
+        /// 다른 상태에서는 다음 경로 갱신을 즉시 허용한다.
         /// </summary>
         protected void ChangeState(EnemyState nextState)
         {
@@ -189,7 +190,11 @@ namespace BlindBlade.Enemies
             if (_state == EnemyState.Idle)
                 _motor.Stop();
             else
+            {
+                if (_state == EnemyState.Searching)
+                    _motor.Stop();
                 _nextRepathTime = 0f;
+            }
 
             StateChanged?.Invoke(_state);
             OnStateChanged(_state);

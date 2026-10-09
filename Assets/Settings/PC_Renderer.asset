@@ -35,7 +35,8 @@ MonoBehaviour:
       type: 3}
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
-  m_RendererFeatureMap: ad6b866f10d7b46c
+  - {fileID: 7283412675168299011}
+  m_RendererFeatureMap: ad6b866f10d7b46c03e8fb273de11365
   m_UseNativeRenderPass: 1
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   m_AssetVersion: 2
@@ -93,3 +94,21 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 3302065f671a8450b82c9ddf07426f3a, type: 3}
   - {fileID: 2800000, guid: 56a77a3e8d64f47b6afe9e3c95cb57d5, type: 3}
   m_Shader: {fileID: 4800000, guid: 0849e84e3d62649e8882e9d6f056a017, type: 3}
+--- !u!114 &7283412675168299011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e2466c0670442bbbb8a7de52768b719, type: 3}
+  m_Name: Screen Space Outline
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  _lineColor: {r: 1, g: 1, b: 1, a: 1}
+  _lineWidth: 1
+  _depthSensitivity: 50
+  _normalSensitivity: 4
+  _shader: {fileID: 4800000, guid: c7c52e823b854534adfb6cc98ed70499, type: 3}
