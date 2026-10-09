@@ -165,8 +165,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _bladeBase: {fileID: 4465997659817687416}
   _bladeTip: {fileID: 8822836106617067518}
-  _lifetime: 0.18
-  _maximumSamples: 64
+  _lifetime: 0.28
+  _maximumSamples: 128
   _minimumDistance: 0.015
   _teleportDistance: 3
-  _color: {r: 0.85, g: 0.88, b: 0.9, a: 0.8}
+  _widthScale: 1.3
+  _color: {r: 1, g: 1, b: 1, a: 1}

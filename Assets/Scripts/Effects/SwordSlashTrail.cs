@@ -14,11 +14,12 @@ public sealed class SwordSlashTrail : MonoBehaviour
     [SerializeField] private Transform _bladeTip;
 
     [Header("궤적")]
-    [SerializeField, Min(0.01f)] private float _lifetime = 0.18f;
-    [SerializeField, Range(4, 128)] private int _maximumSamples = 64;
+    [SerializeField, Min(0.01f)] private float _lifetime = 0.28f;
+    [SerializeField, Range(4, 128)] private int _maximumSamples = 128;
     [SerializeField, Min(0.001f)] private float _minimumDistance = 0.015f;
     [SerializeField, Min(0.01f)] private float _teleportDistance = 3f;
-    [SerializeField, ColorUsage(true, true)] private Color _color = new Color(0.85f, 0.88f, 0.9f, 0.8f);
+    [SerializeField, Range(1f, 2f)] private float _widthScale = 1.3f;
+    [SerializeField, ColorUsage(true, true)] private Color _color = Color.white;
     private readonly List<BladeSample> _samples = new List<BladeSample>(128);
     private readonly List<Vector3> _vertices = new List<Vector3>(256);
     private readonly List<Vector2> _uvs = new List<Vector2>(256);
@@ -158,8 +159,8 @@ public sealed class SwordSlashTrail : MonoBehaviour
     }
 
     /// <summary>
-    /// 유효한 월드 위치 표본을 현재 로컬 좌표로 변환해 양면 띠 메시를 갱신한다.
-    /// 표본의 경과 시간과 색상으로 정점 알파를 줄이고 메시 경계를 재계산한다.
+    /// 월드 표본과 시각적 폭 배율로 검 궤적의 양면 띠 메시를 갱신한다.
+    /// 경과 시간을 정점 알파로 전달해 먹물 셰이더의 소멸을 진행하고 경계를 재계산한다.
     /// </summary>
     private void RebuildMesh()
     {
@@ -172,12 +173,13 @@ public sealed class SwordSlashTrail : MonoBehaviour
         {
             BladeSample sample = _samples[i];
             _vertices.Add(transform.InverseTransformPoint(sample.Base));
-            _vertices.Add(transform.InverseTransformPoint(sample.Tip));
+            Vector3 visualTip = sample.Base + (sample.Tip - sample.Base) * _widthScale;
+            _vertices.Add(transform.InverseTransformPoint(visualTip));
             float progress = i / (float)Mathf.Max(1, _samples.Count - 1);
             _uvs.Add(new Vector2(progress, 0f));
             _uvs.Add(new Vector2(progress, 1f));
             Color color = _color;
-            color.a *= Mathf.Pow(Mathf.Clamp01(1f - (Time.time - sample.Time) / _lifetime), 1.5f);
+            color.a *= Mathf.Clamp01(1f - (Time.time - sample.Time) / _lifetime);
             _colors.Add(color);
             _colors.Add(color);
             if (i == 0)

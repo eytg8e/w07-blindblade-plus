@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: SwordSlash
-  m_Shader: {fileID: 4800000, guid: 9d92e1b6bae71774790b4860ad582ba6, type: 3}
+  m_Shader: {fileID: 4800000, guid: f70ee11d555d7404594d75e183588ec7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -26,13 +26,19 @@ Material:
     m_Ints: []
     m_Floats:
     - _BaseStrength: 0.45
+    - _BrushContrast: 0.95
     - _DetailStrength: 0.18
+    - _Dissolve: 0.65
     - _DstBlend: 1
-    - _FlowSpeed: 2.4
+    - _FlowSpeed: 0.45
+    - _FragmentStrength: 0.75
     - _HighlightWidth: 0.45
     - _Shape: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _HighlightColor: {r: 0.9, g: 0.92, b: 0.94, a: 1}
+    - _InkColor: {r: 0.008, g: 0.012, b: 0.018, a: 1}
+    - _LightColor: {r: 1.5, g: 1.65, b: 1.8, a: 1}
+    - _WashColor: {r: 0.55, g: 0.65, b: 0.78, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
