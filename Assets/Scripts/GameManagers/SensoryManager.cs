@@ -22,7 +22,6 @@ public sealed class SensoryManager : MonoBehaviour
     [Header("독립 효과")]
     [SerializeField] private FootstepObject _footstepPrefab;
     [SerializeField] private FootstepWave _wavePrefab;
-    [SerializeField] private GameObject _lightPrefab;
     private readonly List<ActiveEffect> _activeEffects = new List<ActiveEffect>(64);
     private bool _initialized;
     private bool _reportedUnavailable;
@@ -93,8 +92,6 @@ public sealed class SensoryManager : MonoBehaviour
             Managers.Pool.CreatePool(_footstepPrefab.gameObject);
         if (_wavePrefab != null)
             Managers.Pool.CreatePool(_wavePrefab.gameObject);
-        if (_lightPrefab != null)
-            Managers.Pool.CreatePool(_lightPrefab);
         _initialized = true;
         _reportedUnavailable = false;
         return true;
@@ -119,7 +116,7 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 사건 위치와 관측자 거리로 웨이브·빛을 생성하고 생성 성공 여부를 반환한다.
+    /// 사건 위치와 관측자 거리로 웨이브를 생성하고 생성 성공 여부를 반환한다.
     /// </summary>
     public bool Emit(SensoryEvent sensoryEvent)
     {
@@ -127,7 +124,7 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 사건 위치와 좌우 선택으로 발자국·웨이브·빛을 생성하고 생성 성공 여부를 반환한다.
+    /// 사건 위치와 좌우 선택으로 발자국·웨이브를 생성하고 생성 성공 여부를 반환한다.
     /// </summary>
     public bool EmitFootstep(SensoryEvent sensoryEvent, bool isLeft)
     {
@@ -172,17 +169,6 @@ public sealed class SensoryManager : MonoBehaviour
             if (instance != null)
             {
                 FootstepWave effect = instance.GetComponent<FootstepWave>();
-                effect.Play(visibility);
-                spawned |= Track(effect, sensoryEvent.Position);
-            }
-        }
-        if (_lightPrefab != null)
-        {
-            GameObject instance = Managers.Resource.Instantiate(_lightPrefab,
-                sensoryEvent.Position + rotation * _lightPrefab.transform.localPosition, rotation);
-            if (instance != null)
-            {
-                SensoryLight effect = instance.GetComponent<SensoryLight>();
                 effect.Play(visibility);
                 spawned |= Track(effect, sensoryEvent.Position);
             }

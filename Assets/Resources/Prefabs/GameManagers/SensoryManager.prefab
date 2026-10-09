@@ -50,7 +50,6 @@ MonoBehaviour:
   _maximumDistance: 15
   _footstepPrefab: {fileID: 102, guid: 95e3d4ea2a5643ca8b9380538d34ad33, type: 3}
   _wavePrefab: {fileID: 403, guid: 2363502e95a345d2b96fbe5cf9542e60, type: 3}
-  _lightPrefab: {fileID: 10000, guid: 3bef030f83b34d5a94ae701fb65dc5a7, type: 3}
 --- !u!114 &1003
 MonoBehaviour:
   m_ObjectHideFlags: 0
