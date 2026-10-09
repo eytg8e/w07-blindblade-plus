@@ -17,11 +17,11 @@ MonoBehaviour:
     _type: 1
     _event:
       Guid:
-        Data1: 461163530
-        Data2: 1147479832
-        Data3: 735220412
-        Data4: 1865606939
-      Path: event:/Test/TestFootsteps
+        Data1: 1048976781
+        Data2: 1174801519
+        Data3: -716890462
+        Data4: 1211083272
+      Path: event:/Footsteps
   - _id: 2
     _type: 0
     _event:

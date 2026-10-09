@@ -288,3 +288,5 @@ flowchart LR
 - 런타임 검증 후 Play를 종료했다. 테스트 코드·씬 오브젝트를 추가하지 않았다.
 
 - MainMap 이동 감각: SetFootstepOnlyOwner(GameObject)는 지정 플레이어의 Footstep만 허용하고 기존 효과음을 정지하며 BGM을 음소거한다. null로 제한을 해제한다. 이동 상태 판단과 해제는 MainMapSession이 소유하며 옵션 Bus 음량은 변경하지 않는다. 직접 FMOD/AudioSource 호출에는 적용되지 않는다.
+
+- 2026-10-10: 사용자 요청으로 SoundLibrary의 Footstep Event 경로와 GUID를 event:/Footsteps로 변경했다. 기존 테스트 이벤트 대신 Footsteps_Wood_Walk 음원을 포함한 새 이벤트를 사용한다. Unity Play에서 Managers.Sound.PlayAttached 호출 성공과 실제 이벤트 경로 event:/Footsteps, PLAYING 상태를 확인했다. Studio 음원·Bank의 기존 사용자 변경은 커밋에 포함하지 않았다.
