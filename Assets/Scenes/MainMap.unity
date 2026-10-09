@@ -45662,16 +45662,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _characterController: {fileID: 1647938500}
   _cameraPivot: {fileID: 1468965462}
-  _walkSpeed: 2
-  _guardWalkSpeed: 1
-  _chargingWalkSpeed: 0.8
+  _walkSpeed: 1.388889
+  _guardWalkSpeed: 0.6944445
+  _chargingWalkSpeed: 0.5555556
   _acceleration: 8
   _deceleration: 12
   _gravity: 20
   _lookSensitivity: 0.12
   _pitchLimit: 75
-  _normalStepDistance: 1.2
-  _quietStepDistance: 1.5
+  _stepMoveDuration: 0.28
+  _stepPauseDuration: 0.08
   _normalFootstepNoise: 0.6
   _quietFootstepNoise: 0.2
   _iaidoSpeed: 14
