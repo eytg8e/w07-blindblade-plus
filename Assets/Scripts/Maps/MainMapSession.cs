@@ -13,6 +13,7 @@ public sealed class MainMapSession : MonoBehaviour
 
     [Header("이동 감각")]
     [SerializeField, Min(0f)] private float _movementGrace = 0.12f;
+    [SerializeField] private bool _showEnemyFootsteps;
     private SensoryPerceptionMask _perceptionMask;
     private Vector3 _previousPosition;
     private float _lastMovementTime = float.NegativeInfinity;
@@ -22,7 +23,7 @@ public sealed class MainMapSession : MonoBehaviour
         Game.Instance.SensoryManager.SetObserver(_player.transform);
         _perceptionMask = Game.Instance.SensoryManager.GetComponent<SensoryPerceptionMask>();
         _perceptionMask.SetFootstepOnly(true);
-        Game.Instance.SensoryManager.SetEffectsVisible(false);
+        Game.Instance.SensoryManager.SetEffectsVisible(_showEnemyFootsteps);
         _previousPosition = _player.transform.position;
     }
 
@@ -44,7 +45,7 @@ public sealed class MainMapSession : MonoBehaviour
         if (_perceptionMask != null)
         {
             _perceptionMask.SetFootstepOnly(true);
-            _perceptionMask.GetComponent<SensoryManager>().SetEffectsVisible(false);
+            _perceptionMask.GetComponent<SensoryManager>().SetEffectsVisible(_showEnemyFootsteps);
         }
     }
 
