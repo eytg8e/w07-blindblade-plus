@@ -294,11 +294,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8123843000988514292, guid: d351018fbc9cc174b8f3013c318cf3ea, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.09
       objectReference: {fileID: 0}
     - target: {fileID: 8123843000988514292, guid: d351018fbc9cc174b8f3013c318cf3ea, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0.21
       objectReference: {fileID: 0}
     - target: {fileID: 8123843000988514292, guid: d351018fbc9cc174b8f3013c318cf3ea, type: 3}
       propertyPath: m_LocalRotation.w
@@ -795,7 +795,7 @@ MonoBehaviour:
   _comboResetDelay: 1.2
   _readyTintStrength: 0.1
   _normalImpactProgress: 0.375
-  _iaidoImpactProgress: 0.5833333
+  _iaidoImpactProgress: 0.88461536
 --- !u!114 &1224188713
 MonoBehaviour:
   m_ObjectHideFlags: 0
