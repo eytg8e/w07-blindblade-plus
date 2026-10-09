@@ -226,7 +226,8 @@ public enum SoundId
     None = 0,
     Footstep = 1,
     Ambience = 2,
-    SwordHit = 3,
+    SwordSwing = 3,
+    SwordHit = 4,
 }
 ```
 
@@ -240,8 +241,10 @@ Library의 Mixer 설정은 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SF
 
 | ID | Type | 현재 FMOD 이벤트 |
 | --- | --- | --- |
-| Footstep=1 | Effect | event:/Test/TestFootsteps |
+| Footstep=1 | Effect | event:/Footsteps |
 | Ambience=2 | BGM | event:/Test/TestAmbience |
+| SwordSwing=3 | Effect | event:/SwordSwing |
+| SwordHit=4 | Effect | event:/SwordHit |
 
 #### 내부 구조를 이해하고 싶을 때
 
@@ -287,6 +290,14 @@ flowchart LR
 - Unity 컴파일 성공. 현재 씬의 Step Move Duration 0.4초와 Step Pause Duration 0.08초를 사용한 Play 검증에서 실제 착지 1회 → FMOD 인스턴스 1개, PLAYING, 3D, 음량 0.6, WASAPI 출력 상태를 확인했다. 체감 음질·크기의 청취 검증은 미확인이다.
 - 런타임 검증 후 Play를 종료했다. 테스트 코드·씬 오브젝트를 추가하지 않았다.
 
-- MainMap 이동 감각: SetFootstepOnlyOwner(GameObject)는 지정 플레이어의 Footstep만 허용하고 기존 효과음을 정지하며 BGM을 음소거한다. null로 제한을 해제한다. 이동 상태 판단과 해제는 MainMapSession이 소유하며 옵션 Bus 음량은 변경하지 않는다. 직접 FMOD/AudioSource 호출에는 적용되지 않는다.
+- MainMap 이동 감각: SetFootstepOnlyOwner(GameObject)는 지정 플레이어의 Footstep, SwordSwing, SwordHit을 허용하고 기존 효과음을 정지하며 BGM을 음소거한다. null로 제한을 해제한다. 이동 상태 판단과 해제는 MainMapSession이 소유하며 옵션 Bus 음량은 변경하지 않는다. 직접 FMOD/AudioSource 호출에는 적용되지 않는다.
 
 - 2026-10-10: 사용자 요청으로 SoundLibrary의 Footstep Event 경로와 GUID를 event:/Footsteps로 변경했다. 기존 테스트 이벤트 대신 Footsteps_Wood_Walk 음원을 포함한 새 이벤트를 사용한다. Unity Play에서 Managers.Sound.PlayAttached 호출 성공과 실제 이벤트 경로 event:/Footsteps, PLAYING 상태를 확인했다. Studio 음원·Bank의 기존 사용자 변경은 커밋에 포함하지 않았다.
+
+#### 복도 검 휘두르기 및 명중음
+
+- Assets/Scripts/Player/PlayerCombatAudio.cs를 StraightCorridor의 Player에 추가했다. PlayerController.ActionEvent를 구독하여 일반 공격 AttackStarted 또는 발도 SlashStarted에 SwordSwing을, HitConfirmed에 SwordHit을 재생한다. ActionId를 기록하여 각 소리를 행동당 한 번만 요청한다. 헛스윙은 명중음이 없다.
+- PlayAttached로 플레이어에 소리를 부착한다. 이동 중에도 해당 플레이어의 두 전투음은 허용한다. 적의 다른 소리 및 BGM에 대한 기존 이동 제한은 유지한다.
+- 새 FMOD 이벤트 event:/SwordSwing 및 event:/SwordHit은 Combat Bank와 SFX_Bus에 연결한 단발음이다. 원본은 FMODProject/week06-blindblade/Assets/Combat/SwordSwing.wav 및 SwordHit.wav이며 이번 작업에서 생성한 임시 음원이다. 기존 발소리 음원은 교체하지 않는다.
+- 음원 교체: FMOD Studio에서 위 이벤트의 Single Instrument 음원을 바꾸고 Desktop Bank를 Build한다. Unity FMOD Bank Source는 기존 FMODProject Build/Desktop이다. SoundLibrary의 SwordSwing=3, SwordHit=4 연결과 FMOD Settings의 Combat 자동 로드를 사용한다. PlayerCombatAudio의 Volume 기본값은 0.8이다.
+- 검증: 실제 RequestNormalAttack → NotifyNormalAttackImpact 호출에서 휘두르기 1개, 성공 명중 후 총 2개 FMOD 인스턴스 생성과 적 사망을 확인했다. 이동 사운드 제한 상태에서도 성공했다. 헛스윙 시 인스턴스는 1개였다. 재시작 직후 체력 100 및 감각 준비 상태를 확인했고 플레이어 선제 명중 후 비치명 피해에는 GameOver가 발생하지 않았다. Unity 컴파일 성공. 체감 음질과 사용자의 스피커 출력 청취는 미확인이다.

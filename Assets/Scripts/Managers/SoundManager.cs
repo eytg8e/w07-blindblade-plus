@@ -70,7 +70,7 @@ public class SoundManager
         }
     }
 
-    /// <summary>owner 지정 시 해당 플레이어의 발소리만 허용하고 기존 효과음을 정지한다. null이면 제한을 해제하고 BGM 음량을 복구한다.</summary>
+    /// <summary>owner 지정 시 해당 플레이어의 발소리와 검 전투음만 허용하고 기존 효과음을 정지한다. null이면 제한을 해제하고 BGM 음량을 복구한다.</summary>
     public void SetFootstepOnlyOwner(GameObject owner)
     {
         if (_footstepOnlyOwner == owner)
@@ -258,7 +258,8 @@ public class SoundManager
     /// </summary>
     private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume)
     {
-        if (_footstepOnlyOwner != null && (source != _footstepOnlyOwner || soundId != SoundId.Footstep))
+        if (_footstepOnlyOwner != null && (source != _footstepOnlyOwner
+            || (soundId != SoundId.Footstep && soundId != SoundId.SwordSwing && soundId != SoundId.SwordHit)))
             return false;
         if (!ReferenceEquals(source, null) && (source == null || !source.activeInHierarchy))
         {

@@ -31,5 +31,23 @@ MonoBehaviour:
         Data3: -606255725
         Data4: -1357935490
       Path: event:/Test/TestAmbience
+  - _id: 3
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1658974810
+        Data2: 1261509514
+        Data3: -157734982
+        Data4: -318955813
+      Path: event:/SwordSwing
+  - _id: 4
+    _type: 1
+    _event:
+      Guid:
+        Data1: -602247626
+        Data2: 1288995397
+        Data3: -1835342190
+        Data4: 1286039222
+      Path: event:/SwordHit
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
