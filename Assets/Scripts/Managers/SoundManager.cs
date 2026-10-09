@@ -11,7 +11,7 @@ using FMODUnity;
 public class SoundManager
 {
     [Header("Configuration")]
-    private readonly SoundCatalog _catalog;
+    private readonly SoundLibrary _library;
 
     [Header("Effects")]
     private readonly List<ActiveEffect> _effects = new List<ActiveEffect>();
@@ -31,12 +31,12 @@ public class SoundManager
     private float _effectVolume = 1f;
 
     /// <summary>
-    /// catalog의 사운드 ID와 FMOD 이벤트 연결을 보관한다.
+    /// library의 사운드 ID와 FMOD 이벤트 연결을 보관한다.
     /// FMOD 재생 시스템은 실제 재생 요청 시 초기화하며, 매니저의 설정 상태를 준비한다.
     /// </summary>
-    internal SoundManager(SoundCatalog catalog)
+    internal SoundManager(SoundLibrary library)
     {
-        _catalog = catalog;
+        _library = library;
     }
 
     /// <summary>
@@ -305,12 +305,12 @@ public class SoundManager
     private bool TryResolveEvent(SoundId soundId, SoundType expectedType, out EventReference eventReference)
     {
         eventReference = default;
-        if (_catalog == null)
+        if (_library == null)
         {
-            Debug.LogWarning("[SoundManager] SoundCatalog is not assigned.");
+            Debug.LogWarning("[SoundManager] SoundLibrary is not assigned.");
             return false;
         }
-        if (!_catalog.TryGetEvent(soundId, out eventReference, out SoundType type))
+        if (!_library.TryGetEvent(soundId, out eventReference, out SoundType type))
             return false;
         if (type != expectedType)
         {
@@ -321,19 +321,19 @@ public class SoundManager
     }
 
     /// <summary>
-    /// catalog의 BGM 및 효과음 Bus를 조회하고 보관한 음량을 적용한다.
+    /// library의 BGM 및 효과음 Bus를 조회하고 보관한 음량을 적용한다.
     /// 연결을 확보하면 true를 반환하고 실패 시 Bus 오류를 보고한다.
     /// </summary>
     private bool TryInitializeBuses()
     {
         if (_busesReady && _bgmBus.isValid() && _effectBus.isValid())
             return true;
-        if (_catalog == null)
+        if (_library == null)
             return false;
         try
         {
-            _bgmBus = RuntimeManager.GetBus(_catalog.BgmBusPath);
-            _effectBus = RuntimeManager.GetBus(_catalog.EffectBusPath);
+            _bgmBus = RuntimeManager.GetBus(_library.BgmBusPath);
+            _effectBus = RuntimeManager.GetBus(_library.EffectBusPath);
             FMOD.RESULT bgmResult = _bgmBus.setVolume(_bgmVolume);
             FMOD.RESULT effectResult = _effectBus.setVolume(_effectVolume);
             _busesReady = bgmResult == FMOD.RESULT.OK && effectResult == FMOD.RESULT.OK;

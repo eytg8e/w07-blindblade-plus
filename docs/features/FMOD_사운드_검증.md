@@ -11,8 +11,8 @@
 | Assets/Scripts/Managers/SoundManager.cs | Play, PlayAttached, PlayBgm, StopBgm, StopFor, StopEffects | 실제 게임에서 호출하는 재생 및 정리 API |
 | Assets/Scripts/Managers/Managers.cs | Update, ClearServices | 기존 서비스 수명 정리 |
 | Assets/Scripts/Enums/SoundId.cs | SoundId | 등록한 사운드 식별자 |
-| Assets/Scripts/SoundSystem/SoundCatalog.cs | SoundCatalog | 사운드 등록 규칙 |
-| Assets/Resources/Sound/SoundCatalog.asset | SoundCatalog | 실제 이벤트 및 Bus 연결 |
+| Assets/Scripts/SoundSystem/SoundLibrary.cs | SoundLibrary | 사운드 등록 규칙 |
+| Assets/Resources/Sound/SoundLibrary.asset | SoundLibrary | 실제 이벤트 및 Bus 연결 |
 
 #### 연결 및 협업
 
@@ -25,7 +25,7 @@
 
 1. 실제 플레이어와 소리를 내는 캐릭터가 있는 게임 씬을 연다. 아직 없다면 실제 행동 연결 이후 검증한다.
 2. 3D 소리의 청취 위치와 방향에 FMOD StudioListener가 있는지 확인한다. 1인칭 게임은 일반적으로 실제 플레이어 카메라를 사용한다.
-3. SoundCatalog.asset의 Id, Type, Event 및 Bus 경로를 확인한다. Studio 변경 후에는 Bank를 재빌드하고 Unity Event Browser의 갱신을 확인한다.
+3. SoundLibrary.asset의 Id, Type, Event 및 Bus 경로를 확인한다. Studio 변경 후에는 Bank를 재빌드하고 Unity Event Browser의 갱신을 확인한다.
 4. 게임 코드의 발 접촉 시점에서 PlayAttached를 한 번 호출한다. 이동 정지 후에는 다음 발걸음 호출을 중단한다. 매니저 자체는 발걸음 시점이나 일반 효과음의 중복 호출을 판정하지 않는다.
 5. BGM을 재생하고 정지하는 실제 게임 흐름 또는 UI가 연결되어 있는지 확인한다.
 6. 헤드폰을 사용하고, 발소리 방향 검증 중에는 BGM을 정지해 소리 하나씩 비교한다. Play Mode에 진입하고 Console 오류를 확인한다.
@@ -70,4 +70,4 @@
 - Build Settings에는 SampleScene만 등록되어 있고, 현재 열린 씬에도 Missing Script가 없다. Console 오류와 경고는 0건이었다.
 - 기존 문서의 삭제된 씬 경로, 컴포넌트, 단축키 및 Material 설명을 본 수동 절차로 교체했다.
 - 현재 Assets/Scripts에는 Managers.Sound를 호출하는 실제 게임의 재생 호출부가 발견되지 않았다. 현재 열린 SampleScene의 StudioListener는 0개다. 따라서 실제 게임에서의 재검증은 위 실행 준비를 완료한 후 진행해야 한다.
-- Catalog가 연결하는 event:/Test/TestFootsteps와 event:/Test/TestAmbience는 현재 사용 중인 FMOD 이벤트다. 테스트라는 이름만을 이유로 삭제하지 않으며, 이번 작업에서 변경하지 않았다.
+- Library가 연결하는 event:/Test/TestFootsteps와 event:/Test/TestAmbience는 현재 사용 중인 FMOD 이벤트다. 테스트라는 이름만을 이유로 삭제하지 않으며, 이번 작업에서 변경하지 않았다.

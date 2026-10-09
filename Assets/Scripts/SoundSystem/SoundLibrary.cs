@@ -5,8 +5,8 @@ using UnityEngine;
 
 using FMODUnity;
 
-[CreateAssetMenu(fileName = "SoundCatalog", menuName = "Sound/Sound Catalog")]
-public class SoundCatalog : ScriptableObject
+[CreateAssetMenu(fileName = "SoundLibrary", menuName = "Sound/Sound Library")]
+public class SoundLibrary : ScriptableObject
 {
     [Header("Events")]
     [SerializeField] private SoundEntry[] _sounds = Array.Empty<SoundEntry>();
