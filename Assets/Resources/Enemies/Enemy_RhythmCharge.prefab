@@ -127,6 +127,7 @@ GameObject:
   - component: {fileID: 4548416382837583736}
   - component: {fileID: 9203231712060768136}
   - component: {fileID: 8097694393400035710}
+  - component: {fileID: 1877680012681666384}
   m_Layer: 0
   m_Name: Enemy_RhythmCharge
   m_TagString: Untagged
@@ -303,3 +304,18 @@ MonoBehaviour:
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 51
+--- !u!114 &1877680012681666384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2253480226399273074}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad211ee5731c0be4f805049036d85292, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _distance: 3
+  _localDirection: {x: 0, y: 0, z: 1}
+  _waitDuration: 1

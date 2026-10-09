@@ -9,7 +9,8 @@ namespace BlindBlade.Enemies
         Idle,
         Chasing,
         Searching,
-        Attacking
+        Attacking,
+        Patrolling
     }
 
     [DisallowMultipleComponent]
@@ -25,6 +26,8 @@ namespace BlindBlade.Enemies
         private EnemySensor _sensor;
         private EnemyMotor _motor;
         private EnemyAttackSelector _attackSelector;
+        private EnemyPatrol _patrol;
+        private bool _hasVisibleTarget;
         private EnemyState _state;
         private Vector3 _lastKnownPosition;
         private float _lastSeenTime;
@@ -44,6 +47,7 @@ namespace BlindBlade.Enemies
             _sensor = GetComponent<EnemySensor>();
             _motor = GetComponent<EnemyMotor>();
             _attackSelector = GetComponent<EnemyAttackSelector>();
+            _patrol = GetComponent<EnemyPatrol>();
         }
 
         protected virtual void OnEnable()
@@ -52,6 +56,7 @@ namespace BlindBlade.Enemies
             _nextRepathTime = 0f;
             _lastSeenTime = float.NegativeInfinity;
             _lastKnownPosition = transform.position;
+            _hasVisibleTarget = false;
         }
 
         protected virtual void Update()
@@ -77,8 +82,19 @@ namespace BlindBlade.Enemies
                 UpdatePerception();
             }
 
-            if (_state == EnemyState.Idle)
+            if (_state == EnemyState.Idle || _state == EnemyState.Patrolling)
+            {
+                if (!_hasVisibleTarget && _patrol != null && _patrol.IsConfigured)
+                {
+                    ChangeState(EnemyState.Patrolling);
+                    _patrol.UpdatePatrol();
+                }
+                else
+                {
+                    ChangeState(EnemyState.Idle);
+                }
                 return;
+            }
 
             if (_state == EnemyState.Attacking)
             {
@@ -124,6 +140,7 @@ namespace BlindBlade.Enemies
             _attackSelector.CancelCurrentAttack();
             _lastSeenTime = float.NegativeInfinity;
             _nextPerceptionTime = 0f;
+            _hasVisibleTarget = false;
             _motor.Stop();
             ChangeState(EnemyState.Idle);
         }
@@ -135,13 +152,15 @@ namespace BlindBlade.Enemies
         /// </summary>
         protected virtual void UpdatePerception()
         {
+            _hasVisibleTarget = _sensor.CanSeeTarget();
             if (_sensor.Target == null || !_sensor.Target.gameObject.activeInHierarchy)
             {
-                ChangeState(EnemyState.Idle);
+                if (_state != EnemyState.Patrolling)
+                    ChangeState(EnemyState.Idle);
                 return;
             }
 
-            if (_sensor.CanSeeTarget())
+            if (_hasVisibleTarget)
             {
                 _lastKnownPosition = _sensor.Target.position;
                 _lastSeenTime = Time.time;
@@ -164,6 +183,8 @@ namespace BlindBlade.Enemies
             if (_state == nextState)
                 return;
 
+            if (_state == EnemyState.Patrolling && _patrol != null)
+                _patrol.Pause();
             _state = nextState;
             if (_state == EnemyState.Idle)
                 _motor.Stop();

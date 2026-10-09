@@ -6,7 +6,8 @@ namespace BlindBlade.Enemies
     public sealed class EnemySensor : MonoBehaviour
     {
         [Header("감지 설정")]
-        [SerializeField] private Transform _target;
+        [SerializeField, Tooltip("비어 있으면 시작 시 Player 태그의 오브젝트를 대상으로 연결합니다.")]
+        private Transform _target;
         [SerializeField, Min(0f)] private float _detectionRange = 12f;
         [SerializeField] private Vector3 _eyeOffset = new Vector3(0f, 1.5f, 0f);
         [SerializeField] private Vector3 _targetOffset = new Vector3(0f, 1f, 0f);
@@ -14,6 +15,16 @@ namespace BlindBlade.Enemies
 
         public Transform Target => _target;
         public float DetectionRange => _detectionRange;
+
+        void Awake()
+        {
+            if (_target == null)
+            {
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null)
+                    _target = player.transform;
+            }
+        }
 
         /// <summary>
         /// target을 감지 대상으로 지정하여 이후 거리와 시야 검사에 사용할 대상을 변경한다.

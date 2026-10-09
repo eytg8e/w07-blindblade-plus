@@ -138,6 +138,7 @@ GameObject:
   - component: {fileID: 112837380}
   - component: {fileID: 112837379}
   - component: {fileID: 112837383}
+  - component: {fileID: 112837384}
   m_Layer: 0
   m_Name: Enemy_MultiPattern
   m_TagString: Untagged
@@ -368,6 +369,21 @@ MonoBehaviour:
     m_Bits: 1
   _rayHeight: 0.5
   _rayDepth: 0.5
+--- !u!114 &112837384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 112837371}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad211ee5731c0be4f805049036d85292, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _distance: 3
+  _localDirection: {x: 0, y: 0, z: 1}
+  _waitDuration: 1
 --- !u!1 &266063218
 GameObject:
   m_ObjectHideFlags: 0
@@ -532,7 +548,7 @@ GameObject:
   - component: {fileID: 583122672}
   m_Layer: 0
   m_Name: StationaryPlayer
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1410,6 +1426,7 @@ GameObject:
   - component: {fileID: 1616937859}
   - component: {fileID: 1616937860}
   - component: {fileID: 1616937862}
+  - component: {fileID: 1616937863}
   m_Layer: 0
   m_Name: Enemy_SingleMelee
   m_TagString: Untagged
@@ -1587,6 +1604,21 @@ MonoBehaviour:
     m_Bits: 1
   _rayHeight: 0.5
   _rayDepth: 0.5
+--- !u!114 &1616937863
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1616937852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad211ee5731c0be4f805049036d85292, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _distance: 3
+  _localDirection: {x: 0, y: 0, z: 1}
+  _waitDuration: 1
 --- !u!1 &1636407054
 GameObject:
   m_ObjectHideFlags: 0
@@ -1714,6 +1746,7 @@ GameObject:
   - component: {fileID: 1799513522}
   - component: {fileID: 1799513523}
   - component: {fileID: 1799513525}
+  - component: {fileID: 1799513526}
   m_Layer: 0
   m_Name: Enemy_SingleRanged
   m_TagString: Untagged
@@ -1887,6 +1920,21 @@ MonoBehaviour:
     m_Bits: 1
   _rayHeight: 0.5
   _rayDepth: 0.5
+--- !u!114 &1799513526
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1799513515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad211ee5731c0be4f805049036d85292, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _distance: 3
+  _localDirection: {x: 0, y: 0, z: 1}
+  _waitDuration: 1
 --- !u!1 &1888083908
 GameObject:
   m_ObjectHideFlags: 0
@@ -2155,6 +2203,7 @@ GameObject:
   - component: {fileID: 1539248816218555215}
   - component: {fileID: 283672132828478333}
   - component: {fileID: 8609654580772754318}
+  - component: {fileID: 8609654580772754319}
   m_Layer: 0
   m_Name: Enemy_RhythmCharge
   m_TagString: Untagged
@@ -2315,6 +2364,21 @@ MonoBehaviour:
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 4294967291
+--- !u!114 &8609654580772754319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2738265269013884217}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad211ee5731c0be4f805049036d85292, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _distance: 3
+  _localDirection: {x: 0, y: 0, z: 1}
+  _waitDuration: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
