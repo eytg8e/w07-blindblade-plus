@@ -17,11 +17,7 @@
 | 매니저 싱글턴 | [명세](features/매니저_싱글턴.md) |
 | FMOD 사운드 수동 검증 | [명세](features/FMOD_사운드_검증.md) |
 | FMOD 사운드 매니저 | [명세](features/FMOD_사운드_매니저.md) |
-| 감각 표현 | [명세](features/감각_표현.md) |
-| 플레이어 시스템 | [명세](features/플레이어_시스템.md) |
-| 적 추적 | [명세](features/적_추적.md) |
-| 적 공격 패턴 | [명세](features/적_공격_패턴.md) |
-| 발자국 시스템 | [명세](features/발자국_시스템.md) |
+| 이펙트 시스템 | [명세](features/이펙트_시스템.md) |
 
 ## 공통 양식
 
