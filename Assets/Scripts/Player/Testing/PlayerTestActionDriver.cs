@@ -10,8 +10,8 @@ public sealed class PlayerTestActionDriver : MonoBehaviour
     [SerializeField] private PlayerAnimationEventRelay _animationEventRelay;
     [SerializeField, Min(0f)] private float _normalHitTime = 0.15f;
     [SerializeField, Min(0f)] private float _normalActionDuration = 0.4f;
-    [SerializeField, Min(0f)] private float _iaidoHitTime = 0.18f;
-    [SerializeField, Min(0f)] private float _iaidoSlashDuration = 0.5f;
+    [SerializeField, Min(0f)] private float _iaidoHitTime = 0.42f;
+    [SerializeField, Min(0f)] private float _iaidoSlashDuration = 0.72f;
 
     private PlayerActionState _activeState;
     private int _activeActionId;
@@ -96,6 +96,20 @@ public sealed class PlayerTestActionDriver : MonoBehaviour
             else
                 _player.NotifyIaidoSlashAnimationEnded(_activeActionId);
         }
+    }
+
+    /// <summary>kind의 실제 적중·종료 시간을 읽어 시각 모션에 제공한다. 드라이버의 판정 시간은 변경하지 않는다.</summary>
+    public void GetPresentationTiming(PlayerAttackKind kind, out float impactTime, out float duration)
+    {
+        bool iaido = kind == PlayerAttackKind.IaidoFinisher;
+        impactTime = iaido ? _iaidoHitTime : _normalHitTime;
+        duration = iaido ? _iaidoSlashDuration : _normalActionDuration;
+    }
+
+    /// <summary>현재 actionId의 게임 시간 경과를 반환한다. 아직 시작되지 않았거나 다른 행동이면 0을 반환한다.</summary>
+    public float GetPresentationElapsed(int actionId)
+    {
+        return actionId == _activeActionId ? _elapsed : 0f;
     }
 
     private void OnValidate()

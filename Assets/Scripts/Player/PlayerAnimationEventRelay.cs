@@ -83,7 +83,8 @@ public sealed class PlayerAnimationEventRelay : MonoBehaviour
 
         if (_hasActiveAction && actionEvent.ActionId == _activeActionId
             && (actionEvent.Stage == PlayerActionStage.ActionEnded
-                || actionEvent.Stage == PlayerActionStage.RequestRejected
+                || (actionEvent.Stage == PlayerActionStage.RequestRejected
+                    && actionEvent.State != _activeActionState)
                 || actionEvent.State == PlayerActionState.Dead))
         {
             ClearTrackedAction();

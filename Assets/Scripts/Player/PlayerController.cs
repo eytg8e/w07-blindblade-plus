@@ -64,6 +64,8 @@ public sealed class PlayerController : MonoBehaviour
     public bool IsGuarding => _state == PlayerActionState.Guarding;
     public bool IsCharging => _state == PlayerActionState.Charging;
     public bool IsChargingReady => _state == PlayerActionState.Charging && _chargeReady;
+    /// <summary>실제 차징 시간을 0~1로 읽어 표현에 전달한다. 행동 타이밍은 변경하지 않는다.</summary>
+    public float ChargeProgress => _minimumChargeTime <= 0f ? 1f : Mathf.Clamp01(_chargeElapsed / _minimumChargeTime);
     public bool IsPaused => _state == PlayerActionState.Paused;
     public int CurrentActionId => _currentActionId;
     public bool IsInRecovery => _state == PlayerActionState.Recovery;

@@ -17,6 +17,7 @@
 | 매니저 싱글턴 | [명세](features/매니저_싱글턴.md) |
 | FMOD 사운드 수동 검증 | [명세](features/FMOD_사운드_검증.md) |
 | FMOD 사운드 매니저 | [명세](features/FMOD_사운드_매니저.md) |
+| 플레이어 검 애니메이션 | [명세](features/플레이어_검_애니메이션.md) |
 
 ## 공통 양식
 
