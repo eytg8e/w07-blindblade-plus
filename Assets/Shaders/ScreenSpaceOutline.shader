@@ -6,6 +6,7 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
         _LineWidth ("Line Width", Float) = 1
         _DepthSensitivity ("Depth Sensitivity", Float) = 50
         _NormalSensitivity ("Normal Sensitivity", Float) = 4
+        _TransparentThreshold ("Transparent Coverage Threshold", Float) = 0.015
     }
 
     SubShader
@@ -37,7 +38,11 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float _DepthSensitivity;
                 float _NormalSensitivity;
                 float _UsePerceptionMask;
+                float _TransparentThreshold;
             CBUFFER_END
+
+            TEXTURE2D_X(_OutlineOpaqueColor);
+            TEXTURE2D_X(_OutlineTransparentDepth);
 
             #define MAX_SOUND_REGIONS 16
             float4 _OutlineObserverRegion;
@@ -93,6 +98,20 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 #endif
             }
 
+            // 원근 및 직교 카메라의 장치 깊이를 같은 눈 공간 거리로 변환한다.
+            float EyeDepth(float rawDepth)
+            {
+                if (unity_OrthoParams.w > 0.5)
+                {
+                    #if UNITY_REVERSED_Z
+                        return lerp(_ProjectionParams.y, _ProjectionParams.z, 1.0 - rawDepth);
+                    #else
+                        return lerp(_ProjectionParams.y, _ProjectionParams.z, rawDepth);
+                    #endif
+                }
+                return LinearEyeDepth(rawDepth, _ZBufferParams);
+            }
+
             // 두 픽셀의 상대 깊이와 노멀 차이를 사용해 경계 강도를 반환한다.
             float EdgeBetween(float2 firstUv, float2 secondUv)
             {
@@ -109,18 +128,8 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 if (firstSurface == 0.0)
                     return 0.0;
 
-                float firstDepth = LinearEyeDepth(firstRawDepth, _ZBufferParams);
-                float secondDepth = LinearEyeDepth(secondRawDepth, _ZBufferParams);
-                if (unity_OrthoParams.w > 0.5)
-                {
-                    #if UNITY_REVERSED_Z
-                        firstDepth = lerp(_ProjectionParams.y, _ProjectionParams.z, 1.0 - firstRawDepth);
-                        secondDepth = lerp(_ProjectionParams.y, _ProjectionParams.z, 1.0 - secondRawDepth);
-                    #else
-                        firstDepth = lerp(_ProjectionParams.y, _ProjectionParams.z, firstRawDepth);
-                        secondDepth = lerp(_ProjectionParams.y, _ProjectionParams.z, secondRawDepth);
-                    #endif
-                }
+                float firstDepth = EyeDepth(firstRawDepth);
+                float secondDepth = EyeDepth(secondRawDepth);
                 float depthDifference = abs(firstDepth - secondDepth)
                     / max(min(firstDepth, secondDepth), 0.0001);
                 float normalDifference = length(
@@ -137,7 +146,35 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                     PerceptionVisibility(secondUv, secondRawDepth, secondSurface));
             }
 
-            // 대각선 픽셀 차이로 선을 생성하고 면과 배경을 검게 출력한다.
+            // 선택한 VFX가 원래 셰이더로 만든 알파와 색상에서 모양을 검출한다.
+            float TransparentCoverage(float2 uv)
+            {
+                float4 source = SAMPLE_TEXTURE2D_X(_OutlineOpaqueColor, sampler_LinearClamp, uv);
+                float difference = max(source.a, max(abs(source.r), max(abs(source.g), abs(source.b))));
+                float depth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, uv).r;
+                return smoothstep(_TransparentThreshold, _TransparentThreshold * 2.0, difference) * HasSurface(depth);
+            }
+
+            // 실제 표시된 투명 모양의 경계와 투명 기하 깊이 차이를 인지 영역에 맞춰 표시한다.
+            float TransparentEdgeBetween(float2 firstUv, float2 secondUv)
+            {
+                float first = TransparentCoverage(firstUv);
+                float second = TransparentCoverage(secondUv);
+                float firstDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, firstUv).r;
+                float secondDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, secondUv).r;
+                float edge = saturate(abs(first - second) * 1.5);
+                if (first > 0.5 && second > 0.5)
+                {
+                    float a = EyeDepth(firstDepth);
+                    float b = EyeDepth(secondDepth);
+                    float difference = abs(a - b) / max(min(a, b), 0.0001);
+                    edge = max(edge, smoothstep(1.0, 1.25, difference * _DepthSensitivity));
+                }
+                return edge * max(PerceptionVisibility(firstUv, firstDepth, first),
+                    PerceptionVisibility(secondUv, secondDepth, second));
+            }
+
+            // 불투명 경계와 투명 이펙트 경계를 합성하고 모든 면과 배경은 검게 출력한다.
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
@@ -150,6 +187,10 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float2 thirdUv = saturate(uv + float2(-lowerOffset, upperOffset) * texelSize);
                 float2 fourthUv = saturate(uv + float2(upperOffset, -lowerOffset) * texelSize);
                 float edge = max(EdgeBetween(firstUv, secondUv), EdgeBetween(thirdUv, fourthUv));
+                edge *= 1.0 - TransparentCoverage(uv);
+                float transparentEdge = max(TransparentEdgeBetween(firstUv, secondUv),
+                    TransparentEdgeBetween(thirdUv, fourthUv));
+                edge = max(edge, transparentEdge);
                 return half4(_LineColor.rgb * (_LineColor.a * edge), 1.0);
             }
             ENDHLSL
