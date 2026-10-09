@@ -4,6 +4,7 @@
 - 동작 조건 및 처리 흐름: Managers가 승인된 Resources 설정을 로드해 SoundManager를 생성한다. 단발 효과음은 자연 종료하고 BGM은 매니저가 하나만 유지한다. Update는 종료된 재생과 소유자 수명을 정리한다.
 - 구현 상태: 공개 재생 핸들과 미사용 지속 효과음 API를 제거하고 단발 효과음/BGM 중심으로 단순화했다. 기존 오브젝트별 정지와 음량 제어는 유지한다.
 - 로그 규칙: Debug.Log 계열 안내 및 오류 메시지는 영어로 작성한다.
+- 이름 변경 검증: SoundLibrary로 명칭과 Resources 로드 경로를 변경했다. Unity 재컴파일 성공, 새 경로의 에셋 로드, 기존 스크립트·에셋 GUID 및 FMOD 이벤트·Bus 설정 보존을 확인했다. 실제 소리 재생은 이번 작업에서 검증하지 않았다.
 
 #### 관련 코드
 
@@ -11,20 +12,20 @@
 | --- | --- | --- |
 | Assets/Scripts/Managers/SoundManager.cs | SoundManager | FMOD를 숨기는 공통 재생 API |
 | Assets/Scripts/Managers/Managers.cs | InitializeSingleton, Update, ClearServices | 서비스 생성, 매 프레임 정리, 종료 처리 |
-| Assets/Scripts/SoundSystem/SoundCatalog.cs | SoundCatalog / TryGetEvent | 사운드 ID와 FMOD 이벤트 연결 |
+| Assets/Scripts/SoundSystem/SoundLibrary.cs | SoundLibrary / TryGetEvent | 사운드 ID와 FMOD 이벤트 연결 |
 | Assets/Scripts/Enums/SoundId.cs | SoundId | 협업자가 선택하는 사운드 이름 |
-| Assets/Resources/Sound/SoundCatalog.asset | SoundCatalog | 사운드 담당자가 편집하는 실제 설정 |
+| Assets/Resources/Sound/SoundLibrary.asset | SoundLibrary | 사운드 담당자가 편집하는 실제 설정 |
 
 #### 연결 및 협업
 
 - 연결된 기능: 기존 Managers, ResourceManager, FMOD RuntimeManager, BGM_Bus 및 SFX_Bus.
-- 공유하는 코드 및 상태: 기존 Managers.Sound 접근을 유지한다. 공통 Managers의 수정은 담당자와 합의해야 하며 이번 문서 작업에서는 Managers와 모든 C# 스크립트를 변경하지 않는다.
+- 공유하는 코드 및 상태: 기존 Managers.Sound 접근을 유지한다. 이번 이름 변경 요청에 따라 공통 Managers의 로드 타입과 경로를 SoundLibrary로 함께 변경했다.
 - 중복 또는 충돌 사항: 협업자에게 반환하던 재생 핸들과 지속 효과음 전용 API는 제거했다. 현재 저장소에는 해당 API를 사용하는 게임 스크립트가 없다. 다른 브랜치의 사용 여부는 미확인이다.
-- 승인 필요 사항 및 결과: 사용자가 불필요한 재생 핸들 제거와 스크립트/문서 단순화를 요청했다. 기존에 승인한 Catalog 에셋 경로를 유지한다. 새 Editor 폴더나 에셋 폴더는 만들지 않는다.
+- 승인 필요 사항 및 결과: 사용자가 불필요한 재생 핸들 제거와 스크립트/문서 단순화를 요청했다. 사용자가 SoundCatalog를 SoundLibrary로 변경하도록 요청하여 클래스·스크립트·설정 에셋 및 Resources 로드 경로를 함께 변경한다. 기존 GUID와 FMOD 이벤트·Bus 설정을 유지한다. 새 Editor 폴더나 에셋 폴더는 만들지 않는다.
 
 #### 새 씬에서 Unity Editor로 환경 구성하기
 
-아래 절차는 같은 프로젝트 안에 새 씬을 추가하는 경우다. FMOD 플러그인과 기존 Catalog를 재사용한다. 씬을 만들고 Listener만 추가해도 소리가 자동 재생되지는 않으므로 마지막에 게임 코드의 재생 호출까지 연결한다.
+아래 절차는 같은 프로젝트 안에 새 씬을 추가하는 경우다. FMOD 플러그인과 기존 Library를 재사용한다. 씬을 만들고 Listener만 추가해도 소리가 자동 재생되지는 않으므로 마지막에 게임 코드의 재생 호출까지 연결한다.
 
 ##### 1. 씬 생성과 카메라 준비
 
@@ -41,12 +42,12 @@
 3. Inspector의 Attenuation Object는 이 기본 구성에서는 비워 둔다. 그러면 해당 카메라 위치가 청취 위치가 된다.
 4. Unity의 AudioListener는 FMOD StudioListener와 다른 컴포넌트다. AudioListener만 있는 상태로 FMOD 청취 구성이 완료됐다고 판단하지 않는다.
 
-##### 3. 기존 FMOD 설정과 Catalog 확인
+##### 3. 기존 FMOD 설정과 Library 확인
 
 1. Unity 상단의 `FMOD > Edit Settings`를 열고 Source Type이 Studio 프로젝트를 사용하는지 확인한다.
 2. 연결 파일이 `FMODProject/week06-blindblade/week06-blindblade.fspro`인지 확인한다. 새 씬을 추가하기 위해 프로젝트 연결이나 Bank 로딩 설정을 변경하지 않는다.
 3. `FMOD > Event Browser`에서 `event:/Test/TestFootsteps`, `event:/Test/TestAmbience`가 보이는지 확인한다. 표시되지 않으면 Studio의 Bank 빌드 및 연결 경로부터 확인한다.
-4. Project 창에서 `Assets/Resources/Sound/SoundCatalog.asset`을 선택한다. Inspector의 Events에 Footstep/Effect/발소리 이벤트와 Ambience/BGM/배경음 이벤트가 연결되어 있는지 확인한다.
+4. Project 창에서 `Assets/Resources/Sound/SoundLibrary.asset`을 선택한다. Inspector의 Events에 Footstep/Effect/발소리 이벤트와 Ambience/BGM/배경음 이벤트가 연결되어 있는지 확인한다.
 5. Mixer의 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SFX_Bus`를 확인한다. 이 에셋은 씬마다 복제하거나 Hierarchy에 배치하지 않는다.
 
 ##### 4. Managers 배치에 대한 선택
@@ -54,7 +55,7 @@
 - 기본 구성에서는 Managers를 Hierarchy에 수동으로 추가할 필요가 없다. Play Mode에서 처음 `Managers.Sound`를 호출하면 기존 Managers를 찾고, 없으면 자동 생성한다.
 - 자동 생성된 오브젝트는 `@ReusableManagers`로 표시되고 씬 전환 이후에도 유지된다. 호출할 때마다 새 매니저를 생성하지 않는다.
 - 프로젝트의 기존 부트스트랩이나 프리팹이 이미 Managers를 제공한다면 그 구성을 그대로 사용한다. 새로운 씬마다 별도 매니저를 추가하지 않는다.
-- SoundManager는 일반 C# 클래스라 Add Component로 부착하는 대상이 아니다. SoundCatalog.asset을 Managers의 Inspector에 드래그할 필요도 없다. 현재 코드가 Resources 경로에서 로드한다.
+- SoundManager는 일반 C# 클래스라 Add Component로 부착하는 대상이 아니다. SoundLibrary.asset을 Managers의 Inspector에 드래그할 필요도 없다. 현재 코드가 Resources 경로에서 로드한다.
 - 공통 Managers의 생성 코드와 `_sound.Update()`는 씬 준비를 이유로 수정하지 않는다. 변경이 필요하면 담당자와 합의한다.
 
 ##### 5. 발음체와 실제 재생 호출 연결
@@ -135,7 +136,7 @@ public class SceneAudioController : MonoBehaviour
 6. Play Mode를 종료한다. Play Mode 중 변경한 Transform이나 연결 값이 씬에 저장됐다고 가정하지 않는다. 필요한 최종 배치는 Edit Mode에서 설정하고 다시 저장한다.
 7. 이후 실제 게임 행동에 연결한 상태에서 [수동 검증 절차](FMOD_사운드_검증.md)의 나머지 항목을 수행한다.
 
-새 씬 구성의 완료 기준은 카메라/Listener, 기존 Catalog, Managers 실행 주체, 실제 재생 호출이 모두 연결된 상태다. 현재 프로젝트에서 새 게임 씬을 이 절차대로 생성·실행한 결과는 별도 검증 전까지 미확인으로 기록한다.
+새 씬 구성의 완료 기준은 카메라/Listener, 기존 Library, Managers 실행 주체, 실제 재생 호출이 모두 연결된 상태다. 현재 프로젝트에서 새 게임 씬을 이 절차대로 생성·실행한 결과는 별도 검증 전까지 미확인으로 기록한다.
 
 문서의 SceneAudioController 예시는 현재 Unity의 Pipeline에서 컴파일만 검증했으며 성공했다. Inspector에서 할당하는 Footstep Source 필드에 대한 CS0649 경고가 있었으므로 위 드래그 연결 단계를 빠뜨리지 않는다. 예시 코드를 실행하거나 새 씬과 스크립트를 저장소에 생성하지 않았다.
 
@@ -207,11 +208,11 @@ Managers.Sound.Clear();
 
 #### 사운드 담당자의 등록 방법
 
-SoundId는 게임 코드가 사용하는 이름이고, SoundCatalog는 그 이름에 실제 FMOD 이벤트를 연결하는 설정이다. ID만 추가하거나 Studio 이벤트만 제작해서는 매니저 재생이 완성되지 않는다.
+SoundId는 게임 코드가 사용하는 이름이고, SoundLibrary는 그 이름에 실제 FMOD 이벤트를 연결하는 설정이다. ID만 추가하거나 Studio 이벤트만 제작해서는 매니저 재생이 완성되지 않는다.
 
 1. FMOD Studio에서 이벤트를 제작하고 적절한 Bus/Bank에 연결한 뒤 빌드한다. 실제 프로젝트 경로는 `FMODProject/week06-blindblade/week06-blindblade.fspro`다.
 2. `Assets/Scripts/Enums/SoundId.cs`의 enum에 이름과 고유 숫자를 추가한다. None=0은 재생에 사용하지 않는다. 이미 저장한 ID의 숫자는 변경하거나 다른 소리에 재사용하지 않는다.
-3. Unity 컴파일을 기다린 뒤 Project에서 기존 `Assets/Resources/Sound/SoundCatalog.asset`을 선택한다. 추가 사운드마다 Catalog 에셋을 새로 만들지 않는다.
+3. Unity 컴파일을 기다린 뒤 Project에서 기존 `Assets/Resources/Sound/SoundLibrary.asset`을 선택한다. 추가 사운드마다 Library 에셋을 새로 만들지 않는다.
 4. Inspector의 Events 배열에 항목을 하나 추가하고 Id에 새 enum 값, Type에 Effect 또는 BGM, Event에 FMOD Event Browser에서 고른 이벤트를 지정한다.
 5. Effect는 단발 이벤트에 연결하고 Play/PlayAttached로 호출한다. BGM은 2D 이벤트에 연결하고 PlayBgm으로 호출한다. 음악을 반복하려면 Studio에서 Loop Region을 설정한다.
 6. None, 중복 Id, 비어 있는 Event를 확인하고 에셋을 저장한다. 중복은 임의로 첫 항목을 재생하지 않고 오류로 거부한다.
@@ -229,13 +230,13 @@ public enum SoundId
 }
 ```
 
-그다음 Catalog에 Id=SwordHit, Type=Effect, Event=실제로 제작한 단발 타격음 이벤트를 연결한다. 등록까지 끝난 뒤에만 `Managers.Sound.Play(SoundId.SwordHit, hitPosition)`을 사용한다.
+그다음 Library에 Id=SwordHit, Type=Effect, Event=실제로 제작한 단발 타격음 이벤트를 연결한다. 등록까지 끝난 뒤에만 `Managers.Sound.Play(SoundId.SwordHit, hitPosition)`을 사용한다.
 
-Catalog의 Mixer 설정은 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SFX_Bus`다. Studio의 실제 Bus 경로가 바뀌면 이 값도 갱신한다. Bank 이름과 Bus 경로는 다른 개념이다.
+Library의 Mixer 설정은 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SFX_Bus`다. Studio의 실제 Bus 경로가 바뀌면 이 값도 갱신한다. Bank 이름과 Bus 경로는 다른 개념이다.
 
-자동 로드 경로는 `Sound/SoundCatalog`로 고정되어 있다. 에셋을 Resources 밖으로 이동하거나 이름을 바꾸면 Managers가 찾지 못한다. 경로를 바꿔야 한다면 공통 Managers 담당자와 먼저 합의한다.
+자동 로드 경로는 `Sound/SoundLibrary`로 고정되어 있다. 에셋을 Resources 밖으로 이동하거나 이름을 바꾸면 Managers가 찾지 못한다. 경로를 바꿔야 한다면 공통 Managers 담당자와 먼저 합의한다.
 
-재생되지 않을 때는 영어 Console 경고를 확인한다. 등록 누락은 `No event registered for SoundId`, Catalog 로드 누락은 `SoundCatalog is not assigned`, 종류 불일치는 `playback API does not match`, Bank/Bus 누락은 `not found in loaded banks`로 안내된다.
+재생되지 않을 때는 영어 Console 경고를 확인한다. 등록 누락은 `No event registered for SoundId`, Library 로드 누락은 `SoundLibrary is not assigned`, 종류 불일치는 `playback API does not match`, Bank/Bus 누락은 `not found in loaded banks`로 안내된다.
 
 | ID | Type | 현재 FMOD 이벤트 |
 | --- | --- | --- |
@@ -247,7 +248,7 @@ Catalog의 Mixer 설정은 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SF
 ```mermaid
 flowchart LR
     Caller["게임 스크립트"] -->|"SoundId로 요청"| Manager["Managers.Sound"]
-    Catalog["SoundCatalog.asset"] -->|"ID와 이벤트 연결"| Manager
+    Library["SoundLibrary.asset"] -->|"ID와 이벤트 연결"| Manager
     Manager -->|"생성·재생·해제"| FMOD["FMOD"]
     Update["Managers.Update"] -->|"종료·소유자 정리"| Manager
 ```
@@ -256,8 +257,8 @@ flowchart LR
 - 내부 ActiveEffect는 단발음의 인스턴스와 소유자만 기록하는 private 데이터다. 별도 스크립트나 협업자가 다루는 핸들이 아니다.
 - 단발음은 시작 직후 해제를 요청하여 자연 종료 시 FMOD가 자원을 반환한다. Update는 종료된 항목을 내부 목록에서 제거한다.
 - 실제 오디오 믹싱과 부착 발음체의 위치 갱신은 FMOD RuntimeManager가 수행한다. 매니저 Update는 소리를 반복 재생하지 않는다.
-- Managers는 PoolManager, ResourceManager, SoundManager, SceneManagerEx를 보유하며 씬 전환 시 유지된다. ResourceManager는 Catalog만 로드하며 FMOD 음원은 Unity AudioClip Pool을 사용하지 않는다.
-- SoundCatalog.cs는 SoundSystem 폴더에 있고 실제 설정 에셋은 Resources/Sound에 있다. 기존 호출과 설정 에셋 경로는 유지한다.
+- Managers는 PoolManager, ResourceManager, SoundManager, SceneManagerEx를 보유하며 씬 전환 시 유지된다. ResourceManager는 Library만 로드하며 FMOD 음원은 Unity AudioClip Pool을 사용하지 않는다.
+- SoundLibrary.cs는 SoundSystem 폴더에 있고 실제 설정 에셋은 Resources/Sound에 있다. 기존 호출은 유지하며 설정 에셋 이름과 로드 경로를 SoundLibrary로 변경했다.
 
 #### 공통 Managers의 Update 호출에 대한 협업 규칙
 
