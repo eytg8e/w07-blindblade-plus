@@ -286,3 +286,5 @@ flowchart LR
 - SoundLibrary의 기존 event:/Test/TestFootsteps 연결을 유지한다. 새 event:/Footsteps도 Event Browser에 있지만 이번 설정에서 선택하지 않았다. 사용자가 편집한 Studio 음원·이벤트·Bank 파일은 수정하거나 커밋에 포함하지 않았다.
 - Unity 컴파일 성공. 현재 씬의 Step Move Duration 0.4초와 Step Pause Duration 0.08초를 사용한 Play 검증에서 실제 착지 1회 → FMOD 인스턴스 1개, PLAYING, 3D, 음량 0.6, WASAPI 출력 상태를 확인했다. 체감 음질·크기의 청취 검증은 미확인이다.
 - 런타임 검증 후 Play를 종료했다. 테스트 코드·씬 오브젝트를 추가하지 않았다.
+
+- MainMap 이동 감각: SetFootstepOnlyOwner(GameObject)는 지정 플레이어의 Footstep만 허용하고 기존 효과음을 정지하며 BGM을 음소거한다. null로 제한을 해제한다. 이동 상태 판단과 해제는 MainMapSession이 소유하며 옵션 Bus 음량은 변경하지 않는다. 직접 FMOD/AudioSource 호출에는 적용되지 않는다.

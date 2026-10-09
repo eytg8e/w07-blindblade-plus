@@ -12,6 +12,7 @@ public class SoundManager
 {
     [Header("Configuration")]
     private readonly SoundLibrary _library;
+    private GameObject _footstepOnlyOwner;
 
     [Header("Effects")]
     private readonly List<ActiveEffect> _effects = new List<ActiveEffect>();
@@ -69,6 +70,18 @@ public class SoundManager
         }
     }
 
+    /// <summary>owner 지정 시 해당 플레이어의 발소리만 허용하고 기존 효과음을 정지한다. null이면 제한을 해제하고 BGM 음량을 복구한다.</summary>
+    public void SetFootstepOnlyOwner(GameObject owner)
+    {
+        if (_footstepOnlyOwner == owner)
+            return;
+        _footstepOnlyOwner = owner;
+        if (owner != null)
+            StopEffects();
+        if (_bgm.isValid() && RuntimeManager.IsInitialized)
+            _bgm.setVolume(owner != null ? 0f : 1f);
+    }
+
     /// <summary>
     /// soundId의 단발 효과음을 position에서 volume 배율로 재생한다.
     /// owner를 지정하면 해당 오브젝트의 수명을 따르며, 2D 이벤트는 위치를 사용하지 않고 성공 시 true를 반환한다.
@@ -124,6 +137,7 @@ public class SoundManager
             _bgmReleaseRequested = false;
             _bgmOwner = owner;
             _hasBgmOwner = owner != null;
+            _bgm.setVolume(_footstepOnlyOwner != null ? 0f : 1f);
             FMOD.RESULT result = _bgm.start();
             if (result == FMOD.RESULT.OK)
                 return true;
@@ -210,6 +224,7 @@ public class SoundManager
     /// </summary>
     public void Clear()
     {
+        _footstepOnlyOwner = null;
         StopBgm(false);
         StopEffects();
         _busesReady = false;
@@ -243,6 +258,8 @@ public class SoundManager
     /// </summary>
     private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume)
     {
+        if (_footstepOnlyOwner != null && (source != _footstepOnlyOwner || soundId != SoundId.Footstep))
+            return false;
         if (!ReferenceEquals(source, null) && (source == null || !source.activeInHierarchy))
         {
             Debug.LogWarning("[SoundManager] The sound owner must be active.");

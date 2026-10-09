@@ -29,6 +29,7 @@ namespace BlindBlade.Rendering
         private float _soundLifetime = 1f;
         private readonly Vector4[] _soundRegions = new Vector4[MAX_SOUND_REGIONS];
         private int _soundCount;
+        private bool _footstepOnly;
 
         [Header("인지 경계")]
         [SerializeField, Min(0.01f), Tooltip("인지 반경 안쪽에서 가장자리까지 흐려지는 거리(미터).")]
@@ -56,10 +57,33 @@ namespace BlindBlade.Rendering
             PublishMask();
         }
 
+        /// <summary>enabled로 착지 전용 표시를 전환하고 이전 영역을 비운다.</summary>
+        public void SetFootstepOnly(bool enabled)
+        {
+            _footstepOnly = enabled;
+            ClearMask();
+            PublishMask();
+        }
+
+        /// <summary>착지 position의 주변을 잠깐 표시하고 기존 수명으로 페이드한다.</summary>
+        public void RevealFootstep(Vector3 position)
+        {
+            if (_sensoryManager.IsReady)
+                RegisterRegion(position);
+        }
+
         /// <summary>
         /// 사건의 월드 위치와 발생 시간을 버퍼에 등록하고 가장 오래된 영역부터 교체한다.
         /// </summary>
         private void HandlePerceptionRequested(SensoryEvent sensoryEvent)
+        {
+            if (_footstepOnly)
+                return;
+            RegisterRegion(sensoryEvent.Position);
+        }
+
+        /// <summary>position에 임시 표시 영역을 등록하고 오래된 영역을 교체한다.</summary>
+        private void RegisterRegion(Vector3 position)
         {
             if (_soundCount == MAX_SOUND_REGIONS)
             {
@@ -68,7 +92,6 @@ namespace BlindBlade.Rendering
                 _soundCount--;
             }
 
-            Vector3 position = sensoryEvent.Position;
             _soundRegions[_soundCount++] = new Vector4(position.x, position.y, position.z, Time.time);
             PublishMask();
         }
@@ -95,7 +118,7 @@ namespace BlindBlade.Rendering
 
             Vector3 observerPosition = _sensoryManager.Observer.position;
             Shader.SetGlobalVector(_observerRegionId,
-                new Vector4(observerPosition.x, observerPosition.y, observerPosition.z, _playerRadius));
+                new Vector4(observerPosition.x, observerPosition.y, observerPosition.z, _footstepOnly ? 0f : _playerRadius));
             Shader.SetGlobalFloat(_soundRadiusId, _soundRadius);
             Shader.SetGlobalFloat(_soundLifetimeId, _soundLifetime);
             Shader.SetGlobalFloat(_edgeFadeId, _edgeFade);

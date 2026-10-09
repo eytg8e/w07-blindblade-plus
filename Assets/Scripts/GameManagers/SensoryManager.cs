@@ -25,6 +25,7 @@ public sealed class SensoryManager : MonoBehaviour
     private readonly List<ActiveEffect> _activeEffects = new List<ActiveEffect>(64);
     private bool _initialized;
     private bool _reportedUnavailable;
+    private bool _effectsVisible = true;
     public bool IsReady => _initialized && _observer != null && isActiveAndEnabled;
     public Transform Observer => _observer;
     public int ActiveEffectCount => _activeEffects.Count;
@@ -75,7 +76,7 @@ public sealed class SensoryManager : MonoBehaviour
                 _activeEffects.RemoveAt(i);
                 continue;
             }
-            float visibility = _observer != null
+            float visibility = _effectsVisible && _observer != null
                 ? CalculateVisibility(Vector3.Distance(entry.Position, _observer.position))
                 : 0f;
             entry.Effect.SetVisibility(visibility);
@@ -115,6 +116,13 @@ public sealed class SensoryManager : MonoBehaviour
         SetObserver(null);
     }
 
+    /// <summary>visible로 발자국·웨이브 표시를 제어하고 현재 효과에 즉시 반영한다. 인지 사건 전달은 유지한다.</summary>
+    public void SetEffectsVisible(bool visible)
+    {
+        _effectsVisible = visible;
+        LateUpdate();
+    }
+
     /// <summary>
     /// 사건 위치와 관측자 거리로 웨이브를 생성하고 생성 성공 여부를 반환한다.
     /// </summary>
@@ -149,6 +157,8 @@ public sealed class SensoryManager : MonoBehaviour
         if (visibility <= 0f)
             return false;
         PerceptionRequested?.Invoke(sensoryEvent);
+        if (!_effectsVisible)
+            return false;
         Quaternion rotation = Quaternion.LookRotation(sensoryEvent.Direction, sensoryEvent.SurfaceNormal);
         bool spawned = false;
         if (showFootstep && _footstepPrefab != null)
