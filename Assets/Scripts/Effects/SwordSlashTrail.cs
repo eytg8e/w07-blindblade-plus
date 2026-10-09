@@ -29,8 +29,10 @@ public sealed class SwordSlashTrail : MonoBehaviour
     private Mesh _mesh;
     private bool _emitting;
     private float _patternDistance;
+    private ProceduralSwordSlashVFX _appearance;
 
-    public bool IsPlaying => _emitting || _samples.Count > 0;
+    public bool IsPlaying => _emitting || _samples.Count > 0
+        || (_appearance != null && _appearance.IsAlive);
 
     private readonly struct BladeSample
     {
@@ -57,6 +59,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
         _mesh = new Mesh { name = "Procedural Sword Slash Trail" };
         _mesh.MarkDynamic();
         GetComponent<MeshFilter>().sharedMesh = _mesh;
+        _appearance = GetComponent<ProceduralSwordSlashVFX>();
     }
 
     void LateUpdate()
@@ -68,8 +71,15 @@ public sealed class SwordSlashTrail : MonoBehaviour
             _emitting = false;
         if (_emitting)
             RecordSample();
-        while (_samples.Count > 0 && Time.time - _samples[0].Time >= _lifetime)
-            _samples.RemoveAt(0);
+        if (_appearance != null)
+        {
+            _appearance.Tick(Time.deltaTime, _emitting);
+            if (!_emitting && !_appearance.IsAlive)
+                _samples.Clear();
+        }
+        else
+            while (_samples.Count > 0 && Time.time - _samples[0].Time >= _lifetime)
+                _samples.RemoveAt(0);
         RebuildMesh();
     }
 
@@ -102,6 +112,11 @@ public sealed class SwordSlashTrail : MonoBehaviour
         _bladeBase = bladeBase;
         _bladeTip = bladeTip;
         _emitting = true;
+        if (_appearance != null)
+        {
+            transform.position = bladeBase.position;
+            _appearance.Begin();
+        }
         RecordSample();
     }
 
@@ -136,6 +151,8 @@ public sealed class SwordSlashTrail : MonoBehaviour
         _emitting = false;
         _samples.Clear();
         _patternDistance = 0f;
+        if (_appearance != null)
+            _appearance.Clear();
         if (_mesh != null)
             _mesh.Clear();
     }
@@ -153,7 +170,9 @@ public sealed class SwordSlashTrail : MonoBehaviour
             BladeSample previous = _samples[_samples.Count - 1];
             float distance = Mathf.Max(Vector3.Distance(previous.Base, bladeBase),
                 Vector3.Distance(previous.Tip, bladeTip));
-            if (distance >= _teleportDistance)
+            float teleportMovement = _appearance != null
+                ? Vector3.Distance(previous.Base, bladeBase) : distance;
+            if (teleportMovement >= _teleportDistance)
             {
                 _samples.Clear();
                 _patternDistance = 0f;
@@ -207,5 +226,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
         _mesh.SetColors(_colors);
         _mesh.SetTriangles(_triangles, 0);
         _mesh.RecalculateBounds();
+        if (_appearance != null)
+            _appearance.ApplyAppearance(_mesh);
     }
 }

@@ -24,7 +24,7 @@ namespace BlindBlade.Rendering
         [SerializeField, Range(1, 6)] private int _lineWidth = 1;
         [SerializeField, Range(1f, 200f)] private float _depthSensitivity = 50f;
         [SerializeField, Range(1f, 20f)] private float _normalSensitivity = 4f;
-        [SerializeField, Range(0.001f, 0.5f), Tooltip("선택 VFX의 색상·알파 검출 기준이다.")]
+        [SerializeField, Range(0.001f, 0.5f), Tooltip("선택 VFX의 RGB 밝기 검출 기준이다.")]
         private float _transparentThreshold = 0.015f;
 
         [Header("렌더링 연결")]

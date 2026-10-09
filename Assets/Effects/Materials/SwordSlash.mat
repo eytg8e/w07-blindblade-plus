@@ -26,7 +26,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _BaseStrength: 0.45
-    - _BrushContrast: 0.95
+    - _BrushContrast: 1.15
     - _DetailStrength: 0.18
     - _DstBlend: 1
     - _HighlightWidth: 0.45

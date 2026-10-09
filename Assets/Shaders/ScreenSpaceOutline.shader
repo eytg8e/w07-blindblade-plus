@@ -146,16 +146,16 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                     PerceptionVisibility(secondUv, secondRawDepth, secondSurface));
             }
 
-            // 선택한 VFX가 원래 셰이더로 만든 알파와 색상에서 모양을 검출한다.
+            // 선택 VFX의 실제 RGB 기여에서 모양을 검출하고 보이지 않는 알파 면은 제외한다.
             float TransparentCoverage(float2 uv)
             {
                 float4 source = SAMPLE_TEXTURE2D_X(_OutlineOpaqueColor, sampler_LinearClamp, uv);
-                float difference = max(source.a, max(abs(source.r), max(abs(source.g), abs(source.b))));
+                float difference = max(abs(source.r), max(abs(source.g), abs(source.b)));
                 float depth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, uv).r;
                 return smoothstep(_TransparentThreshold, _TransparentThreshold * 2.0, difference) * HasSurface(depth);
             }
 
-            // 실제 표시된 투명 모양의 경계와 투명 기하 깊이 차이를 인지 영역에 맞춰 표시한다.
+            // 보이는 RGB 모양의 경계만 표시하며 기하 깊이는 인지 위치 계산에만 사용한다.
             float TransparentEdgeBetween(float2 firstUv, float2 secondUv)
             {
                 float first = TransparentCoverage(firstUv);
@@ -163,13 +163,6 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float firstDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, firstUv).r;
                 float secondDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, secondUv).r;
                 float edge = saturate(abs(first - second) * 1.5);
-                if (first > 0.5 && second > 0.5)
-                {
-                    float a = EyeDepth(firstDepth);
-                    float b = EyeDepth(secondDepth);
-                    float difference = abs(a - b) / max(min(a, b), 0.0001);
-                    edge = max(edge, smoothstep(1.0, 1.25, difference * _DepthSensitivity));
-                }
                 return edge * max(PerceptionVisibility(firstUv, firstDepth, first),
                     PerceptionVisibility(secondUv, secondDepth, second));
             }

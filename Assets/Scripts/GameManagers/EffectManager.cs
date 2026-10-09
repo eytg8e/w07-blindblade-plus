@@ -145,7 +145,7 @@ public sealed class EffectManager : MonoBehaviour
 
     /// <summary>
     /// 월드 position에 공용 원형 Hit 파티클을 재생한다.
-    /// 접촉점만 받아 기존 SwordClash 등록으로 생성하며 성공 여부를 반환한다.
+    /// 접촉점만 받아 SwordClash ID에 등록된 공용 타격 프리팹으로 생성하며 성공 여부를 반환한다.
     /// </summary>
     public bool PlayHit(Vector3 position)
     {

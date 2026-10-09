@@ -92,6 +92,13 @@ namespace BlindBlade.Rendering
                     route.Copies[i].CopyPropertiesFromMaterial(original);
                     route.Copies[i].renderQueue = selected ? 2500
                         : (original.renderQueue <= 2500 ? 3000 : original.renderQueue);
+                    if (selected && original.renderQueue > 2500)
+                    {
+                        // 원래 투명 재질은 불투명 깊이·노멀 프리패스에서 제외한다.
+                        route.Copies[i].SetShaderPassEnabled("DepthOnly", false);
+                        route.Copies[i].SetShaderPassEnabled("DepthNormals", false);
+                        route.Copies[i].SetShaderPassEnabled("DepthNormalsOnly", false);
+                    }
                 }
                 renderer.sharedMaterials = route.Copies;
             }
