@@ -18,6 +18,8 @@
 | FMOD 사운드 수동 검증 | [명세](features/FMOD_사운드_검증.md) |
 | FMOD 사운드 매니저 | [명세](features/FMOD_사운드_매니저.md) |
 | 이펙트 시스템 | [명세](features/이펙트_시스템.md) |
+| 화면 공간 윤곽선 | [명세](features/화면_공간_윤곽선.md) |
+| 감각 표현 | [명세](features/감각_표현.md) |
 
 ## 공통 양식
 

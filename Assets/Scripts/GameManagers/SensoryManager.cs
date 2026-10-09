@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -28,6 +29,7 @@ public sealed class SensoryManager : MonoBehaviour
     public bool IsReady => _initialized && _observer != null && isActiveAndEnabled;
     public Transform Observer => _observer;
     public int ActiveEffectCount => _activeEffects.Count;
+    public event Action<SensoryEvent> PerceptionRequested;
 
     private readonly struct ActiveEffect
     {
@@ -133,7 +135,7 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 공통 거리 정책으로 효과를 재생하며 발자국 요청일 때만 좌우 선택을 적용한다.
+    /// 공통 거리 판정을 통과한 사건을 알림으로 전달하고 효과를 재생하며 발자국 요청에 좌우 선택을 적용한다.
     /// </summary>
     private bool EmitEffects(SensoryEvent sensoryEvent, bool showFootstep, bool isLeft = false)
     {
@@ -149,6 +151,7 @@ public sealed class SensoryManager : MonoBehaviour
         float visibility = CalculateVisibility(Vector3.Distance(sensoryEvent.Position, _observer.position));
         if (visibility <= 0f)
             return false;
+        PerceptionRequested?.Invoke(sensoryEvent);
         Quaternion rotation = Quaternion.LookRotation(sensoryEvent.Direction, sensoryEvent.SurfaceNormal);
         bool spawned = false;
         if (showFootstep && _footstepPrefab != null)
