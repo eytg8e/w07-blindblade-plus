@@ -22,7 +22,7 @@ namespace BlindBlade.Enemies
         [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
         private NavMeshAgent _agent;
         private EnemyMotor _motor;
-        private EnemySensor _sensor;
+        private EnemySensor _rangeSensor;
         private Vector3 _direction;
         private Vector3 _lockedDestination;
         private float _previousSpeed;
@@ -34,7 +34,7 @@ namespace BlindBlade.Enemies
         private bool _isRunning;
         private bool _isMoving;
 
-        public override float Range => _sensor.DetectionRange;
+        public override float Range => _rangeSensor.DetectionRange;
         public override bool AllowsMovement => Phase == EnemyAttackPhase.Active;
         public event Action<EnemyAttackContext, int> PulseStarted;
 
@@ -47,7 +47,7 @@ namespace BlindBlade.Enemies
             base.Awake();
             _agent = GetComponent<NavMeshAgent>();
             _motor = GetComponent<EnemyMotor>();
-            _sensor = GetComponent<EnemySensor>();
+            _rangeSensor = GetComponent<EnemySensor>();
         }
 
         /// <summary>
