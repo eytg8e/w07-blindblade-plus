@@ -128,6 +128,7 @@ GameObject:
   - component: {fileID: 9198606408320082796}
   - component: {fileID: 1925365551691218873}
   - component: {fileID: 1096873540639086612}
+  - component: {fileID: 5368321131972277671}
   m_Layer: 0
   m_Name: Enemy_SingleRanged
   m_TagString: Untagged
@@ -316,6 +317,22 @@ MonoBehaviour:
   _distance: 3
   _localDirection: {x: 0, y: 0, z: 1}
   _waitDuration: 1
+--- !u!114 &5368321131972277671
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4881386061489125236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b256b4bb12560a41a0634808047e235, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxHealth: 30
+  _dieOnAnyHit: 1
+  _hitCollider: {fileID: 3463872705100445242}
+  _cancelAttackOnHit: 0
 --- !u!1 &7100173192179143851
 GameObject:
   m_ObjectHideFlags: 0

@@ -130,6 +130,8 @@ GameObject:
   - component: {fileID: 1158641304352380840}
   - component: {fileID: 8861553571904170434}
   - component: {fileID: 6570254151583680903}
+  - component: {fileID: 1906621012752804754}
+  - component: {fileID: 3724893727897300803}
   m_Layer: 0
   m_Name: Enemy_MultiPattern
   m_TagString: Untagged
@@ -375,6 +377,43 @@ MonoBehaviour:
   _distance: 3
   _localDirection: {x: 0, y: 0, z: 1}
   _waitDuration: 1
+--- !u!114 &1906621012752804754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7039733516697902587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b256b4bb12560a41a0634808047e235, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxHealth: 30
+  _dieOnAnyHit: 1
+  _hitCollider: {fileID: 9029861113449799703}
+  _cancelAttackOnHit: 0
+--- !u!114 &3724893727897300803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7039733516697902587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a302823d9df9f543b76d464db25a04c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _damage: 10
+  _radius: 0.5
+  _height: 1
+  _hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967291
 --- !u!1 &8140427288079008813
 GameObject:
   m_ObjectHideFlags: 0

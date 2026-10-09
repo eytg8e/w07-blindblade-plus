@@ -43,7 +43,7 @@ namespace BlindBlade.Enemies
 
         /// <summary>
         /// context의 고정 조준 위치와 Inspector의 반경·레이어로 Collider를 수집하여 피해를 전달한다.
-        /// 자신과 벽 뒤의 수신자를 제외하고 같은 수신자에는 공격 한 번당 한 번만 피해를 적용한다.
+        /// 지정 대상 계층만 판정하고 벽 뒤의 수신자를 제외하여 공격 한 번당 한 번만 피해를 적용한다.
         /// </summary>
         protected virtual void ApplyHit(EnemyAttackContext context)
         {
@@ -51,7 +51,8 @@ namespace BlindBlade.Enemies
             HashSet<IDamageable> damaged = new HashSet<IDamageable>();
             foreach (Collider collider in Physics.OverlapSphere(center, _hitRadius, _hitMask, QueryTriggerInteraction.Ignore))
             {
-                if (collider.transform.IsChildOf(transform))
+                if (collider.transform.IsChildOf(transform) || context.Target == null ||
+                    !collider.transform.IsChildOf(context.Target))
                     continue;
 
                 IDamageable receiver = collider.GetComponentInParent<IDamageable>();

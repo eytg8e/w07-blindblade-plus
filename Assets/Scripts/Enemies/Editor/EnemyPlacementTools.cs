@@ -53,7 +53,7 @@ namespace BlindBlade.Enemies.Editor
         /// </summary>
         private static void PlaceEnemy(string prefabName, MenuCommand command)
         {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemies/" + prefabName + ".prefab");
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Enemies/" + prefabName + ".prefab");
             if (prefab == null)
             {
                 Debug.LogError("적 프리팹을 찾을 수 없습니다: " + prefabName);

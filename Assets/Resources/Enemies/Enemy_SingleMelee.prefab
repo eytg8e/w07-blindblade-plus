@@ -128,6 +128,7 @@ GameObject:
   - component: {fileID: 5120591557259224666}
   - component: {fileID: 5889778185624755816}
   - component: {fileID: 7608795753784398461}
+  - component: {fileID: 3288842359839099639}
   m_Layer: 0
   m_Name: Enemy_SingleMelee
   m_TagString: Untagged
@@ -320,3 +321,19 @@ MonoBehaviour:
   _distance: 3
   _localDirection: {x: 0, y: 0, z: 1}
   _waitDuration: 1
+--- !u!114 &3288842359839099639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8382106560393218092}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b256b4bb12560a41a0634808047e235, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _maxHealth: 30
+  _dieOnAnyHit: 1
+  _hitCollider: {fileID: 8865722896377662893}
+  _cancelAttackOnHit: 0

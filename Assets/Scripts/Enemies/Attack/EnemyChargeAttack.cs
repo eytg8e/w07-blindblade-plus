@@ -20,6 +20,7 @@ namespace BlindBlade.Enemies
 
         public override float Range => _attackRange;
         public override bool AllowsMovement => Phase == EnemyAttackPhase.Active;
+        public bool IsMoving => Phase == EnemyAttackPhase.Active && _isCharging && !_agent.isStopped;
 
         protected override float ActiveDuration => _chargeDuration;
         protected override EnemySoundAction SoundAction => EnemySoundAction.Charge;

@@ -9,15 +9,17 @@ using UnityEngine.InputSystem;
 [DisallowMultipleComponent]
 public sealed class PlayerSandboxScenarioControls : MonoBehaviour
 {
-    [Header("Sandbox Controls")]
-    [SerializeField] private bool _showControls = true;
+    [Header("Sandbox Controls")] [SerializeField]
+    private bool _showControls = true;
+
     [SerializeField, Min(0.5f)] private float _normalHitDistance = 1f;
     [SerializeField, Min(1f)] private float _iaidoHitDistance = 3f;
     [SerializeField, Min(0.5f)] private float _wallDistance = 1f;
     [SerializeField, Min(1f)] private float _wallTargetDistance = 4f;
 
-    [Header("Movement Measurements")]
-    [SerializeField, Min(0.05f)] private float _movementWarmupDuration = 0.35f;
+    [Header("Movement Measurements")] [SerializeField, Min(0.05f)]
+    private float _movementWarmupDuration = 0.35f;
+
     [SerializeField, Min(0.1f)] private float _movementSampleDuration = 0.5f;
     [SerializeField, Min(0.05f)] private float _movementBrakeSampleDuration = 0.25f;
     [SerializeField, Range(0.01f, 0.5f)] private float _movementDiagonalTolerance = 0.15f;
@@ -37,11 +39,11 @@ public sealed class PlayerSandboxScenarioControls : MonoBehaviour
     private bool _hasObservedRecoveryStart;
     private bool _hasObservedRecoveryEnd;
     private bool _lastValidationCasePassed;
-    
+
     private bool _observedGuardStarted;
     private bool _observedGuardSucceeded;
     private bool _observedGuardEnded;
-private int _validationPassCount;
+    private int _validationPassCount;
 
     private enum ValidationCase
     {
@@ -65,7 +67,9 @@ private int _validationPassCount;
         if (_wallObject != null)
             _wallCollider = _wallObject.GetComponent<Collider>();
 
-        if (_player == null || _viewCamera == null || _testTarget == null || _wallObject == null || _wallCollider == null)
+        if (_player == null || _viewCamera == null ||
+            _testTarget == null ||
+            _wallObject == null || _wallCollider == null)
         {
             Debug.LogError(
                 "PlayerSandboxScenarioControls requires PlayerController, a child Camera, Test Enemy, and Test Wall.",
@@ -79,7 +83,7 @@ private int _validationPassCount;
         _scenarioLabel = "Ready: target centered, wall hidden";
     }
 
-private void Update()
+    private void Update()
     {
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null || _validationRoutine != null)
@@ -105,7 +109,7 @@ private void Update()
             RunMovementTuning();
     }
 
-private void OnGUI()
+    private void OnGUI()
     {
         if (!_showControls)
             return;
@@ -202,7 +206,7 @@ private void OnGUI()
         Debug.Log("[PlayerSandboxScenario] " + label, this);
     }
 
-private void FinishRecoveryValidation()
+    private void FinishRecoveryValidation()
     {
         _scenarioLabel = $"Recovery checks: {_validationPassCount}/8 passed";
         Debug.Log($"[RecoveryCheck] Sequence finished: {_validationPassCount}/8 passed.", this);
@@ -210,7 +214,7 @@ private void FinishRecoveryValidation()
     }
 
 
-private void RecordValidationFailure(string label, string reason)
+    private void RecordValidationFailure(string label, string reason)
     {
         _lastValidationCasePassed = false;
         _scenarioLabel = $"FAIL: {label} ({reason})";
@@ -218,7 +222,7 @@ private void RecordValidationFailure(string label, string reason)
     }
 
 
-private void ResetRecoveryObservation()
+    private void ResetRecoveryObservation()
     {
         _observedOutcome = PlayerAttackOutcome.None;
         _observedRecoveryDuration = 0f;
@@ -230,7 +234,7 @@ private void ResetRecoveryObservation()
     }
 
 
-private IEnumerator ValidateCase(ValidationCase testCase)
+    private IEnumerator ValidateCase(ValidationCase testCase)
     {
         string label;
         PlayerAttackOutcome expectedOutcome;
@@ -347,7 +351,7 @@ private IEnumerator ValidateCase(ValidationCase testCase)
             _validationPassCount++;
     }
 
-private IEnumerator ValidateRecoveryInputLock()
+    private IEnumerator ValidateRecoveryInputLock()
     {
         const string label = "Recovery input lock";
         PrepareNormalHit();
@@ -385,7 +389,7 @@ private IEnumerator ValidateRecoveryInputLock()
             _player.transform.position - positionBeforeRequests,
             Vector3.up).magnitude;
         bool movementStayedLocked = horizontalDisplacement <= 0.01f
-            && (motor == null || motor.HorizontalSpeed <= 0.05f);
+                                    && (motor == null || motor.HorizontalSpeed <= 0.05f);
 
         float endDeadline = Time.time + 1f;
         while (!_hasObservedRecoveryEnd && Time.time < endDeadline)
@@ -424,8 +428,7 @@ private IEnumerator ValidateRecoveryInputLock()
     }
 
 
-
-private IEnumerator RecoveryValidationRoutine()
+    private IEnumerator RecoveryValidationRoutine()
     {
         yield return ValidateCase(ValidationCase.NormalHit);
         if (!_lastValidationCasePassed)
@@ -480,7 +483,7 @@ private IEnumerator RecoveryValidationRoutine()
         FinishRecoveryValidation();
     }
 
-private IEnumerator ValidateDeathDuringRecovery()
+    private IEnumerator ValidateDeathDuringRecovery()
     {
         const string label = "Death during recovery";
         PrepareNormalHit();
@@ -523,7 +526,7 @@ private IEnumerator ValidateDeathDuringRecovery()
     }
 
 
-private IEnumerator ValidatePauseDuringRecovery()
+    private IEnumerator ValidatePauseDuringRecovery()
     {
         const string label = "Pause during recovery";
         PrepareNormalHit();
@@ -579,7 +582,7 @@ private IEnumerator ValidatePauseDuringRecovery()
             _validationPassCount++;
     }
 
-private IEnumerator GuardValidationRoutine()
+    private IEnumerator GuardValidationRoutine()
     {
         const string label = "Guard feedback";
         PlayerWeaponDebugVisual visual = GetComponent<PlayerWeaponDebugVisual>();
@@ -606,14 +609,14 @@ private IEnumerator GuardValidationRoutine()
 
         float poseDeadline = Time.unscaledTime + Mathf.Max(1.5f, visual.GuardTransitionTime + 0.5f);
         while ((!_observedGuardStarted || !visual.IsAtGuardPose)
-            && Time.unscaledTime < poseDeadline)
+               && Time.unscaledTime < poseDeadline)
         {
             yield return null;
         }
 
         bool enteredGuardPose = _player.IsGuarding
-            && _observedGuardStarted
-            && visual.IsAtGuardPose;
+                                && _observedGuardStarted
+                                && visual.IsAtGuardPose;
         bool incomingAttackBlocked = _player.TryBlockIncomingAttack();
         if (incomingAttackBlocked)
             _player.NotifyGuardSuccess();
@@ -627,23 +630,23 @@ private IEnumerator GuardValidationRoutine()
         _player.EndGuard();
         float releaseDeadline = Time.unscaledTime + visual.GuardTransitionTime + 1f;
         while ((!_observedGuardEnded || !visual.IsAtRestPose)
-            && Time.unscaledTime < releaseDeadline)
+               && Time.unscaledTime < releaseDeadline)
         {
             yield return null;
         }
 
         bool returnedToRestPose = !_player.IsGuarding
-            && _player.CurrentState == PlayerActionState.Free
-            && _observedGuardEnded
-            && visual.IsAtRestPose;
+                                  && _player.CurrentState == PlayerActionState.Free
+                                  && _observedGuardEnded
+                                  && visual.IsAtRestPose;
 
         bool passed = guardAccepted
-            && enteredGuardPose
-            && incomingAttackBlocked
-            && successEventObserved
-            && successColorShown
-            && stayedGuardingAfterSuccess
-            && returnedToRestPose;
+                      && enteredGuardPose
+                      && incomingAttackBlocked
+                      && successEventObserved
+                      && successColorShown
+                      && stayedGuardingAfterSuccess
+                      && returnedToRestPose;
 
         _scenarioLabel = passed ? "PASS: Guard pose / block / release" : "FAIL: Guard feedback";
         Debug.Log(
@@ -656,160 +659,161 @@ private IEnumerator GuardValidationRoutine()
         _validationRoutine = null;
     }
 
-private IEnumerator MovementTuningRoutine()
-{
-    const string label = "Movement tuning";
-    PlayerMotor motor = GetComponent<PlayerMotor>();
-    CharacterController characterController = GetComponent<CharacterController>();
-    PlayerInputCommandAdapter inputAdapter = GetComponent<PlayerInputCommandAdapter>();
-
-    if (motor == null || characterController == null || _testTarget == null
-        || _wallObject == null || _wallCollider == null)
+    private IEnumerator MovementTuningRoutine()
     {
-        Debug.LogError("[MovementTune] FAIL: motor, CharacterController, test target, or test wall is missing.", this);
-        _scenarioLabel = "FAIL: Movement test setup missing";
+        const string label = "Movement tuning";
+        PlayerMotor motor = GetComponent<PlayerMotor>();
+        CharacterController characterController = GetComponent<CharacterController>();
+        PlayerInputCommandAdapter inputAdapter = GetComponent<PlayerInputCommandAdapter>();
+
+        if (motor == null || characterController == null || _testTarget == null
+            || _wallObject == null || _wallCollider == null)
+        {
+            Debug.LogError("[MovementTune] FAIL: motor, CharacterController, test target, or test wall is missing.",
+                this);
+            _scenarioLabel = "FAIL: Movement test setup missing";
+            _validationRoutine = null;
+            yield break;
+        }
+
+        Vector3 startingPosition = _player.transform.position;
+        Quaternion startingRotation = _player.transform.rotation;
+        Vector3 flatForward = GetFlatForward();
+        bool restoreInputAdapter = inputAdapter != null && inputAdapter.enabled;
+        Collider[] targetColliders = _testTarget.GetComponentsInChildren<Collider>(true);
+        bool[] targetColliderStates = new bool[targetColliders.Length];
+
+        if (restoreInputAdapter)
+            inputAdapter.enabled = false;
+
+        // The sandbox target sits directly in front of the player and would invalidate the forward sample.
+        for (int i = 0; i < targetColliders.Length; i++)
+        {
+            targetColliderStates[i] = targetColliders[i].enabled;
+            targetColliders[i].enabled = false;
+        }
+
+        _player.SetMovementInput(Vector2.zero);
+        HideWall();
+        yield return new WaitForSecondsRealtime(0.15f);
+
+        float settleDeadline = Time.realtimeSinceStartup + 2f;
+        while (motor.HorizontalSpeed > 0.05f && Time.realtimeSinceStartup < settleDeadline)
+            yield return null;
+        bool accelerationStartedFromRest = motor.HorizontalSpeed <= 0.05f;
+        RestorePlayerTransform(characterController, startingPosition, startingRotation);
+
+        // Measure game time from rest until the motor reaches 90% of its configured walk speed.
+        float targetSpeed = motor.WalkSpeed * 0.9f;
+        float accelerationStartTime = Time.time;
+        float accelerationDeadline = accelerationStartTime + 2f;
+        _player.SetMovementInput(Vector2.up);
+        while (targetSpeed > 0.05f
+               && motor.HorizontalSpeed < targetSpeed
+               && Time.time < accelerationDeadline)
+        {
+            yield return null;
+        }
+
+        float timeToNinetyPercent = Mathf.Max(0f, Time.time - accelerationStartTime);
+        bool accelerationReachedTarget = targetSpeed <= 0.05f
+                                         || motor.HorizontalSpeed >= targetSpeed;
+
+        _player.SetMovementInput(Vector2.zero);
+        yield return new WaitForSecondsRealtime(0.15f);
+        settleDeadline = Time.realtimeSinceStartup + 2f;
+        while (motor.HorizontalSpeed > 0.05f && Time.realtimeSinceStartup < settleDeadline)
+            yield return null;
+        bool accelerationTestStopped = motor.HorizontalSpeed <= 0.05f;
+        RestorePlayerTransform(characterController, startingPosition, startingRotation);
+
+        // Warm-up lets acceleration reach its configured top speed before distance sampling.
+        _player.SetMovementInput(Vector2.up);
+        yield return new WaitForSeconds(_movementWarmupDuration);
+        Vector3 forwardSampleStart = _player.transform.position;
+        yield return new WaitForSeconds(_movementSampleDuration);
+        Vector3 forwardSampleEnd = _player.transform.position;
+        float forwardDistance = Vector3.ProjectOnPlane(
+            forwardSampleEnd - forwardSampleStart,
+            Vector3.up).magnitude;
+
+        _player.SetMovementInput(Vector2.zero);
+        yield return new WaitForSecondsRealtime(_movementBrakeSampleDuration);
+        RestorePlayerTransform(characterController, startingPosition, startingRotation);
+
+        _player.SetMovementInput(Vector2.one);
+        yield return new WaitForSeconds(_movementWarmupDuration);
+        Vector3 diagonalSampleStart = _player.transform.position;
+        yield return new WaitForSeconds(_movementSampleDuration);
+        Vector3 diagonalSampleEnd = _player.transform.position;
+        float diagonalDistance = Vector3.ProjectOnPlane(
+            diagonalSampleEnd - diagonalSampleStart,
+            Vector3.up).magnitude;
+        float diagonalRatio = forwardDistance > 0.001f
+            ? diagonalDistance / forwardDistance
+            : 0f;
+
+        _player.SetMovementInput(Vector2.zero);
+        Vector3 brakeStart = _player.transform.position;
+        yield return new WaitForSecondsRealtime(_movementBrakeSampleDuration);
+        float brakingDistance = Vector3.ProjectOnPlane(
+            _player.transform.position - brakeStart,
+            Vector3.up).magnitude;
+        bool cameToRest = motor.HorizontalSpeed <= 0.05f;
+
+        RestorePlayerTransform(characterController, startingPosition, startingRotation);
+        _wallObject.transform.position =
+            _viewCamera.transform.position + flatForward * _movementTestWallDistance;
+        _wallObject.SetActive(true);
+        _wallCollider.enabled = true;
+
+        _player.SetMovementInput(Vector2.up);
+        yield return new WaitForSeconds(_movementWarmupDuration + _movementSampleDuration);
+        float wallTravelDistance = Vector3.ProjectOnPlane(
+            _player.transform.position - startingPosition,
+            Vector3.up).magnitude;
+        _player.SetMovementInput(Vector2.zero);
+        HideWall();
+        RestorePlayerTransform(characterController, startingPosition, startingRotation);
+
+        for (int i = 0; i < targetColliders.Length; i++)
+        {
+            if (targetColliders[i] != null)
+                targetColliders[i].enabled = targetColliderStates[i];
+        }
+
+        if (restoreInputAdapter)
+            inputAdapter.enabled = true;
+
+        float walkDistanceRatioError = Mathf.Abs(diagonalRatio - 1f);
+        bool diagonalSpeedNormalized = forwardDistance > 0.1f
+                                       && diagonalDistance > 0.1f
+                                       && walkDistanceRatioError <= _movementDiagonalTolerance;
+        bool wallStoppedMovement = wallTravelDistance > 0.1f
+                                   && wallTravelDistance < forwardDistance * 0.85f;
+        bool passed = accelerationStartedFromRest
+                      && accelerationReachedTarget
+                      && accelerationTestStopped
+                      && diagonalSpeedNormalized
+                      && cameToRest
+                      && wallStoppedMovement;
+
+        string result = passed ? "PASS" : "REVIEW";
+        _scenarioLabel =
+            $"{result}: accel90={timeToNinetyPercent:0.00}s, ratio={diagonalRatio:0.00}, "
+            + $"brake={brakingDistance:0.00}m, wall={wallTravelDistance:0.00}m";
+        Debug.Log(
+            $"[MovementTune] {result} {label}: walk={motor.WalkSpeed:0.00}m/s, "
+            + $"acceleration={motor.Acceleration:0.00}, time-to-90%={timeToNinetyPercent:0.000}s "
+            + $"(reached={accelerationReachedTarget}, settled={accelerationTestStopped}), "
+            + $"deceleration={motor.Deceleration:0.00}, forward={forwardDistance:0.00}m, "
+            + $"diagonal={diagonalDistance:0.00}m (ratio {diagonalRatio:0.00}, "
+            + $"allowed error {_movementDiagonalTolerance:0.00}), "
+            + $"braking={brakingDistance:0.00}m, stopped={cameToRest}, "
+            + $"wall travel={wallTravelDistance:0.00}m.",
+            this);
         _validationRoutine = null;
-        yield break;
     }
-
-    Vector3 startingPosition = _player.transform.position;
-    Quaternion startingRotation = _player.transform.rotation;
-    Vector3 flatForward = GetFlatForward();
-    bool restoreInputAdapter = inputAdapter != null && inputAdapter.enabled;
-    Collider[] targetColliders = _testTarget.GetComponentsInChildren<Collider>(true);
-    bool[] targetColliderStates = new bool[targetColliders.Length];
-
-    if (restoreInputAdapter)
-        inputAdapter.enabled = false;
-
-    // The sandbox target sits directly in front of the player and would invalidate the forward sample.
-    for (int i = 0; i < targetColliders.Length; i++)
-    {
-        targetColliderStates[i] = targetColliders[i].enabled;
-        targetColliders[i].enabled = false;
-    }
-
-    _player.SetMovementInput(Vector2.zero);
-    HideWall();
-    yield return new WaitForSecondsRealtime(0.15f);
-
-    float settleDeadline = Time.realtimeSinceStartup + 2f;
-    while (motor.HorizontalSpeed > 0.05f && Time.realtimeSinceStartup < settleDeadline)
-        yield return null;
-    bool accelerationStartedFromRest = motor.HorizontalSpeed <= 0.05f;
-    RestorePlayerTransform(characterController, startingPosition, startingRotation);
-
-    // Measure game time from rest until the motor reaches 90% of its configured walk speed.
-    float targetSpeed = motor.WalkSpeed * 0.9f;
-    float accelerationStartTime = Time.time;
-    float accelerationDeadline = accelerationStartTime + 2f;
-    _player.SetMovementInput(Vector2.up);
-    while (targetSpeed > 0.05f
-        && motor.HorizontalSpeed < targetSpeed
-        && Time.time < accelerationDeadline)
-    {
-        yield return null;
-    }
-
-    float timeToNinetyPercent = Mathf.Max(0f, Time.time - accelerationStartTime);
-    bool accelerationReachedTarget = targetSpeed <= 0.05f
-        || motor.HorizontalSpeed >= targetSpeed;
-
-    _player.SetMovementInput(Vector2.zero);
-    yield return new WaitForSecondsRealtime(0.15f);
-    settleDeadline = Time.realtimeSinceStartup + 2f;
-    while (motor.HorizontalSpeed > 0.05f && Time.realtimeSinceStartup < settleDeadline)
-        yield return null;
-    bool accelerationTestStopped = motor.HorizontalSpeed <= 0.05f;
-    RestorePlayerTransform(characterController, startingPosition, startingRotation);
-
-    // Warm-up lets acceleration reach its configured top speed before distance sampling.
-    _player.SetMovementInput(Vector2.up);
-    yield return new WaitForSeconds(_movementWarmupDuration);
-    Vector3 forwardSampleStart = _player.transform.position;
-    yield return new WaitForSeconds(_movementSampleDuration);
-    Vector3 forwardSampleEnd = _player.transform.position;
-    float forwardDistance = Vector3.ProjectOnPlane(
-        forwardSampleEnd - forwardSampleStart,
-        Vector3.up).magnitude;
-
-    _player.SetMovementInput(Vector2.zero);
-    yield return new WaitForSecondsRealtime(_movementBrakeSampleDuration);
-    RestorePlayerTransform(characterController, startingPosition, startingRotation);
-
-    _player.SetMovementInput(Vector2.one);
-    yield return new WaitForSeconds(_movementWarmupDuration);
-    Vector3 diagonalSampleStart = _player.transform.position;
-    yield return new WaitForSeconds(_movementSampleDuration);
-    Vector3 diagonalSampleEnd = _player.transform.position;
-    float diagonalDistance = Vector3.ProjectOnPlane(
-        diagonalSampleEnd - diagonalSampleStart,
-        Vector3.up).magnitude;
-    float diagonalRatio = forwardDistance > 0.001f
-        ? diagonalDistance / forwardDistance
-        : 0f;
-
-    _player.SetMovementInput(Vector2.zero);
-    Vector3 brakeStart = _player.transform.position;
-    yield return new WaitForSecondsRealtime(_movementBrakeSampleDuration);
-    float brakingDistance = Vector3.ProjectOnPlane(
-        _player.transform.position - brakeStart,
-        Vector3.up).magnitude;
-    bool cameToRest = motor.HorizontalSpeed <= 0.05f;
-
-    RestorePlayerTransform(characterController, startingPosition, startingRotation);
-    _wallObject.transform.position =
-        _viewCamera.transform.position + flatForward * _movementTestWallDistance;
-    _wallObject.SetActive(true);
-    _wallCollider.enabled = true;
-
-    _player.SetMovementInput(Vector2.up);
-    yield return new WaitForSeconds(_movementWarmupDuration + _movementSampleDuration);
-    float wallTravelDistance = Vector3.ProjectOnPlane(
-        _player.transform.position - startingPosition,
-        Vector3.up).magnitude;
-    _player.SetMovementInput(Vector2.zero);
-    HideWall();
-    RestorePlayerTransform(characterController, startingPosition, startingRotation);
-
-    for (int i = 0; i < targetColliders.Length; i++)
-    {
-        if (targetColliders[i] != null)
-            targetColliders[i].enabled = targetColliderStates[i];
-    }
-
-    if (restoreInputAdapter)
-        inputAdapter.enabled = true;
-
-    float walkDistanceRatioError = Mathf.Abs(diagonalRatio - 1f);
-    bool diagonalSpeedNormalized = forwardDistance > 0.1f
-        && diagonalDistance > 0.1f
-        && walkDistanceRatioError <= _movementDiagonalTolerance;
-    bool wallStoppedMovement = wallTravelDistance > 0.1f
-        && wallTravelDistance < forwardDistance * 0.85f;
-    bool passed = accelerationStartedFromRest
-        && accelerationReachedTarget
-        && accelerationTestStopped
-        && diagonalSpeedNormalized
-        && cameToRest
-        && wallStoppedMovement;
-
-    string result = passed ? "PASS" : "REVIEW";
-    _scenarioLabel =
-        $"{result}: accel90={timeToNinetyPercent:0.00}s, ratio={diagonalRatio:0.00}, "
-        + $"brake={brakingDistance:0.00}m, wall={wallTravelDistance:0.00}m";
-    Debug.Log(
-        $"[MovementTune] {result} {label}: walk={motor.WalkSpeed:0.00}m/s, "
-        + $"acceleration={motor.Acceleration:0.00}, time-to-90%={timeToNinetyPercent:0.000}s "
-        + $"(reached={accelerationReachedTarget}, settled={accelerationTestStopped}), "
-        + $"deceleration={motor.Deceleration:0.00}, forward={forwardDistance:0.00}m, "
-        + $"diagonal={diagonalDistance:0.00}m (ratio {diagonalRatio:0.00}, "
-        + $"allowed error {_movementDiagonalTolerance:0.00}), "
-        + $"braking={brakingDistance:0.00}m, stopped={cameToRest}, "
-        + $"wall travel={wallTravelDistance:0.00}m.",
-        this);
-    _validationRoutine = null;
-}
 
     private static void RestorePlayerTransform(
         CharacterController characterController,
@@ -828,10 +832,7 @@ private IEnumerator MovementTuningRoutine()
     }
 
 
-
-
-
-public void RunRecoveryValidation()
+    public void RunRecoveryValidation()
     {
         if (_validationRoutine != null)
             return;
@@ -847,29 +848,29 @@ public void RunRecoveryValidation()
         _validationRoutine = StartCoroutine(RecoveryValidationRoutine());
     }
 
-public void RunGuardValidation()
-{
-    if (_validationRoutine != null)
-        return;
-
-    if (_player == null || _player.CurrentState != PlayerActionState.Free)
+    public void RunGuardValidation()
     {
-        _scenarioLabel = "Guard check requires the player to be Free";
-        Debug.LogWarning("[GuardCheck] Start the sequence while the player is Free.", this);
-        return;
+        if (_validationRoutine != null)
+            return;
+
+        if (_player == null || _player.CurrentState != PlayerActionState.Free)
+        {
+            _scenarioLabel = "Guard check requires the player to be Free";
+            Debug.LogWarning("[GuardCheck] Start the sequence while the player is Free.", this);
+            return;
+        }
+
+        if (Time.timeScale <= 0f)
+        {
+            _scenarioLabel = "Guard check requires Time.timeScale > 0";
+            Debug.LogWarning("[GuardCheck] Time.timeScale must be greater than zero.", this);
+            return;
+        }
+
+        _validationRoutine = StartCoroutine(GuardValidationRoutine());
     }
 
-    if (Time.timeScale <= 0f)
-    {
-        _scenarioLabel = "Guard check requires Time.timeScale > 0";
-        Debug.LogWarning("[GuardCheck] Time.timeScale must be greater than zero.", this);
-        return;
-    }
-
-    _validationRoutine = StartCoroutine(GuardValidationRoutine());
-}
-
-public void RunMovementTuning()
+    public void RunMovementTuning()
     {
         if (_validationRoutine != null)
             return;
@@ -892,9 +893,7 @@ public void RunMovementTuning()
     }
 
 
-
-
-private void HandlePlayerActionEvent(PlayerActionEvent actionEvent)
+    private void HandlePlayerActionEvent(PlayerActionEvent actionEvent)
     {
         switch (actionEvent.Stage)
         {
@@ -929,12 +928,13 @@ private void HandlePlayerActionEvent(PlayerActionEvent actionEvent)
                     _observedRecoveryElapsed = Mathf.Max(0f, Time.time - _observedRecoveryStartedAt);
                     _hasObservedRecoveryEnd = true;
                 }
+
                 break;
         }
     }
 
 
-private void OnDisable()
+    private void OnDisable()
     {
         if (_player != null)
             _player.ActionEvent -= HandlePlayerActionEvent;
@@ -947,10 +947,9 @@ private void OnDisable()
     }
 
 
-private void OnEnable()
+    private void OnEnable()
     {
         if (_player != null)
             _player.ActionEvent += HandlePlayerActionEvent;
     }
-
 }

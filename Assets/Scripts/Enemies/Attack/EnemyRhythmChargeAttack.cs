@@ -36,6 +36,7 @@ namespace BlindBlade.Enemies
 
         public override float Range => _rangeSensor.DetectionRange;
         public override bool AllowsMovement => Phase == EnemyAttackPhase.Active;
+        public bool IsMovingPulse => Phase == EnemyAttackPhase.Active && _isMoving;
         public event Action<EnemyAttackContext, int> PulseStarted;
 
         protected override EnemySoundAction SoundAction => EnemySoundAction.RhythmCharge;

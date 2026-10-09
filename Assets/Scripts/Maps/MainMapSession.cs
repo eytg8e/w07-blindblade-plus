@@ -9,7 +9,7 @@ public sealed class MainMapSession : MonoBehaviour
     [Header("플레이어 연결")]
     [SerializeField] private PlayerController _player;
 
-    void Awake()
+    void Start()
     {
         Game.Instance.SensoryManager.SetObserver(_player.transform);
     }
@@ -21,7 +21,8 @@ public sealed class MainMapSession : MonoBehaviour
 
     void OnDisable()
     {
-        _player.FootstepEmitted -= HandlePlayerFootstep;
+        if (_player != null)
+            _player.FootstepEmitted -= HandlePlayerFootstep;
     }
 
     /// <summary>
