@@ -1,33 +1,26 @@
 using UnityEngine;
 
 /// <summary>
-/// EffectTest 씬의 모형 검을 휘둘러 공통 Trail과 Hit를 수동 관찰하게 한다.
+/// EffectTest 씬의 모형 검을 휘둘러 검의 자동 Trail과 접촉 Hit를 관찰하게 한다.
 /// 실제 충돌이나 피해 판정을 수행하지 않는다.
 /// </summary>
 public sealed class EffectTestSword : MonoBehaviour
 {
     [Header("씬 연결")]
     [SerializeField] private Transform _pivot;
-    [SerializeField] private Transform _bladeBase;
-    [SerializeField] private Transform _bladeTip;
-    [SerializeField] private Transform _contactPoint;
+    [SerializeField] private SwordEffectEmitter _swordEffects;
 
     [Header("시연")]
     [SerializeField] private bool _autoSwing = true;
-    [SerializeField] private bool _showHit = true;
     [SerializeField, Min(0.05f)] private float _swingDuration = 0.32f;
     [SerializeField, Min(0.1f)] private float _interval = 1.5f;
     [SerializeField, Range(10f, 170f)] private float _angle = 140f;
-    private EffectManager _effects;
     private float _startedAt;
     private float _nextSwing;
-    private int _handle;
     private bool _swinging;
-    private bool _hitPlayed;
 
     void Start()
     {
-        _effects = Game.Instance.EffectManager;
         _nextSwing = Time.time + 0.5f;
     }
 
@@ -42,15 +35,9 @@ public sealed class EffectTestSword : MonoBehaviour
         float progress = Mathf.Clamp01((Time.time - _startedAt) / _swingDuration);
         float eased = Mathf.SmoothStep(0f, 1f, progress);
         _pivot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-_angle * 0.5f, _angle * 0.5f, eased));
-        if (_showHit && !_hitPlayed && progress >= 0.5f)
-        {
-            _effects.PlayHit(_contactPoint.position);
-            _hitPlayed = true;
-        }
         if (progress >= 1f)
         {
-            _effects.EndTrail(_handle);
-            _handle = 0;
+            _swordEffects.EndSwing();
             _swinging = false;
             _nextSwing = Time.time + _interval;
         }
@@ -58,26 +45,25 @@ public sealed class EffectTestSword : MonoBehaviour
 
     void OnDisable()
     {
-        if (_effects != null)
-            _effects.StopTrail(_handle);
-        _handle = 0;
+        if (_swordEffects != null)
+            _swordEffects.CancelSwing();
         _swinging = false;
     }
 
     /// <summary>
-    /// Inspector의 검 양 끝점으로 한 번의 베기를 시작한다.
-    /// Play Mode에서 이전 Trail을 정리하고 새 요청 번호와 시작 시각을 저장한다.
+    /// Inspector의 검 컴포넌트로 한 번의 베기를 시작한다.
+    /// Play Mode에서 검 접촉 감지를 시작하고 시연 시작 시각을 저장한다.
     /// </summary>
     [ContextMenu("Effects/Swing")]
     public void Swing()
     {
-        if (!Application.isPlaying || !isActiveAndEnabled || _effects == null)
+        if (!Application.isPlaying || !isActiveAndEnabled)
             return;
-        _effects.StopTrail(_handle);
+        _swordEffects.CancelSwing();
         _pivot.localRotation = Quaternion.Euler(0f, 0f, -_angle * 0.5f);
-        _handle = _effects.BeginTrail(_bladeBase, _bladeTip);
+        if (!_swordEffects.BeginSwing())
+            return;
         _startedAt = Time.time;
         _swinging = true;
-        _hitPlayed = false;
     }
 }
