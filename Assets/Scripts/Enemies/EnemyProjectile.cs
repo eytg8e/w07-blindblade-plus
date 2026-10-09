@@ -1,7 +1,6 @@
 using System;
 
 using UnityEngine;
-using UnityEngine.Events;
 
 using BlindBlade.Combat;
 
@@ -19,10 +18,8 @@ namespace BlindBlade.Enemies
         private float _elapsedTime;
         private bool _isFlying;
 
-        [Header("충돌 이벤트")]
-        [SerializeField] private UnityEvent<Vector3> _onImpact = new UnityEvent<Vector3>();
-
         public event Action<Collider, DamageContext> Hit;
+        public event Action<Vector3> Impact;
 
         protected DamageContext Damage => _damage;
         protected Vector3 FlightDirection => _direction;
@@ -117,7 +114,7 @@ namespace BlindBlade.Enemies
             IDamageable receiver = collider.GetComponentInParent<IDamageable>();
             receiver?.TakeDamage(damage);
             Hit?.Invoke(collider, damage);
-            _onImpact.Invoke(point);
+            Impact?.Invoke(point);
             Release();
         }
 

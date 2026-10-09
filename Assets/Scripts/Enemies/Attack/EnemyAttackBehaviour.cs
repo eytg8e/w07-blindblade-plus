@@ -1,7 +1,6 @@
 using System;
 
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace BlindBlade.Enemies
 {
@@ -32,13 +31,6 @@ namespace BlindBlade.Enemies
         private float _phaseEndTime;
         private float _nextAttackTime;
 
-        [Header("팀원 연결 이벤트")]
-        [SerializeField] private UnityEvent<EnemyAttackContext> _onTelegraphStarted = new UnityEvent<EnemyAttackContext>();
-        [SerializeField] private UnityEvent<EnemyAttackContext> _onAttackCommitted = new UnityEvent<EnemyAttackContext>();
-        [SerializeField] private UnityEvent<EnemyAttackContext> _onAttackEnded = new UnityEvent<EnemyAttackContext>();
-        [SerializeField] private UnityEvent<EnemyAttackContext> _onAttackCompleted = new UnityEvent<EnemyAttackContext>();
-        [SerializeField] private UnityEvent<EnemyAttackContext> _onAttackCancelled = new UnityEvent<EnemyAttackContext>();
-
         public abstract float Range { get; }
         public string PatternId => string.IsNullOrEmpty(_patternId) ? GetType().Name : _patternId;
         public int Priority => _priority;
@@ -56,6 +48,8 @@ namespace BlindBlade.Enemies
         public event Action<EnemyAttackContext> AttackCancelled;
 
         protected virtual float ActiveDuration => 0f;
+        protected virtual bool HasFinishedActiveAttack => Time.time >= _phaseEndTime;
+        protected virtual EnemySoundAction SoundAction => EnemySoundAction.None;
 
         protected virtual void Awake()
         {
@@ -85,7 +79,7 @@ namespace BlindBlade.Enemies
             else if (_phase == EnemyAttackPhase.Active)
             {
                 UpdateActiveAttack(_context);
-                if (_phase == EnemyAttackPhase.Active && Time.time >= _phaseEndTime)
+                if (_phase == EnemyAttackPhase.Active && HasFinishedActiveAttack)
                     BeginRecovery();
             }
             else if (_phase == EnemyAttackPhase.Recovery && Time.time >= _phaseEndTime)
@@ -93,7 +87,6 @@ namespace BlindBlade.Enemies
                 EnemyAttackContext context = _context;
                 _phase = EnemyAttackPhase.Ready;
                 AttackCompleted?.Invoke(context);
-                _onAttackCompleted.Invoke(context);
             }
         }
 
@@ -130,9 +123,8 @@ namespace BlindBlade.Enemies
             _phaseEndTime = Time.time + telegraphDuration;
             _nextAttackTime = Time.time + _cooldown;
             EnemyAttackContext context = _context;
+            PlayActionSound(EnemySoundStage.Telegraph);
             TelegraphStarted?.Invoke(context);
-            if (_phase == EnemyAttackPhase.Telegraph)
-                _onTelegraphStarted.Invoke(context);
             return true;
         }
 
@@ -149,7 +141,6 @@ namespace BlindBlade.Enemies
             _phase = EnemyAttackPhase.Ready;
             OnAttackEnded(context, true);
             AttackCancelled?.Invoke(context);
-            _onAttackCancelled.Invoke(context);
         }
 
         /// <summary>
@@ -161,14 +152,12 @@ namespace BlindBlade.Enemies
             _phase = EnemyAttackPhase.Active;
             _phaseEndTime = Time.time + ActiveDuration;
             EnemyAttackContext context = _context;
+            PlayActionSound(EnemySoundStage.Action);
             PerformAttack(context);
             if (_phase != EnemyAttackPhase.Active)
                 return;
 
             AttackCommitted?.Invoke(context);
-            if (_phase != EnemyAttackPhase.Active)
-                return;
-            _onAttackCommitted.Invoke(context);
             if (_phase != EnemyAttackPhase.Active)
                 return;
             AttackPerformed?.Invoke(context.Target);
@@ -187,7 +176,17 @@ namespace BlindBlade.Enemies
             EnemyAttackContext context = _context;
             OnAttackEnded(context, false);
             AttackEnded?.Invoke(context);
-            _onAttackEnded.Invoke(context);
+        }
+
+        /// <summary>
+        /// 행동 종류와 stage로 공통 설정의 소리를 찾아 기존 매니저에 적 위치의 단발 효과음을 요청한다.
+        /// 전조 또는 공격 실행 직전에 한 번 호출하며 이미 시작한 발소리와 다른 효과음을 중단하지 않는다.
+        /// </summary>
+        private void PlayActionSound(EnemySoundStage stage)
+        {
+            SoundId soundId = EnemySoundSettings.GetSound(SoundAction, stage);
+            if (soundId != SoundId.None)
+                Managers.Sound.PlayAttached(soundId, gameObject);
         }
 
         /// <summary>

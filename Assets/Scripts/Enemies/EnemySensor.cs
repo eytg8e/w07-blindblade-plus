@@ -13,6 +13,7 @@ namespace BlindBlade.Enemies
         [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
 
         public Transform Target => _target;
+        public float DetectionRange => _detectionRange;
 
         /// <summary>
         /// target을 감지 대상으로 지정하여 이후 거리와 시야 검사에 사용할 대상을 변경한다.

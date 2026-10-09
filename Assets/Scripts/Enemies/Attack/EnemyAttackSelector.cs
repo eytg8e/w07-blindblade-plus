@@ -6,18 +6,13 @@ namespace BlindBlade.Enemies
     public sealed class EnemyAttackSelector : MonoBehaviour
     {
         [Header("공격 패턴 목록")]
-        [SerializeField] private EnemyAttackBehaviour[] _patterns = new EnemyAttackBehaviour[0];
+        [SerializeField, Tooltip("등록한 같은 루트의 공격만 사용합니다. 비어 있으면 공격하지 않습니다.")]
+        private EnemyAttackBehaviour[] _patterns = new EnemyAttackBehaviour[0];
         private EnemyAttackBehaviour _currentAttack;
         private int _lastSelectedIndex = -1;
 
         public EnemyAttackBehaviour CurrentAttack => _currentAttack;
         public bool IsBusy => _currentAttack != null && _currentAttack.IsBusy;
-
-        void Awake()
-        {
-            if (_patterns.Length == 0)
-                _patterns = GetComponents<EnemyAttackBehaviour>();
-        }
 
         void OnDisable()
         {

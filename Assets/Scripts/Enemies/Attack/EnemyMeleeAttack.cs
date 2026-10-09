@@ -1,7 +1,7 @@
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
-using UnityEngine.Events;
 
 using BlindBlade.Combat;
 
@@ -20,10 +20,10 @@ namespace BlindBlade.Enemies
         [SerializeField] private LayerMask _hitMask = Physics.DefaultRaycastLayers;
         [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
 
-        [Header("근접 공격 이벤트")]
-        [SerializeField] private UnityEvent<EnemyAttackContext> _onMeleeAttack = new UnityEvent<EnemyAttackContext>();
-
         public override float Range => _attackRange;
+        public event Action<EnemyAttackContext> MeleeAttack;
+
+        protected override EnemySoundAction SoundAction => EnemySoundAction.Melee;
 
         protected float Damage => _damage;
         protected float HitRadius => _hitRadius;
@@ -38,7 +38,7 @@ namespace BlindBlade.Enemies
         {
             if (_useBuiltInHitDetection)
                 ApplyHit(context);
-            _onMeleeAttack.Invoke(context);
+            MeleeAttack?.Invoke(context);
         }
 
         /// <summary>

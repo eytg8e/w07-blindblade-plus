@@ -22,6 +22,7 @@ namespace BlindBlade.Enemies
         public override bool AllowsMovement => Phase == EnemyAttackPhase.Active;
 
         protected override float ActiveDuration => _chargeDuration;
+        protected override EnemySoundAction SoundAction => EnemySoundAction.Charge;
 
         protected override void Awake()
         {

@@ -1,7 +1,6 @@
 using System;
 
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace BlindBlade.Enemies
 {
@@ -21,6 +20,8 @@ namespace BlindBlade.Enemies
         [SerializeField, Min(0.02f)] private float _perceptionInterval = 0.1f;
         [SerializeField, Min(0.02f)] private float _repathInterval = 0.2f;
         [SerializeField, Min(0f)] private float _memoryDuration = 3f;
+        [SerializeField, Tooltip("끄면 공격 범위 밖이나 돌진 경로가 막힌 경우 걸어서 접근하지 않고 대기합니다.")]
+        private bool _allowWalkingChase = true;
         private EnemySensor _sensor;
         private EnemyMotor _motor;
         private EnemyAttackSelector _attackSelector;
@@ -29,9 +30,6 @@ namespace BlindBlade.Enemies
         private float _lastSeenTime;
         private float _nextPerceptionTime;
         private float _nextRepathTime;
-
-        [Header("상태 이벤트")]
-        [SerializeField] private UnityEvent<EnemyState> _onStateChanged = new UnityEvent<EnemyState>();
 
         public EnemyState State => _state;
         public event Action<EnemyState> StateChanged;
@@ -148,16 +146,17 @@ namespace BlindBlade.Enemies
                 _lastKnownPosition = _sensor.Target.position;
                 _lastSeenTime = Time.time;
                 ChangeState(_attackSelector.isActiveAndEnabled &&
-                    _attackSelector.CanAttack(_sensor.Target) ? EnemyState.Attacking : EnemyState.Chasing);
+                    _attackSelector.CanAttack(_sensor.Target) ? EnemyState.Attacking :
+                    (_allowWalkingChase ? EnemyState.Chasing : EnemyState.Idle));
                 return;
             }
 
             if (_state == EnemyState.Chasing || _state == EnemyState.Attacking)
-                ChangeState(_memoryDuration > 0f ? EnemyState.Searching : EnemyState.Idle);
+                ChangeState(_allowWalkingChase && _memoryDuration > 0f ? EnemyState.Searching : EnemyState.Idle);
         }
 
         /// <summary>
-        /// nextState가 현재 상태와 다르면 상태를 변경하고 C# 이벤트와 Inspector 이벤트를 발생시킨다.
+        /// nextState가 현재 상태와 다르면 상태를 변경하고 C# 이벤트와 파생 클래스의 상태 반응을 호출한다.
         /// Idle에서는 이동을 중지하고 다른 상태에서는 다음 경로 갱신을 즉시 허용한다.
         /// </summary>
         protected void ChangeState(EnemyState nextState)
@@ -172,7 +171,6 @@ namespace BlindBlade.Enemies
                 _nextRepathTime = 0f;
 
             StateChanged?.Invoke(_state);
-            _onStateChanged.Invoke(_state);
             OnStateChanged(_state);
         }
 
