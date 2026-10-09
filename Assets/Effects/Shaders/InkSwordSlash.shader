@@ -6,9 +6,6 @@ Shader "BlindBlade/InkSwordSlash"
         [HDR] _LightColor ("Brush Light", Color) = (1.5, 1.65, 1.8, 1)
         _WashColor ("Inner Wash", Color) = (0.55, 0.65, 0.78, 1)
         _BrushContrast ("Brush Contrast", Range(0.5, 2)) = 0.95
-        _FlowSpeed ("Brush Flow Speed", Range(0, 3)) = 0.45
-        _Dissolve ("Ink Erosion", Range(0, 1)) = 0.65
-        _FragmentStrength ("Torn Ink Strokes", Range(0, 1)) = 0.75
     }
     SubShader
     {
@@ -30,9 +27,6 @@ Shader "BlindBlade/InkSwordSlash"
                 half4 _LightColor;
                 half4 _WashColor;
                 float _BrushContrast;
-                float _FlowSpeed;
-                float _Dissolve;
-                float _FragmentStrength;
             CBUFFER_END
 
             struct Attributes
@@ -87,10 +81,10 @@ Shader "BlindBlade/InkSwordSlash"
             // 검은 붓질과 찢어진 백색 틈 및 안쪽 잔광을 같은 궤적에서 합성한다.
             half4 Frag(Varyings input) : SV_Target
             {
-                float u = saturate(input.uv.x);
+                float u = input.uv.x;
                 float v = input.uv.y;
                 float life = saturate(input.color.a);
-                float2 flow = float2(u * 5.0 - _Time.y * _FlowSpeed, v * 34.0);
+                float2 flow = float2(u * 5.0, v * 34.0);
                 float brush = Brush(flow);
                 float coarse = Noise(float2(u * 7.0, v * 8.0));
                 float fine = Noise(float2(u * 52.0, v * 110.0));
@@ -102,9 +96,7 @@ Shader "BlindBlade/InkSwordSlash"
                 float band = smoothstep(inner, inner + 0.014, v)
                     * (1.0 - smoothstep(outer - 0.014, outer, v));
                 float dryBrush = smoothstep(0.23, 0.31, brush + (fine - 0.5) * 0.15);
-                float erosion = smoothstep((1.0 - life) * _Dissolve,
-                    (1.0 - life) * _Dissolve + 0.09, brush);
-                float ink = band * dryBrush * erosion;
+                float ink = band * dryBrush;
 
                 float lip = 1.0 - smoothstep(0.015, 0.065, abs(v - (outer - 0.035)));
                 lip *= smoothstep(0.25, 0.58, Noise(float2(u * 13.0, v * 6.0)));
@@ -117,25 +109,11 @@ Shader "BlindBlade/InkSwordSlash"
                 float washLine = exp2(-pow((v - washEdge) / 0.065, 2.0) * 2.0);
                 float washBody = smoothstep(0.015, 0.15, v)
                     * (1.0 - smoothstep(inner - 0.11, inner, v));
-                float washAlpha = saturate(washBody * 0.12 + washLine * 0.58) * life;
+                float washAlpha = saturate(washBody * 0.12 + washLine * 0.58);
                 half3 washColor = lerp(_WashColor.rgb, _LightColor.rgb, washLine * 0.6) * input.color.rgb;
 
-                float cell = floor(u * 15.0);
-                float random = Hash(float2(cell, 8.7));
-                float strokeHeight = lerp(0.05, 0.18, random);
-                float strokeProgress = saturate((v - outer + 0.015) / strokeHeight);
-                float strokeCenter = lerp(0.22, 0.68, Hash(float2(cell, 15.4))) + strokeProgress * 0.28;
-                float strokeWidth = lerp(lerp(0.065, 0.12, random), 0.005, strokeProgress);
-                float fragment = (1.0 - smoothstep(strokeWidth * 0.5, strokeWidth,
-                    abs(frac(u * 15.0) - strokeCenter)))
-                    * step(0.65, random) * smoothstep(outer - 0.01, outer + 0.015, v)
-                    * (1.0 - smoothstep(outer + strokeHeight - 0.025, outer + strokeHeight, v))
-                    * _FragmentStrength * erosion;
-                inkColor = lerp(inkColor, _InkColor.rgb, step(0.001, fragment));
-                ink = saturate(ink + fragment);
-                float fade = smoothstep(0.02, 0.25, life) * start;
-                float inkAlpha = ink * fade;
-                float alpha = saturate((inkAlpha + washAlpha * (1.0 - inkAlpha)) * fade);
+                float inkAlpha = ink * _InkColor.a;
+                float alpha = saturate((inkAlpha + washAlpha * (1.0 - inkAlpha)) * life * start);
                 half3 color = (inkColor * inkAlpha + washColor * washAlpha * (1.0 - inkAlpha))
                     / max(0.001, inkAlpha + washAlpha * (1.0 - inkAlpha));
                 return half4(color, alpha);

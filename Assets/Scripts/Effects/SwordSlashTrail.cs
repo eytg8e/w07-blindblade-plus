@@ -19,6 +19,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
     [SerializeField, Min(0.001f)] private float _minimumDistance = 0.015f;
     [SerializeField, Min(0.01f)] private float _teleportDistance = 3f;
     [SerializeField, Range(1f, 2f)] private float _widthScale = 1.3f;
+    [SerializeField, Min(0.01f)] private float _patternLength = 4f;
     [SerializeField, ColorUsage(true, true)] private Color _color = Color.white;
     private readonly List<BladeSample> _samples = new List<BladeSample>(128);
     private readonly List<Vector3> _vertices = new List<Vector3>(256);
@@ -27,6 +28,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
     private readonly List<int> _triangles = new List<int>(762);
     private Mesh _mesh;
     private bool _emitting;
+    private float _patternDistance;
 
     public bool IsPlaying => _emitting || _samples.Count > 0;
 
@@ -35,16 +37,18 @@ public sealed class SwordSlashTrail : MonoBehaviour
         public Vector3 Base { get; }
         public Vector3 Tip { get; }
         public float Time { get; }
+        public float PatternDistance { get; }
 
         /// <summary>
-        /// 검 밑점·끝점의 월드 위치와 게임 시각을 받아 불변 궤적 표본을 만든다.
-        /// 각 입력값을 표본의 위치와 생성 시각으로 보관한다.
+        /// 검 양 끝점·게임 시각·누적 이동 거리로 불변 궤적 표본을 만든다.
+        /// 위치·생성 시각·무늬 좌표를 보관해 이후 표본 추가에도 무늬가 이동하지 않게 한다.
         /// </summary>
-        public BladeSample(Vector3 bladeBase, Vector3 bladeTip, float time)
+        public BladeSample(Vector3 bladeBase, Vector3 bladeTip, float time, float patternDistance)
         {
             Base = bladeBase;
             Tip = bladeTip;
             Time = time;
+            PatternDistance = patternDistance;
         }
     }
 
@@ -131,6 +135,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
     {
         _emitting = false;
         _samples.Clear();
+        _patternDistance = 0f;
         if (_mesh != null)
             _mesh.Clear();
     }
@@ -149,18 +154,23 @@ public sealed class SwordSlashTrail : MonoBehaviour
             float distance = Mathf.Max(Vector3.Distance(previous.Base, bladeBase),
                 Vector3.Distance(previous.Tip, bladeTip));
             if (distance >= _teleportDistance)
+            {
                 _samples.Clear();
+                _patternDistance = 0f;
+            }
             else if (distance < _minimumDistance)
                 return;
+            else
+                _patternDistance += distance;
         }
         if (_samples.Count >= _maximumSamples)
             _samples.RemoveAt(0);
-        _samples.Add(new BladeSample(bladeBase, bladeTip, Time.time));
+        _samples.Add(new BladeSample(bladeBase, bladeTip, Time.time, _patternDistance));
     }
 
     /// <summary>
     /// 월드 표본과 시각적 폭 배율로 검 궤적의 양면 띠 메시를 갱신한다.
-    /// 경과 시간을 정점 알파로 전달해 먹물 셰이더의 소멸을 진행하고 경계를 재계산한다.
+    /// 누적 거리로 고정 UV를 만들고 경과 시간을 정점 알파로 전달해 투명도를 줄인다.
     /// </summary>
     private void RebuildMesh()
     {
@@ -175,7 +185,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
             _vertices.Add(transform.InverseTransformPoint(sample.Base));
             Vector3 visualTip = sample.Base + (sample.Tip - sample.Base) * _widthScale;
             _vertices.Add(transform.InverseTransformPoint(visualTip));
-            float progress = i / (float)Mathf.Max(1, _samples.Count - 1);
+            float progress = sample.PatternDistance / _patternLength;
             _uvs.Add(new Vector2(progress, 0f));
             _uvs.Add(new Vector2(progress, 1f));
             Color color = _color;
