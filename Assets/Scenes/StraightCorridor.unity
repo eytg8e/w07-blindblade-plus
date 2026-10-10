@@ -821,6 +821,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2677635689661560472, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+      propertyPath: _moveSpeed
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5120591557259224666, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+      propertyPath: _patterns.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5120591557259224666, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+      propertyPath: '_patterns.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2142987402}
+    - target: {fileID: 5120591557259224666, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+      propertyPath: '_patterns.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2142987395}
     - target: {fileID: 5135211428147630035, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -865,6 +881,10 @@ PrefabInstance:
       propertyPath: _target
       value: 
       objectReference: {fileID: 1647938501}
+    - target: {fileID: 6722378550781248484, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+      propertyPath: _detectionRange
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
       propertyPath: m_Name
       value: Enemy_CorridorEnd
@@ -872,7 +892,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8382106560393218092, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2142987402}
   m_SourcePrefab: {fileID: 100100000, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
 --- !u!1 &764540198
 GameObject:
@@ -3405,6 +3428,47 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2131730175}
   m_CullTransparentMesh: 1
+--- !u!1 &2142987390 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8382106560393218092, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+  m_PrefabInstance: {fileID: 762184445}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2142987395 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3519979018492637563, guid: 14655354b3abad645bf5b1ca503e9654, type: 3}
+  m_PrefabInstance: {fileID: 762184445}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2142987390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 837975e8b878c70468f135b6a3eb0914, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &2142987402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2142987390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f9fa997ba5d55c4db8c9a7c3aaecb84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _patternId: CorridorCharge
+  _priority: 10
+  _minimumRange: 2
+  _telegraphDuration: 0.5
+  _recoveryDuration: 0.15
+  _cooldown: 1.5
+  _cancelWhenHidden: 1
+  _attackRange: 6
+  _chargeSpeed: 12
+  _chargeDuration: 0.65
+  _obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967291
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
