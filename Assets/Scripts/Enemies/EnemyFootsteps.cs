@@ -43,6 +43,10 @@ namespace BlindBlade.Enemies
 
         void OnEnable()
         {
+        _agent = GetComponent<NavMeshAgent>();
+        _emitter = GetComponent<FootstepEmitter>();
+        _sensor = GetComponent<EnemySensor>();
+        _attacks = GetComponents<EnemyAttackBehaviour>();
             _previousPosition = transform.position;
             _distanceSinceStep = 0f;
             if (_emitter != null)

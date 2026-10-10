@@ -30,6 +30,7 @@ public sealed class FootstepEmitter : MonoBehaviour
     private float _rayDepth = 0.5f;
     void OnEnable()
     {
+        _attacks = GetComponents<EnemyAttackBehaviour>();
         _previousPosition = transform.position;
         _accumulatedDistance = 0f;
         _isLeft = true;

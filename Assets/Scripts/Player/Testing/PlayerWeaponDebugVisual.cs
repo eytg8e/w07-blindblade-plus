@@ -62,6 +62,12 @@ public sealed class PlayerWeaponDebugVisual : MonoBehaviour
 
     void Awake()
     {
+        InitializeVisual();
+    }
+
+    /// <summary>연결된 Animator로 클립 길이와 검 렌더러 캐시를 복원하고 인스턴스 색상 블록을 준비한다.</summary>
+    private void InitializeVisual()
+    {
         if (_player == null)
             _player = GetComponent<PlayerController>();
         if (_viewCamera == null)
@@ -82,6 +88,7 @@ public sealed class PlayerWeaponDebugVisual : MonoBehaviour
             return;
         }
 
+        _clipLengths.Clear();
         foreach (AnimationClip clip in _animator.runtimeAnimatorController.animationClips)
             _clipLengths[clip.name] = clip.length;
         _animator.applyRootMotion = false;
@@ -96,6 +103,10 @@ public sealed class PlayerWeaponDebugVisual : MonoBehaviour
 
     void OnEnable()
     {
+        if (_bladeProperties == null)
+            InitializeVisual();
+        if (!enabled)
+            return;
         if (_player == null || _animator == null)
             return;
         _player.ActionEvent += OnPlayerAction;

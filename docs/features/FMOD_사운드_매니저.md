@@ -319,3 +319,9 @@ flowchart LR
 - 기존에는 플레이어 이동 제한이 적 발소리를 거부하고 제한 진입 시 재생 중인 소리도 즉시 정지했다. SoundManager.Play에 playDuringMovement 예외를 추가하고 돌진 발걸음에만 적용했다. 예외 음원은 새 재생과 이동 제한 진입 시 모두 보존한다. 일반 순찰 발소리 제한은 유지한다.
 - +5dB 배율과 적 지면 접촉 위치의 3D 공간음향은 유지한다. 각 발소리는 이전 발소리를 중단하지 않고 자연 종료한다.
 - 검증: Unity C# 컴파일 오류 없음. StraightCorridor Play에서 돌진 Phase를 임시 설정하고 실제 Emitter의 지면 접촉 경로를 4회 호출하여 접촉 4회·발자국 4개·Footsteps 인스턴스 4개를 확인했다. 이동 제한을 해제 후 다시 적용해도 4개 모두 PLAYING/STARTING 상태를 유지했다. 실제 돌진 리듬의 스피커 청취는 미확인이다.
+
+#### Editor Live Update 포트 충돌 해소 (2026-10-10)
+
+- 기존 9264 포트를 현재 Unity 프로세스가 이미 점유하고 있었다. Play In Editor 플랫폼의 Live Update Port만 9265로 설정하여 충돌을 피했다. Live Update 활성 상태는 유지한다. Studio에서 게임에 연결할 때 localhost:9265를 사용한다.
+- 설정 에셋: Assets/Plugins/FMOD/Resources/FMODStudioSettings.asset의 playInEditor 플랫폼 Properties.LiveUpdatePort. 기본/빌드 플랫폼 설정은 유지한다.
+- 검증: 변경 후 Play 시작·스크립트 재로드·발걸음 재생·Play 종료 구간에 Cannot listen 경고와 대상 예외가 새로 발생하지 않았다.

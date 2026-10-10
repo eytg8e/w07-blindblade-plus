@@ -9,7 +9,7 @@ public abstract class SensoryEffect : MonoBehaviour
 {
     private Coroutine _routine;
     private float _elapsed;
-    private float _duration;
+    private float _playbackDuration;
     protected float Visibility { get; private set; }
     public int PlaybackVersion { get; private set; }
     public bool IsPlaying { get; private set; }
@@ -31,7 +31,7 @@ public abstract class SensoryEffect : MonoBehaviour
     {
         Visibility = Mathf.Clamp01(visibility);
         if (IsPlaying)
-            ApplyFrame(_elapsed, Mathf.Clamp01(_elapsed / _duration));
+            ApplyFrame(_elapsed, Mathf.Clamp01(_elapsed / _playbackDuration));
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public abstract class SensoryEffect : MonoBehaviour
             StopCoroutine(_routine);
         PlaybackVersion++;
         _elapsed = 0f;
-        _duration = Mathf.Max(0.01f, duration);
+        _playbackDuration = Mathf.Max(0.01f, duration);
         Visibility = Mathf.Clamp01(visibility);
         IsPlaying = true;
         _routine = StartCoroutine(Animate());
@@ -54,9 +54,9 @@ public abstract class SensoryEffect : MonoBehaviour
     /// </summary>
     private IEnumerator Animate()
     {
-        while (_elapsed < _duration)
+        while (_elapsed < _playbackDuration)
         {
-            ApplyFrame(_elapsed, Mathf.Clamp01(_elapsed / _duration));
+            ApplyFrame(_elapsed, Mathf.Clamp01(_elapsed / _playbackDuration));
             yield return null;
             _elapsed += Time.deltaTime;
         }

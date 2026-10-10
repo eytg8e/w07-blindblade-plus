@@ -11,17 +11,34 @@ public class Game : MonoSingleton<Game>
     public SensoryManager SensoryManager => _sensoryManager;
     public EffectManager EffectManager => _effectManager;
 
-    protected override void Awake()
+    /// <summary>싱글턴을 등록하고 기존 감각·이펙트 자식을 재사용하여 재컴파일 뒤 세션 서비스를 복원한다.</summary>
+    protected override void InitializeSingleton()
     {
-        base.Awake();
+        base.InitializeSingleton();
         if (CurrentInstance != this)
             return;
         
-        var sensoryManagerGo = Managers.Resource.Instantiate(ResourcePaths.SENSORY_MANAGER_PATH, transform, usePool: false);
-        _sensoryManager = sensoryManagerGo.GetComponent<SensoryManager>();
+        if (_sensoryManager == null)
+            _sensoryManager = GetComponentInChildren<SensoryManager>(true);
+        if (_sensoryManager == null)
+        {
+            var sensoryManagerGo = Managers.Resource.Instantiate(ResourcePaths.SENSORY_MANAGER_PATH, transform, usePool: false);
+            _sensoryManager = sensoryManagerGo.GetComponent<SensoryManager>();
+        }
         _sensoryManager.Initialize();
-        var effectManagerGo = Managers.Resource.Instantiate(ResourcePaths.EFFECT_MANAGER_PATH, transform, usePool: false);
-        _effectManager = effectManagerGo.GetComponent<EffectManager>();
+        if (_effectManager == null)
+            _effectManager = GetComponentInChildren<EffectManager>(true);
+        if (_effectManager == null)
+        {
+            var effectManagerGo = Managers.Resource.Instantiate(ResourcePaths.EFFECT_MANAGER_PATH, transform, usePool: false);
+            _effectManager = effectManagerGo.GetComponent<EffectManager>();
+        }
         _effectManager.Initialize();
+    }
+
+    void OnEnable()
+    {
+        if (Application.isPlaying)
+            InitializeSingleton();
     }
 }

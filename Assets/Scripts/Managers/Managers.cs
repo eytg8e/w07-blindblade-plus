@@ -11,11 +11,11 @@ public class Managers : MonoSingleton<Managers>
     private SoundManager _sound;
     private SceneManagerEx _scene;
 
-    public static ResourceManager Resource => Instance._resource;
-    public static PoolManager Pool => Instance._pool;
-    public static SoundManager Sound => Instance._sound;
-    public static SceneManagerEx Scene => Instance._scene;
-    public new static bool IsInitialized => CurrentInstance != null && CurrentInstance._initialized;
+    public static ResourceManager Resource => GetServices()._resource;
+    public static PoolManager Pool => GetServices()._pool;
+    public static SoundManager Sound => GetServices()._sound;
+    public static SceneManagerEx Scene => GetServices()._scene;
+    public new static bool IsInitialized => CurrentInstance != null && CurrentInstance._initialized && CurrentInstance._sound != null;
     protected override string SingletonObjectName => "@ReusableManagers";
     protected override bool IncludeInactiveInstances => true;
 
@@ -27,9 +27,26 @@ public class Managers : MonoSingleton<Managers>
         Managers instance = Instance;
     }
 
+    /// <summary>기존 싱글턴을 조회하고 재컴파일로 유실된 서비스가 있으면 재생성하여 반환한다.</summary>
+    private static Managers GetServices()
+    {
+        Managers instance = Instance;
+        if (instance._sound == null || instance._pool == null || instance._resource == null || instance._scene == null)
+            instance.InitializeSingleton();
+        return instance;
+    }
+
     void Update()
     {
+        if (_sound == null)
+            InitializeSingleton();
         _sound.Update();
+    }
+
+    void OnEnable()
+    {
+        if (Application.isPlaying)
+            InitializeSingleton();
     }
 
     /// <summary>
@@ -45,7 +62,7 @@ public class Managers : MonoSingleton<Managers>
 
         transform.SetParent(null);
         base.InitializeSingleton();
-        if (_initialized)
+        if (_initialized && _pool != null && _resource != null && _sound != null && _scene != null)
             return;
 
         _pool = new PoolManager(transform);
@@ -74,8 +91,8 @@ public class Managers : MonoSingleton<Managers>
         _clearing = true;
         try
         {
-            _sound.Clear();
-            _pool.Clear();
+            _sound?.Clear();
+            _pool?.Clear();
         }
         finally
         {

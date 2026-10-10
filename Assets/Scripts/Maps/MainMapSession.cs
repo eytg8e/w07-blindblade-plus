@@ -48,6 +48,9 @@ public sealed class MainMapSession : MonoBehaviour
         _lastMovementTime = float.NegativeInfinity;
         if (_perceptionMask != null)
         {
+            Game.Instance.SensoryManager.SetObserver(_player.transform);
+            if (!Game.Instance.SensoryManager.IsReady)
+                Game.Instance.SensoryManager.Initialize();
             _perceptionMask.SetFootstepOnly(true);
             _perceptionMask.GetComponent<SensoryManager>().SetEffectsVisible(_showEnemyFootsteps);
             _perceptionMask.GetComponent<SensoryManager>().SetFootstepsSuppressed(false);
