@@ -1,9 +1,9 @@
 using UnityEngine;
+
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Maps the project's existing generated _actions to the _player command API.
-/// It owns a separate action instance and does not modify the shared Input Actions asset.
+/// 독립 입력 액션을 플레이어 명령으로 변환하고 입력 정책에 따라 전달과 유지 입력을 제어한다.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class PlayerInputCommandAdapter : MonoBehaviour
@@ -13,23 +13,44 @@ public sealed class PlayerInputCommandAdapter : MonoBehaviour
     [Header("Cursor")]
     [SerializeField] private bool _lockCursorOnMouseClick = true;
 
+    private BlindBlade.Gameplay.InputManager _inputManager;
+    private PlayerMotor _motor;
     private InputSystem_Actions _actions;
     private InputAction _guardAction;
     private bool _resyncAfterPause;
+    private bool _inputAllowed = true;
 
-    private void Awake()
+    /// <summary>allowed에 따라 명령 전달을 허용하고 차단 시 유지 입력을 정리한다.</summary>
+    public void SetInputAllowed(bool allowed)
+    {
+        _inputAllowed = allowed;
+        if (!allowed && _player != null)
+        {
+            _player.SetMovementInput(Vector2.zero);
+            _player.EndGuard();
+            _player.EndCharge();
+            _motor.ClearInput();
+        }
+        _resyncAfterPause = allowed;
+    }
+
+
+    void Awake()
     {
         if (_player == null)
             _player = GetComponent<PlayerController>();
 
+        _motor = _player.GetComponent<PlayerMotor>();
         CreateInputActions();
     }
 
-private void OnEnable()
+    void OnEnable()
     {
         if (_actions == null || _guardAction == null)
             CreateInputActions();
 
+        if (Game.Instance.InputManager != null && Game.Instance.InputManager.IsInitialized) Initialize();
+        else SetInputAllowed(true);
         _actions.Player.Enable();
         _guardAction.started += OnGuardStarted;
         _guardAction.canceled += OnGuardCanceled;
@@ -43,8 +64,9 @@ private void OnEnable()
         _actions.Player.Interact.canceled += OnChargeCanceled;
     }
 
-private void OnDisable()
+    void OnDisable()
     {
+        Shutdown();
         if (_actions != null)
         {
             _actions.Player.Move.performed -= OnMove;
@@ -63,7 +85,7 @@ private void OnDisable()
             _guardAction.Disable();
         }
 
-        if (_player != null && !_player.IsPaused)
+        if (_inputAllowed && _player != null && !_player.IsPaused)
         {
             _player.SetMovementInput(Vector2.zero);
             _player.EndGuard();
@@ -81,6 +103,7 @@ private void OnDestroy()
 
 private void Update()
     {
+        if (!_inputAllowed) return;
         if (_lockCursorOnMouseClick
             && Keyboard.current != null
             && Keyboard.current.escapeKey.wasPressedThisFrame)
@@ -117,24 +140,41 @@ private void Update()
         SynchronizeHeldAction(_actions.Player.Interact.IsPressed(), _player.IsCharging, _player.BeginCharge, _player.EndCharge);
     }
 
+    /// <summary>Game에 등록된 입력 매니저를 구독하고 현재 입력 허용 상태를 적용한다.</summary>
+    public void Initialize()
+    {
+        Shutdown();
+        _inputManager = Game.Instance.InputManager;
+        _inputManager.GameplayInputEnabledChanged += SetInputAllowed;
+        SetInputAllowed(_inputManager.IsGameplayInputEnabled);
+    }
+
+    /// <summary>입력을 차단하고 이전 입력 정책 구독과 매니저 참조를 해제한다.</summary>
+    public void Shutdown()
+    {
+        SetInputAllowed(false);
+        if (_inputManager != null) _inputManager.GameplayInputEnabledChanged -= SetInputAllowed;
+        _inputManager = null;
+    }
+
     /// <summary>입력 콜백의 Vector2 값을 플레이어 이동 명령으로 전달합니다.</summary>
     private void OnMove(InputAction.CallbackContext context)
     {
-        if (_player != null && !_player.IsPaused)
+        if (_inputAllowed && _player != null && !_player.IsPaused)
             _player.SetMovementInput(context.ReadValue<Vector2>());
     }
 
     /// <summary>입력 콜백의 Vector2 변화량을 플레이어 시점 명령으로 전달합니다.</summary>
     private void OnLook(InputAction.CallbackContext context)
     {
-        if (_player != null && !_player.IsPaused)
+        if (_inputAllowed && _player != null && !_player.IsPaused)
             _player.AddLookInput(context.ReadValue<Vector2>());
     }
 
     /// <summary>공격 입력을 현재 상태에 따라 일반 공격 또는 준비된 발도 공격으로 전달합니다.</summary>
 private void OnAttack(InputAction.CallbackContext context)
     {
-        if (_player == null || _player.IsPaused)
+        if (!_inputAllowed || _player == null || _player.IsPaused)
             return;
 
         if (_lockCursorOnMouseClick && Cursor.lockState != CursorLockMode.Locked)
@@ -152,14 +192,14 @@ private void OnAttack(InputAction.CallbackContext context)
     /// <summary>기 모으기 입력 시작을 플레이어 명령으로 전달합니다.</summary>
     private void OnChargeStarted(InputAction.CallbackContext context)
     {
-        if (_player != null && !_player.IsPaused)
+        if (_inputAllowed && _player != null && !_player.IsPaused)
             _player.BeginCharge();
     }
 
     /// <summary>기 모으기 입력 종료를 플레이어 명령으로 전달합니다.</summary>
     private void OnChargeCanceled(InputAction.CallbackContext context)
     {
-        if (_player != null && !_player.IsPaused)
+        if (_inputAllowed && _player != null && !_player.IsPaused)
             _player.EndCharge();
     }
 
@@ -227,7 +267,7 @@ private void CreateInputActions()
 
 private void OnGuardStarted(InputAction.CallbackContext context)
     {
-        if (_player == null || _player.IsPaused)
+        if (!_inputAllowed || _player == null || _player.IsPaused)
             return;
 
         if (_lockCursorOnMouseClick)
@@ -238,7 +278,7 @@ private void OnGuardStarted(InputAction.CallbackContext context)
 
     private void OnGuardCanceled(InputAction.CallbackContext context)
     {
-        if (_player != null && !_player.IsPaused)
+        if (_inputAllowed && _player != null && !_player.IsPaused)
             _player.EndGuard();
     }
 }

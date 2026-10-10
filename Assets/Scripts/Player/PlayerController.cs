@@ -82,6 +82,12 @@ public sealed class PlayerController : MonoBehaviour
             _viewCamera = GetComponentInChildren<Camera>();
 
         BindConfiguredServices();
+        Game.Instance.RegisterPlayer(this);
+    }
+
+    void OnDestroy()
+    {
+        Game.UnregisterPlayer(this);
     }
 
     private void OnEnable()

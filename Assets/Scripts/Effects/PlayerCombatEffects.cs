@@ -33,6 +33,8 @@ public sealed class PlayerCombatEffects : MonoBehaviour
 
     void OnEnable()
     {
+        EnemyCombatService playerContacts = _player.GetComponent<EnemyCombatService>();
+        if (playerContacts != null) _contacts = playerContacts;
         _player.ActionEvent += HandleAction;
         if (_contacts != null && _physicalContacts == null)
             _contacts.AttackContactResolved += HandleContact;
