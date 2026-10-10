@@ -112,3 +112,4 @@ MonoBehaviour:
   _depthSensitivity: 50
   _normalSensitivity: 4
   _shader: {fileID: 4800000, guid: c7c52e823b854534adfb6cc98ed70499, type: 3}
+  _alwaysVisibleMaskShader: {fileID: 4800000, guid: 052048be409cae54596cd3ad87016653, type: 3}
