@@ -17,20 +17,16 @@
 | 매니저 싱글턴 | [명세](features/매니저_싱글턴.md) |
 | FMOD 사운드 수동 검증 | [명세](features/FMOD_사운드_검증.md) |
 | FMOD 사운드 매니저 | [명세](features/FMOD_사운드_매니저.md) |
-| FMOD 에디터 초기화 | [명세](features/FMOD_에디터_초기화.md) |
 | 이펙트 시스템 | [명세](features/이펙트_시스템.md) |
 | 화면 공간 윤곽선 | [명세](features/화면_공간_윤곽선.md) |
 | 감각 표현 | [명세](features/감각_표현.md) |
 | 플레이어 시스템 | [명세](features/플레이어_시스템.md) |
-| 플레이어 걸음 보행 | [명세](features/플레이어_걸음_보행.md) |
-| 플레이어 피격 및 체력 | [명세](features/플레이어_피격_체력.md) |
 | 적 추적 | [명세](features/적_추적.md) |
 | 적 공격 패턴 | [명세](features/적_공격_패턴.md) |
 | 적 전투 및 체력 | [명세](features/적_전투_체력.md) |
 | 발자국 시스템 | [명세](features/발자국_시스템.md) |
 | 메인맵 | [명세](features/메인맵.md) |
-| 직선 복도 씬 | [명세](features/직선_복도_씬.md) |
-| 스테이지 이동과 T자 복도 | [명세](features/스테이지_이동.md) |
+| 카타나 전투 V2 | [명세](features/카타나_전투_V2.md) |
 
 ## 공통 양식
 

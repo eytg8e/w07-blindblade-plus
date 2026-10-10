@@ -218,7 +218,7 @@ public sealed class SwordEffectEmitter : MonoBehaviour
     }
 
     /// <summary>
-    /// collider의 접촉 position에 고정된 공용 SwordClash를 요청한다.
+    /// collider의 접촉 position에 Library에 등록된 공용 타격 효과를 요청한다.
     /// 성공한 충돌체를 기록해 같은 베기에서 한 번만 재생한다.
     /// </summary>
     private void PlayContact(Collider collider, Vector3 position)

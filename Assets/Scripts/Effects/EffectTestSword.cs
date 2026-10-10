@@ -9,6 +9,8 @@ public sealed class EffectTestSword : MonoBehaviour
     [Header("씬 연결")]
     [SerializeField] private Transform _pivot;
     [SerializeField] private SwordEffectEmitter _swordEffects;
+    [SerializeField] private Transform _perceptionObserver;
+    private SensoryManager _sensoryManager;
 
     [Header("시연")]
     [SerializeField] private bool _autoSwing = true;
@@ -21,6 +23,8 @@ public sealed class EffectTestSword : MonoBehaviour
 
     void Start()
     {
+        _sensoryManager = Game.Instance.SensoryManager;
+        _sensoryManager.SetObserver(_perceptionObserver);
         _nextSwing = Time.time + 0.5f;
     }
 
@@ -47,6 +51,8 @@ public sealed class EffectTestSword : MonoBehaviour
     {
         if (_swordEffects != null)
             _swordEffects.CancelSwing();
+        if (_sensoryManager != null && _sensoryManager.Observer == _perceptionObserver)
+            _sensoryManager.ClearObserver();
         _swinging = false;
     }
 

@@ -5,6 +5,7 @@ using UnityEngine.Experimental.Rendering;
 
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
+using UnityEngine.Rendering.RenderGraphModule.Util;
 using UnityEngine.Rendering.Universal;
 
 public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
@@ -17,95 +18,59 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
         private static readonly int _transparentThresholdId = Shader.PropertyToID("_TransparentThreshold");
 
         [Header("윤곽선 표현")]
-        [SerializeField, Tooltip("검은 면 위에 표시할 선 색상. 알파는 선 밝기에 적용한다.")]
-        private Color _lineColor = Color.white;
-        [SerializeField, Range(1, 6), Tooltip("렌더링 해상도 기준 선 검출 폭(픽셀).")]
-        private int _lineWidth = 1;
-        [SerializeField, Range(1f, 200f), Tooltip("깊이 검출 민감도. 높을수록 작은 상대 깊이 차이도 선으로 표시한다.")]
-        private float _depthSensitivity = 50f;
-        [SerializeField, Range(1f, 20f), Tooltip("노멀 검출 민감도. 높을수록 작은 표면 방향 차이도 선으로 표시한다.")]
-        private float _normalSensitivity = 4f;
-
+        [SerializeField] private Color _lineColor = Color.white;
+        [SerializeField, Range(1, 6)] private int _lineWidth = 1;
+        [SerializeField, Range(1f, 200f)] private float _depthSensitivity = 50f;
+        [SerializeField, Range(1f, 20f)] private float _normalSensitivity = 4f;
         [SerializeField, Range(0.001f, 0.5f), Tooltip("선택 VFX의 RGB 밝기 검출 기준이다.")]
         private float _transparentThreshold = 0.015f;
 
         [Header("렌더링 연결")]
-        [SerializeField, Tooltip("화면 공간 윤곽선 셰이더. PC_Renderer에 기본 연결되어 있다.")]
-        private Shader _shader;
-        [SerializeField] private Shader _alwaysVisibleMaskShader;
+        [SerializeField] private Shader _shader;
         [SerializeField] private Shader _transparentDepthShader;
         private Material _material;
-        private Material _maskMaterial;
-        private OutlinePass _pass;
         private Material _depthMaterial;
         private readonly OutlineVFXRouting _routing = new OutlineVFXRouting();
         private CapturePass _capture;
         private TransparentDepthPass _depth;
+        private OutlinePass _outline;
 
         /// <summary>
-        /// 연결된 셰이더로 전용 머티리얼과 깊이·노멀을 사용하는 윤곽선 패스를 생성한다.
+        /// 연결된 셰이더로 색상 캡처·투명 깊이·최종 윤곽선 패스를 생성한다.
+        /// 기존 패스 리소스를 해제하고 현재 설정으로 재생성한다.
         /// </summary>
         public override void Create()
         {
             ReleaseResources();
-
-            if (_shader == null || _alwaysVisibleMaskShader == null || _transparentDepthShader == null)
+            if (_shader == null)
             {
                 Debug.LogError("ScreenSpaceOutlineFeature에 윤곽선 셰이더를 연결해야 합니다.", this);
                 return;
             }
-
+            if (_transparentDepthShader == null)
+                _transparentDepthShader = Shader.Find("Hidden/BlindBlade/OutlineTransparentDepth");
+            if (_transparentDepthShader == null)
+            {
+                Debug.LogError("ScreenSpaceOutlineFeature에 투명 깊이 셰이더를 연결해야 합니다.", this);
+                return;
+            }
             _material = CoreUtils.CreateEngineMaterial(_shader);
-            _maskMaterial = CoreUtils.CreateEngineMaterial(_alwaysVisibleMaskShader);
             _depthMaterial = CoreUtils.CreateEngineMaterial(_transparentDepthShader);
             _depthMaterial.SetFloat("_DepthBlendOp", SystemInfo.usesReversedZBuffer ? 4f : 3f);
             _capture = new CapturePass();
             _depth = new TransparentDepthPass(_depthMaterial);
-            _pass = new OutlinePass(_material, _maskMaterial, _capture, _depth);
+            _outline = new OutlinePass(_material, _capture, _depth);
             RenderPipelineManager.beginCameraRendering += BeginCamera;
             RenderPipelineManager.endCameraRendering += EndCamera;
         }
 
         /// <summary>
-        /// 기본 게임 카메라와 씬 뷰에 인스펙터 설정을 적용하고 윤곽선 패스를 등록한다.
-        /// </summary>
-        public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
-        {
-            CameraData cameraData = renderingData.cameraData;
-            if (_material == null
-                || cameraData.renderType == CameraRenderType.Overlay
-                || (cameraData.cameraType != CameraType.Game
-                    && cameraData.cameraType != CameraType.SceneView))
-            {
-                return;
-            }
-
-            _material.SetColor(_lineColorId, _lineColor);
-            _material.SetFloat(_lineWidthId, _lineWidth);
-            _material.SetFloat(_depthSensitivityId, _depthSensitivity);
-            _material.SetFloat(_normalSensitivityId, _normalSensitivity);
-            _material.SetFloat(_usePerceptionMaskId, Application.isPlaying ? 1f : 0f);
-            _material.SetFloat(_transparentThresholdId, _transparentThreshold);
-            renderer.EnqueuePass(_capture);
-            renderer.EnqueuePass(_depth);
-            renderer.EnqueuePass(_pass);
-        }
-
-        /// <summary>
-        /// 기능 제거 또는 재생 종료 시 이 기능이 생성한 머티리얼을 해제한다.
-        /// </summary>
-        protected override void Dispose(bool disposing)
-        {
-            ReleaseResources();
-        }
-
-        /// <summary>
-        /// context와 camera를 사용해 지원 카메라의 컬링 전에 선택 VFX의 임시 큐를 준비한다.
-        /// 기본 게임 카메라와 씬 뷰의 렌더러 상태만 변경한다.
+        /// 지원 카메라의 컬링 전에 선택 VFX의 임시 큐와 표시를 준비한다.
+        /// 기능 비활성 상태에서는 원본 URP 렌더링을 유지한다.
         /// </summary>
         private void BeginCamera(ScriptableRenderContext context, Camera camera)
         {
-            if (!isActive || _pass == null || (camera.cameraType != CameraType.Game
+            if (!isActive || _outline == null || (camera.cameraType != CameraType.Game
                 && camera.cameraType != CameraType.SceneView))
                 return;
             var data = camera.GetComponent<UniversalAdditionalCameraData>();
@@ -115,17 +80,40 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
         }
 
         /// <summary>
-        /// context와 camera의 렌더링 종료 시 임시 VFX 머티리얼과 렌더링 마스크를 원복한다.
-        /// 원본 에셋과 다음 카메라에 임시 상태를 남기지 않는다.
+        /// 카메라 실행 후 원본 렌더러 상태를 복원한다.
         /// </summary>
-        private void EndCamera(ScriptableRenderContext context, Camera camera)
+        private void EndCamera(ScriptableRenderContext context, Camera camera) { _routing.Restore(); }
+
+        /// <summary>
+        /// 기본 게임 카메라와 Scene View에 현재 설정을 전달하고 세 패스를 등록한다.
+        /// Overlay·Preview·Reflection 카메라는 기존처럼 제외한다.
+        /// </summary>
+        public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            _routing.Restore();
+            var camera = renderingData.cameraData;
+            if (_outline == null || camera.renderType == CameraRenderType.Overlay
+                || (camera.cameraType != CameraType.Game && camera.cameraType != CameraType.SceneView))
+                return;
+            _material.SetColor(_lineColorId, _lineColor);
+            _material.SetFloat(_lineWidthId, _lineWidth);
+            _material.SetFloat(_depthSensitivityId, _depthSensitivity);
+            _material.SetFloat(_normalSensitivityId, _normalSensitivity);
+            _material.SetFloat(_transparentThresholdId, _transparentThreshold);
+            _material.SetFloat(_usePerceptionMaskId, Application.isPlaying ? 1f : 0f);
+            renderer.EnqueuePass(_capture);
+            renderer.EnqueuePass(_depth);
+            renderer.EnqueuePass(_outline);
         }
 
         /// <summary>
-        /// 추가 입력 없이 카메라 구독, 임시 머티리얼 및 패스 타깃을 해제한다.
-        /// 재생성이나 기능 제거 이후 이전 렌더링 상태와 리소스를 남기지 않는다.
+        /// 기능 제거 시 생성한 머티리얼과 호환 모드 타깃을 해제한다.
+        /// disposing 값과 무관하게 이 기능의 리소스만 정리한다.
+        /// </summary>
+        protected override void Dispose(bool disposing) { ReleaseResources(); }
+
+        /// <summary>
+        /// 현재 패스의 머티리얼·타깃과 참조를 정리한다.
+        /// 재생성 또는 제거 이후 이전 리소스를 재사용하지 않는다.
         /// </summary>
         private void ReleaseResources()
         {
@@ -133,17 +121,15 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             RenderPipelineManager.endCameraRendering -= EndCamera;
             _routing.Dispose();
             CoreUtils.Destroy(_material);
-            CoreUtils.Destroy(_maskMaterial);
             CoreUtils.Destroy(_depthMaterial);
             _capture?.Release();
             _depth?.Release();
-            _pass?.Dispose();
+            _outline?.Release();
             _material = null;
-            _maskMaterial = null;
             _depthMaterial = null;
             _capture = null;
             _depth = null;
-            _pass = null;
+            _outline = null;
         }
 
         private sealed class FrameTextures : ContextItem
@@ -337,157 +323,105 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
 
         private sealed class OutlinePass : ScriptableRenderPass
         {
-            private const string PASS_NAME = "Screen Space Outline";
             private readonly Material _material;
-            private readonly Material _maskMaterial;
             private readonly CapturePass _capture;
             private readonly TransparentDepthPass _depth;
-            private RTHandle _maskTarget;
-            private static readonly int MaskId = Shader.PropertyToID("_AlwaysVisibleOutlineMask");
-            private static readonly List<ShaderTagId> Tags = new List<ShaderTagId>
-            {
-                new ShaderTagId("UniversalForward"), new ShaderTagId("UniversalForwardOnly"),
-                new ShaderTagId("SRPDefaultUnlit")
-            };
-            private const uint ALWAYS_VISIBLE_LAYER = 1u << 30;
-
-            private sealed class MaskPassData
-            {
-                internal RendererListHandle Renderers;
-            }
+            private RTHandle _legacyResult;
 
             private sealed class PassData
             {
-                internal Material Material;
-                internal TextureHandle Opaque;
-                internal TextureHandle TransparentDepth;
-                internal TextureHandle SceneDepth;
-                internal TextureHandle Normals;
-                internal TextureHandle Mask;
+                public Material Material { get; set; }
+                public TextureHandle Source { get; set; }
+                public TextureHandle Opaque { get; set; }
+                public TextureHandle TransparentDepth { get; set; }
+                public TextureHandle SceneDepth { get; set; }
+                public TextureHandle Normals { get; set; }
             }
 
             /// <summary>
-            /// 머티리얼을 보관하고 투명 오브젝트 이전에 깊이·노멀 입력을 요청한다.
+            /// material과 앞선 캡처 패스를 연결해 투명 합성 후 윤곽선을 출력하게 한다.
+            /// 깊이·노멀 입력과 중간 카메라 타깃을 요청한다.
             /// </summary>
-            public OutlinePass(Material material, Material maskMaterial, CapturePass capture, TransparentDepthPass depth)
+            public OutlinePass(Material material, CapturePass capture, TransparentDepthPass depth)
             {
                 _material = material;
-                _maskMaterial = maskMaterial;
                 _capture = capture;
                 _depth = depth;
                 renderPassEvent = RenderPassEvent.BeforeRenderingTransparents;
+                requiresIntermediateTexture = true;
                 ConfigureInput(ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal);
             }
 
             /// <summary>
-            /// 프레임의 깊이·노멀을 읽어 카메라 색상에 검은 면과 선을 기록한다.
+            /// 최종 색상·불투명 색상·투명 깊이를 명시적으로 읽어 별도 합성 타깃에 출력한다.
+            /// 같은 텍스처의 동시 읽기·쓰기를 피한 뒤 카메라 색상으로 복사한다.
             /// </summary>
-            public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+            public override void RecordRenderGraph(RenderGraph graph, ContextContainer frameData)
             {
-                UniversalResourceData resources = frameData.Get<UniversalResourceData>();
-                UniversalRenderingData rendering = frameData.Get<UniversalRenderingData>();
-                UniversalCameraData camera = frameData.Get<UniversalCameraData>();
-                UniversalLightData light = frameData.Get<UniversalLightData>();
-                TextureDesc description = renderGraph.GetTextureDesc(resources.activeColorTexture);
-                description.name = "Always Visible Outline Mask";
-                description.colorFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R8_UNorm;
-                description.depthBufferBits = DepthBits.None;
-                description.clearBuffer = true;
-                description.clearColor = Color.clear;
-                TextureHandle mask = renderGraph.CreateTexture(description);
-                DrawingSettings drawing = RenderingUtils.CreateDrawingSettings(Tags, rendering, camera, light,
-                    SortingCriteria.CommonOpaque);
-                drawing.overrideMaterial = _maskMaterial;
-                drawing.overrideMaterialPassIndex = 0;
-                FilteringSettings filter = new FilteringSettings(RenderQueueRange.opaque, -1, ALWAYS_VISIBLE_LAYER);
-                using (IRasterRenderGraphBuilder builder = renderGraph.AddRasterRenderPass<MaskPassData>(
-                    "Always Visible Outline Mask", out MaskPassData data))
+                var resources = frameData.Get<UniversalResourceData>();
+                var frame = frameData.Get<FrameTextures>();
+                var desc = resources.activeColorTexture.GetDescriptor(graph);
+                desc.name = "Outline Composite";
+                desc.depthBufferBits = DepthBits.None;
+                desc.msaaSamples = MSAASamples.None;
+                var result = graph.CreateTexture(desc);
+                using (var builder = graph.AddRasterRenderPass<PassData>("Screen Space Outline", out var data))
                 {
-                    data.Renderers = renderGraph.CreateRendererList(new RendererListParams(rendering.cullResults, drawing, filter));
-                    builder.UseRendererList(data.Renderers);
-                    builder.SetRenderAttachment(mask, 0, AccessFlags.Write);
-                    builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.Read);
-                    builder.SetGlobalTextureAfterPass(mask, MaskId);
-                    builder.SetRenderFunc<MaskPassData>(DrawMask);
-                }
-                using (IRasterRenderGraphBuilder builder =
-                    renderGraph.AddRasterRenderPass<PassData>(PASS_NAME, out PassData passData))
-                {
-                    FrameTextures frame = frameData.Get<FrameTextures>();
-                    passData.Material = _material;
-                    passData.Opaque = frame.Opaque;
-                    passData.TransparentDepth = frame.TransparentDepth;
-                    passData.SceneDepth = resources.cameraDepthTexture;
-                    passData.Normals = resources.cameraNormalsTexture;
-                    passData.Mask = mask;
-                    builder.UseTexture(passData.Opaque, AccessFlags.Read);
-                    builder.UseTexture(passData.TransparentDepth, AccessFlags.Read);
-                    builder.UseTexture(passData.SceneDepth, AccessFlags.Read);
-                    builder.UseTexture(passData.Normals, AccessFlags.Read);
-                    builder.UseTexture(passData.Mask, AccessFlags.Read);
-                    builder.SetRenderAttachment(resources.activeColorTexture, 0, AccessFlags.WriteAll);
+                    data.Material = _material;
+                    data.Source = resources.activeColorTexture;
+                    data.Opaque = frame.Opaque;
+                    data.TransparentDepth = frame.TransparentDepth;
+                    data.SceneDepth = resources.cameraDepthTexture;
+                    data.Normals = resources.cameraNormalsTexture;
+                    builder.UseTexture(data.Source, AccessFlags.Read);
+                    builder.UseTexture(data.Opaque, AccessFlags.Read);
+                    builder.UseTexture(data.TransparentDepth, AccessFlags.Read);
+                    builder.UseTexture(data.SceneDepth, AccessFlags.Read);
+                    builder.UseTexture(data.Normals, AccessFlags.Read);
+                    builder.SetRenderAttachment(result, 0, AccessFlags.WriteAll);
                     builder.SetRenderFunc<PassData>(DrawOutline);
                 }
-            }
-
-            /// <summary>선택 렌더러 목록을 깊이 검사한 흰색 마스크로 그린다.</summary>
-            private static void DrawMask(MaskPassData data, RasterGraphContext context)
-            {
-                context.cmd.DrawRendererList(data.Renderers);
-            }
-
-            /// <summary>호환 모드에서 사용하는 임시 마스크 타깃을 해제한다.</summary>
-            internal void Dispose()
-            {
-                _maskTarget?.Release();
-                _maskTarget = null;
+                graph.AddBlitPass(result, resources.activeColorTexture, Vector2.one, Vector2.zero);
             }
 
             /// <summary>
-            /// 패스 머티리얼로 전체 화면을 덮어 윤곽선 결과를 출력한다.
+            /// 현재 프레임의 모든 텍스처를 속성 블록에 연결해 전체 화면 윤곽선을 그린다.
             /// </summary>
             private static void DrawOutline(PassData data, RasterGraphContext context)
             {
                 var properties = context.renderGraphPool.GetTempMaterialPropertyBlock();
-                properties.SetVector("_BlitScaleBias", new Vector4(1f, 1f, 0f, 0f));
+                properties.SetTexture("_BlitTexture", data.Source);
+                properties.SetVector("_BlitScaleBias", new Vector4(1, 1, 0, 0));
                 properties.SetTexture("_OutlineOpaqueColor", data.Opaque);
                 properties.SetTexture("_OutlineTransparentDepth", data.TransparentDepth);
                 properties.SetTexture("_CameraDepthTexture", data.SceneDepth);
                 properties.SetTexture("_CameraNormalsTexture", data.Normals);
-                properties.SetTexture("_AlwaysVisibleOutlineMask", data.Mask);
                 context.cmd.DrawProcedural(Matrix4x4.identity, data.Material, 0, MeshTopology.Triangles, 3, 1, properties);
             }
 
+            /// <summary>
+            /// 호환 모드에서 할당한 합성 결과 타깃을 해제한다.
+            /// </summary>
+            public void Release() { _legacyResult?.Release(); }
+
 #pragma warning disable CS0618, CS0672
             /// <summary>
-            /// 호환 모드에서는 현재 카메라 색상 대상으로 같은 윤곽선 셰이더를 실행한다.
+            /// 호환 모드에서 저장한 색상과 투명 깊이로 최종 윤곽선을 합성한다.
             /// </summary>
             public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
             {
-                CommandBuffer commandBuffer = CommandBufferPool.Get(PASS_NAME);
-                RenderTextureDescriptor descriptor = renderingData.cameraData.cameraTargetDescriptor;
-                descriptor.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R8_UNorm;
-                descriptor.depthBufferBits = 0;
-                RenderingUtils.ReAllocateHandleIfNeeded(ref _maskTarget, descriptor, FilterMode.Point,
-                    TextureWrapMode.Clamp, name: "Always Visible Outline Mask");
-                CoreUtils.SetRenderTarget(commandBuffer, _maskTarget,
-                    renderingData.cameraData.renderer.cameraDepthTargetHandle, ClearFlag.Color, Color.clear);
-                context.ExecuteCommandBuffer(commandBuffer);
-                commandBuffer.Clear();
-                DrawingSettings drawing = CreateDrawingSettings(Tags, ref renderingData, SortingCriteria.CommonOpaque);
-                drawing.overrideMaterial = _maskMaterial;
-                FilteringSettings filter = new FilteringSettings(RenderQueueRange.opaque, -1, ALWAYS_VISIBLE_LAYER);
-                context.DrawRenderers(renderingData.cullResults, ref drawing, ref filter);
-                commandBuffer.SetGlobalTexture(MaskId, _maskTarget);
+                var desc = renderingData.cameraData.cameraTargetDescriptor;
+                desc.depthBufferBits = 0;
+                desc.msaaSamples = 1;
+                RenderingUtils.ReAllocateHandleIfNeeded(ref _legacyResult, desc, name: "Outline Composite");
                 _material.SetTexture("_OutlineOpaqueColor", _capture.LegacyColor);
                 _material.SetTexture("_OutlineTransparentDepth", _depth.LegacyDepth);
-                CoreUtils.SetRenderTarget(
-                    commandBuffer,
-                    renderingData.cameraData.renderer.cameraColorTargetHandle,
-                    ClearFlag.None);
-                Blitter.BlitTexture(commandBuffer, new Vector4(1f, 1f, 0f, 0f), _material, 0);
-                context.ExecuteCommandBuffer(commandBuffer);
-                CommandBufferPool.Release(commandBuffer);
+                var cmd = CommandBufferPool.Get("Screen Space Outline");
+                Blitter.BlitCameraTexture(cmd, renderingData.cameraData.renderer.cameraColorTargetHandle,
+                    _legacyResult, _material, 0);
+                Blitter.BlitCameraTexture(cmd, _legacyResult, renderingData.cameraData.renderer.cameraColorTargetHandle);
+                context.ExecuteCommandBuffer(cmd);
+                CommandBufferPool.Release(cmd);
             }
 #pragma warning restore CS0618, CS0672
         }

@@ -14,11 +14,13 @@ public sealed class SwordSlashTrail : MonoBehaviour
     [SerializeField] private Transform _bladeTip;
 
     [Header("궤적")]
-    [SerializeField, Min(0.01f)] private float _lifetime = 0.18f;
-    [SerializeField, Range(4, 128)] private int _maximumSamples = 64;
+    [SerializeField, Min(0.01f)] private float _lifetime = 0.28f;
+    [SerializeField, Range(4, 128)] private int _maximumSamples = 128;
     [SerializeField, Min(0.001f)] private float _minimumDistance = 0.015f;
     [SerializeField, Min(0.01f)] private float _teleportDistance = 3f;
-    [SerializeField, ColorUsage(true, true)] private Color _color = new Color(0.85f, 0.88f, 0.9f, 0.8f);
+    [SerializeField, Range(1f, 2f)] private float _widthScale = 1.3f;
+    [SerializeField, Min(0.01f)] private float _patternLength = 4f;
+    [SerializeField, ColorUsage(true, true)] private Color _color = Color.white;
     private readonly List<BladeSample> _samples = new List<BladeSample>(128);
     private readonly List<Vector3> _vertices = new List<Vector3>(256);
     private readonly List<Vector2> _uvs = new List<Vector2>(256);
@@ -26,24 +28,29 @@ public sealed class SwordSlashTrail : MonoBehaviour
     private readonly List<int> _triangles = new List<int>(762);
     private Mesh _mesh;
     private bool _emitting;
+    private float _patternDistance;
+    private ProceduralSwordSlashVFX _appearance;
 
-    public bool IsPlaying => _emitting || _samples.Count > 0;
+    public bool IsPlaying => _emitting || _samples.Count > 0
+        || (_appearance != null && _appearance.IsAlive);
 
     private readonly struct BladeSample
     {
         public Vector3 Base { get; }
         public Vector3 Tip { get; }
         public float Time { get; }
+        public float PatternDistance { get; }
 
         /// <summary>
-        /// 검 밑점·끝점의 월드 위치와 게임 시각을 받아 불변 궤적 표본을 만든다.
-        /// 각 입력값을 표본의 위치와 생성 시각으로 보관한다.
+        /// 검 양 끝점·게임 시각·누적 이동 거리로 불변 궤적 표본을 만든다.
+        /// 위치·생성 시각·무늬 좌표를 보관해 이후 표본 추가에도 무늬가 이동하지 않게 한다.
         /// </summary>
-        public BladeSample(Vector3 bladeBase, Vector3 bladeTip, float time)
+        public BladeSample(Vector3 bladeBase, Vector3 bladeTip, float time, float patternDistance)
         {
             Base = bladeBase;
             Tip = bladeTip;
             Time = time;
+            PatternDistance = patternDistance;
         }
     }
 
@@ -52,6 +59,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
         _mesh = new Mesh { name = "Procedural Sword Slash Trail" };
         _mesh.MarkDynamic();
         GetComponent<MeshFilter>().sharedMesh = _mesh;
+        _appearance = GetComponent<ProceduralSwordSlashVFX>();
     }
 
     void LateUpdate()
@@ -63,8 +71,15 @@ public sealed class SwordSlashTrail : MonoBehaviour
             _emitting = false;
         if (_emitting)
             RecordSample();
-        while (_samples.Count > 0 && Time.time - _samples[0].Time >= _lifetime)
-            _samples.RemoveAt(0);
+        if (_appearance != null)
+        {
+            _appearance.Tick(Time.deltaTime, _emitting);
+            if (!_emitting && !_appearance.IsAlive)
+                _samples.Clear();
+        }
+        else
+            while (_samples.Count > 0 && Time.time - _samples[0].Time >= _lifetime)
+                _samples.RemoveAt(0);
         RebuildMesh();
     }
 
@@ -97,6 +112,11 @@ public sealed class SwordSlashTrail : MonoBehaviour
         _bladeBase = bladeBase;
         _bladeTip = bladeTip;
         _emitting = true;
+        if (_appearance != null)
+        {
+            transform.position = bladeBase.position;
+            _appearance.Begin();
+        }
         RecordSample();
     }
 
@@ -130,6 +150,9 @@ public sealed class SwordSlashTrail : MonoBehaviour
     {
         _emitting = false;
         _samples.Clear();
+        _patternDistance = 0f;
+        if (_appearance != null)
+            _appearance.Clear();
         if (_mesh != null)
             _mesh.Clear();
     }
@@ -147,19 +170,26 @@ public sealed class SwordSlashTrail : MonoBehaviour
             BladeSample previous = _samples[_samples.Count - 1];
             float distance = Mathf.Max(Vector3.Distance(previous.Base, bladeBase),
                 Vector3.Distance(previous.Tip, bladeTip));
-            if (distance >= _teleportDistance)
+            float teleportMovement = _appearance != null
+                ? Vector3.Distance(previous.Base, bladeBase) : distance;
+            if (teleportMovement >= _teleportDistance)
+            {
                 _samples.Clear();
+                _patternDistance = 0f;
+            }
             else if (distance < _minimumDistance)
                 return;
+            else
+                _patternDistance += distance;
         }
         if (_samples.Count >= _maximumSamples)
             _samples.RemoveAt(0);
-        _samples.Add(new BladeSample(bladeBase, bladeTip, Time.time));
+        _samples.Add(new BladeSample(bladeBase, bladeTip, Time.time, _patternDistance));
     }
 
     /// <summary>
-    /// 유효한 월드 위치 표본을 현재 로컬 좌표로 변환해 양면 띠 메시를 갱신한다.
-    /// 표본의 경과 시간과 색상으로 정점 알파를 줄이고 메시 경계를 재계산한다.
+    /// 월드 표본과 시각적 폭 배율로 검 궤적의 양면 띠 메시를 갱신한다.
+    /// 누적 거리로 고정 UV를 만들고 경과 시간을 정점 알파로 전달해 투명도를 줄인다.
     /// </summary>
     private void RebuildMesh()
     {
@@ -172,12 +202,13 @@ public sealed class SwordSlashTrail : MonoBehaviour
         {
             BladeSample sample = _samples[i];
             _vertices.Add(transform.InverseTransformPoint(sample.Base));
-            _vertices.Add(transform.InverseTransformPoint(sample.Tip));
-            float progress = i / (float)Mathf.Max(1, _samples.Count - 1);
+            Vector3 visualTip = sample.Base + (sample.Tip - sample.Base) * _widthScale;
+            _vertices.Add(transform.InverseTransformPoint(visualTip));
+            float progress = sample.PatternDistance / _patternLength;
             _uvs.Add(new Vector2(progress, 0f));
             _uvs.Add(new Vector2(progress, 1f));
             Color color = _color;
-            color.a *= Mathf.Pow(Mathf.Clamp01(1f - (Time.time - sample.Time) / _lifetime), 1.5f);
+            color.a *= Mathf.Clamp01(1f - (Time.time - sample.Time) / _lifetime);
             _colors.Add(color);
             _colors.Add(color);
             if (i == 0)
@@ -195,5 +226,7 @@ public sealed class SwordSlashTrail : MonoBehaviour
         _mesh.SetColors(_colors);
         _mesh.SetTriangles(_triangles, 0);
         _mesh.RecalculateBounds();
+        if (_appearance != null)
+            _appearance.ApplyAppearance(_mesh);
     }
 }
