@@ -41,6 +41,14 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0f)] private float _deceleration = 12f;
     [SerializeField, Min(0f)] private float _gravity = 20f;
 
+    [Header("Crouch")]
+    [SerializeField, Min(0f)] private float _crouchWalkSpeed = 0.7f;
+    [SerializeField, Min(0.1f)] private float _crouchedCharacterHeight = 1.6f;
+    [SerializeField, Min(0f)] private float _crouchedCameraHeight = 1.325f;
+    [SerializeField, Min(0.01f)] private float _crouchTransitionDuration = 0.15f;
+    [SerializeField, Range(0f, 1f)] private float _crouchFootstepNoise = 0.12f;
+    [SerializeField] private LayerMask _crouchCollisionMask = ~0;
+
     [Header("Look")]
     [SerializeField, Min(0f)] private float _lookSensitivity = 0.12f;
     [SerializeField, Range(1f, 89f)] private float _pitchLimit = 75f;
@@ -69,6 +77,12 @@ public sealed class PlayerMotor : MonoBehaviour
     private bool _stepInProgress;
     private PlayerLocomotionMode _stepMode;
     private bool _leftStep;
+    private readonly Collider[] _crouchOverlapBuffer = new Collider[16];
+    private Vector3 _standingCharacterCenter;
+    private Vector3 _standingCameraLocalPosition;
+    private float _standingCharacterHeight;
+    private float _crouchBlend;
+    private bool _crouchRequested;
     private bool _isDashing;
     private Vector3 _dashDirection;
     private float _dashGoalDistance;
@@ -88,7 +102,8 @@ public sealed class PlayerMotor : MonoBehaviour
     public float WalkSpeed => _walkSpeed;
     public float Acceleration => _acceleration;
     public float Deceleration => _deceleration;
-public bool IsDashing => _isDashing;
+    public bool IsCrouching => _crouchBlend > 0.001f;
+    public bool IsDashing => _isDashing;
 
     private void Awake()
     {
@@ -103,8 +118,17 @@ public bool IsDashing => _isDashing;
         }
 
         _yaw = transform.eulerAngles.y;
+        _standingCharacterHeight = _characterController.height;
+        _standingCharacterCenter = _characterController.center;
+        _crouchedCharacterHeight = Mathf.Clamp(
+            _crouchedCharacterHeight, _characterController.radius * 2f, _standingCharacterHeight);
         if (_cameraPivot != null)
+        {
             _pitch = NormalizeAngle(_cameraPivot.localEulerAngles.x);
+            _standingCameraLocalPosition = _cameraPivot.localPosition;
+            _crouchedCameraHeight = Mathf.Clamp(
+                _crouchedCameraHeight, 0f, Mathf.Max(0f, _standingCameraLocalPosition.y));
+        }
     }
 
     /// <summary>벽 충돌을 소유하는 맵 서비스 계약을 이동 장치에 등록합니다.</summary>
@@ -123,6 +147,12 @@ public bool IsDashing => _isDashing;
     public void SetMoveInput(Vector2 input)
     {
         _moveInput = Vector2.ClampMagnitude(input, 1f);
+    }
+
+    /// <summary>웅크리기 목표 상태를 저장해 다음 Tick에서 카메라와 충돌 캡슐에 반영합니다.</summary>
+    public void SetCrouchInput(bool isCrouching)
+    {
+        _crouchRequested = isCrouching;
     }
 
     /// <summary>시점 변화량을 누적해 다음 Tick에서 카메라 회전에 반영합니다.</summary>
@@ -145,6 +175,8 @@ public bool IsDashing => _isDashing;
     {
         if (_characterController == null || !_characterController.enabled)
             return;
+
+        TickCrouch(deltaTime);
 
         if (!lookLocked)
             ApplyLook();
@@ -184,6 +216,59 @@ public bool IsDashing => _isDashing;
         float actualDistance = actualDelta.magnitude;
         _lastHorizontalSpeed = deltaTime > 0f ? actualDistance / deltaTime : 0f;
 
+    }
+
+    /// <summary>웅크리기 진행도를 부드럽게 갱신합니다. 일어설 때 머리 공간이 막혀 있으면 현재 높이를 유지합니다.</summary>
+    private void TickCrouch(float deltaTime)
+    {
+        float targetBlend = _crouchRequested ? 1f : 0f;
+        float blendStep = Mathf.Max(0f, deltaTime) / Mathf.Max(0.01f, _crouchTransitionDuration);
+        float nextBlend = Mathf.MoveTowards(_crouchBlend, targetBlend, blendStep);
+        if (nextBlend < _crouchBlend && !CanFitCapsule(nextBlend))
+            nextBlend = _crouchBlend;
+
+        _crouchBlend = nextBlend;
+        float easedBlend = Mathf.SmoothStep(0f, 1f, _crouchBlend);
+        float height = Mathf.Lerp(_standingCharacterHeight, _crouchedCharacterHeight, easedBlend);
+        Vector3 center = _standingCharacterCenter;
+        center.y += (_standingCharacterHeight - height) * 0.5f;
+        _characterController.height = height;
+        _characterController.center = center;
+
+        if (_cameraPivot != null)
+        {
+            Vector3 cameraPosition = _standingCameraLocalPosition;
+            cameraPosition.y = Mathf.Lerp(_standingCameraLocalPosition.y, _crouchedCameraHeight, easedBlend);
+            _cameraPivot.localPosition = cameraPosition;
+        }
+    }
+
+    /// <summary>blend에 해당하는 캡슐이 다른 물리 충돌체와 겹치지 않는지 반환합니다.</summary>
+    private bool CanFitCapsule(float blend)
+    {
+        float easedBlend = Mathf.SmoothStep(0f, 1f, blend);
+        float height = Mathf.Lerp(_standingCharacterHeight, _crouchedCharacterHeight, easedBlend);
+        float radius = Mathf.Max(0.01f, _characterController.radius - _characterController.skinWidth - 0.01f);
+        Vector3 center = _standingCharacterCenter;
+        center.y += (_standingCharacterHeight - height) * 0.5f;
+        Vector3 worldCenter = transform.TransformPoint(center);
+        float halfSegment = Mathf.Max(0f, height * 0.5f - radius);
+        Vector3 top = worldCenter + transform.up * halfSegment;
+        Vector3 bottom = worldCenter - transform.up * halfSegment;
+        int count = Physics.OverlapCapsuleNonAlloc(
+            bottom, top, radius, _crouchOverlapBuffer, _crouchCollisionMask, QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider other = _crouchOverlapBuffer[i];
+            if (other == null || other.transform == transform || other.transform.IsChildOf(transform))
+                continue;
+            if (other.bounds.max.y <= worldCenter.y - height * 0.5f + 0.02f)
+                continue;
+            return false;
+        }
+
+        return count < _crouchOverlapBuffer.Length;
     }
 
     /// <summary>대상 위치 또는 전방 방향으로 목표 거리를 계산하고 대시를 시작합니다. 시작 가능 여부를 반환합니다.</summary>
@@ -416,6 +501,8 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
                 return _guardWalkSpeed;
             case PlayerLocomotionMode.ChargingWalking:
                 return _chargingWalkSpeed;
+            case PlayerLocomotionMode.CrouchWalking:
+                return _crouchWalkSpeed;
             default:
                 return 0f;
         }
@@ -521,13 +608,16 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
         if (!emit)
             return;
 
-        bool quiet = mode == PlayerLocomotionMode.ChargingWalking;
+        bool crouching = mode == PlayerLocomotionMode.CrouchWalking;
+        bool quiet = crouching || mode == PlayerLocomotionMode.ChargingWalking;
+        float noiseStrength = crouching ? _crouchFootstepNoise
+            : quiet ? _quietFootstepNoise : _normalFootstepNoise;
         _leftStep = !_leftStep;
         Vector3 position = transform.position - transform.forward * 0.05f
             + transform.right * (_leftStep ? -0.12f : 0.12f);
         FootstepEmitted?.Invoke(new PlayerFootstepEvent(
             position, Time.time, quiet ? PlayerFootstepType.Quiet : PlayerFootstepType.Normal,
-            speed, quiet ? _quietFootstepNoise : _normalFootstepNoise));
+            speed, noiseStrength));
     }
 
     /// <summary>
@@ -564,6 +654,10 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
     {
         _iaidoMaxDistance = Mathf.Max(0f, _iaidoMaxDistance);
         _iaidoSpeed = Mathf.Max(0f, _iaidoSpeed);
+        _crouchWalkSpeed = Mathf.Max(0f, _crouchWalkSpeed);
+        _crouchedCharacterHeight = Mathf.Max(0.1f, _crouchedCharacterHeight);
+        _crouchTransitionDuration = Mathf.Max(0.01f, _crouchTransitionDuration);
+        _crouchFootstepNoise = Mathf.Clamp01(_crouchFootstepNoise);
     }
 #endif
 }

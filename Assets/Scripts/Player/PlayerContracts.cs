@@ -22,6 +22,8 @@ public enum PlayerLocomotionMode
     GuardWalking,
     ChargingStill,
     ChargingWalking,
+    Crouching,
+    CrouchWalking,
     IaidoDash
 }
 

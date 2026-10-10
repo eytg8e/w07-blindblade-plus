@@ -47,14 +47,14 @@ namespace BlindBlade.Player.Katana
         {
             if (!_showOverlay) return;
             _text.Clear();
-            _text.AppendLine("KATANA V2 | LMB attack / Ctrl charge / RMB tap parry / Esc cursor");
+            _text.AppendLine("KATANA V2 | LMB attack / Ctrl hold + C toggle crouch / RMB tap parry / Esc cursor");
             _text.Append("Action: ").Append(_combat.Player.CurrentState)
                 .Append("  Recovery: ").AppendLine(_combat.Player.RecoveryRemaining.ToString("0.00"));
             _text.Append("Weapon: ").Append(_combat.WeaponState).Append("  Chain: ")
                 .Append(_combat.ChainKind).Append(' ').AppendLine(_combat.Strike.ToString());
             _text.Append("Parry: ").Append(_combat.IsParryMotion ? "SUCCESS MOTION " : _combat.IsParryWindowOpen ? "OPEN " : "closed ")
-                .Append(_combat.ParryRemaining.ToString("0.00")).Append("  Charge: ")
-                .AppendLine(_combat.Player.ChargeProgress.ToString("0.00"));
+                .Append(_combat.ParryRemaining.ToString("0.00")).Append("  Crouch: ")
+                .AppendLine(_combat.Player.IsCrouching ? "on" : "off");
             _text.Append("Animator: ").AppendLine(_visual.AnimatorState);
             _text.AppendLine(_lastResult);
             foreach (string line in _recent) _text.AppendLine(line);

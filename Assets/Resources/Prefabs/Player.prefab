@@ -514,7 +514,7 @@ PrefabInstance:
     - target: {fileID: 3502371185263496807, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: d9eae1d7ddc47834283de6b48eeb0900, type: 2}
+      objectReference: {fileID: 9100000, guid: 1eb1cf08b0ba4cd3b001f3714f5f04d7, type: 2}
     - target: {fileID: 4775461175289693859, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}
       propertyPath: m_Name
       value: KatanaRig

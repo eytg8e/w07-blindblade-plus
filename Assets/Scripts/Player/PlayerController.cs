@@ -18,6 +18,7 @@ public sealed class PlayerController : MonoBehaviour
     [SerializeField] private MonoBehaviour _mapServiceSource;
 
     [Header("Charge")]
+    [SerializeField] private bool _enableChargeAttack;
     [SerializeField, Min(0f)] private float _minimumChargeTime = 1f;
 
     [Header("Attack")]
@@ -43,6 +44,7 @@ public sealed class PlayerController : MonoBehaviour
     private IPlayerCombatService _combatService;
     private IPlayerMapService _mapService;
     private Vector2 _moveInput;
+    private Vector2 _requestedMoveInput;
     private float _chargeElapsed;
     private float _recoveryRemaining;
     private bool _chargeReady;
@@ -70,6 +72,7 @@ public sealed class PlayerController : MonoBehaviour
     public int CurrentActionId => _currentActionId;
     public bool IsInRecovery => _state == PlayerActionState.Recovery;
     public float RecoveryRemaining => _recoveryRemaining;
+    public bool IsCrouching => _motor != null && _motor.IsCrouching;
 
     private void Awake()
     {
@@ -148,22 +151,41 @@ public sealed class PlayerController : MonoBehaviour
         _hasSenseContext = false;
     }
 
-    /// <summary>이동 입력을 저장하고 이동 장치에 전달합니다. 회복, 정지, 사망, 발도 동작 중에는 입력을 0으로 제한합니다.</summary>
+    /// <summary>
+    /// 회복 중에는 입력 방향을 저장하고 실제 이동은 멈춘다.
+    /// value를 사용하며, 회복 종료 시 마지막 이동 입력을 모터에 복원한다.
+    /// </summary>
     public void SetMovementInput(Vector2 value)
     {
-        if (_state == PlayerActionState.Recovery
-            || _state == PlayerActionState.Paused
+        if (_state == PlayerActionState.Paused
             || _state == PlayerActionState.Dead
             || _state == PlayerActionState.IaidoDash
             || _state == PlayerActionState.IaidoSlash)
+        {
+            _requestedMoveInput = Vector2.zero;
+            _moveInput = Vector2.zero;
+            _motor?.SetMoveInput(Vector2.zero);
+            return;
+        }
+
+        _requestedMoveInput = Vector2.ClampMagnitude(value, 1f);
+        if (_state == PlayerActionState.Recovery)
         {
             _moveInput = Vector2.zero;
             _motor?.SetMoveInput(Vector2.zero);
             return;
         }
 
-        _moveInput = Vector2.ClampMagnitude(value, 1f);
+        _moveInput = _requestedMoveInput;
         _motor?.SetMoveInput(_moveInput);
+    }
+
+    /// <summary>입력 어댑터가 계산한 웅크리기 상태를 이동 장치에 전달합니다. 일시정지나 사망 상태에서는 요청을 무시합니다.</summary>
+    public void SetCrouchInput(bool isCrouching)
+    {
+        if (_state == PlayerActionState.Paused || _state == PlayerActionState.Dead)
+            return;
+        _motor?.SetCrouchInput(isCrouching);
     }
 
     /// <summary>마우스 또는 패드 시점 변화량을 이동 장치에 누적 전달합니다. 일시정지나 사망 상태에서는 입력을 무시합니다.</summary>
@@ -216,7 +238,7 @@ public sealed class PlayerController : MonoBehaviour
     /// <summary>자유 상태에서 기 모으기를 시작하고 충전 시간을 초기화합니다. 상태가 허용되지 않으면 false를 반환합니다.</summary>
     public bool BeginCharge()
     {
-        if (_state != PlayerActionState.Free)
+        if (!_enableChargeAttack || _state != PlayerActionState.Free)
             /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
 
@@ -279,7 +301,7 @@ public sealed class PlayerController : MonoBehaviour
     /// <summary>완료된 기 모으기에서 감지 대상과 중앙 화면 영역으로 목표를 고정하고 발도 대시를 시작합니다. 요청 성공 여부를 반환합니다.</summary>
     public bool RequestIaidoAttack()
     {
-        if (_state != PlayerActionState.Charging || !_chargeReady)
+        if (!_enableChargeAttack || _state != PlayerActionState.Charging || !_chargeReady)
             /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
 
@@ -355,6 +377,7 @@ public sealed class PlayerController : MonoBehaviour
         if (paused)
         {
             _stateBeforePause = _state;
+            _requestedMoveInput = Vector2.zero;
             _moveInput = Vector2.zero;
             _motor?.ClearInput();
             SetState(PlayerActionState.Paused, PlayerActionStage.StateChanged);
@@ -372,6 +395,7 @@ public sealed class PlayerController : MonoBehaviour
 
         _state = PlayerActionState.Dead;
         _recoveryRemaining = 0f;
+        _requestedMoveInput = Vector2.zero;
         _moveInput = Vector2.zero;
         _motor?.ClearInput();
         _motor?.CancelDash();
@@ -481,6 +505,8 @@ public sealed class PlayerController : MonoBehaviour
         _recoveryRemaining = 0f;
         SetState(PlayerActionState.Free, PlayerActionStage.RecoveryEnded, _currentAttackOutcome);
         ResetFinishedAttack();
+        _moveInput = _requestedMoveInput;
+        _motor?.SetMoveInput(_moveInput);
     }
 
     /// <summary>종료된 공격의 적중 처리, 결과, 대상 정보를 초기화합니다.</summary>
@@ -576,11 +602,21 @@ public sealed class PlayerController : MonoBehaviour
         return found;
     }
 
-    /// <summary>현재 행동 상태와 충전 완료 여부로 이동 유형을 반환합니다.</summary>
+    /// <summary>행동 상태, 충전 완료, 웅크리기 여부로 이동 유형을 반환합니다.</summary>
     private PlayerLocomotionMode GetLocomotionMode()
     {
         if (_state == PlayerActionState.IaidoDash)
             return PlayerLocomotionMode.IaidoDash;
+
+        bool canWalk = _state == PlayerActionState.Free
+            || _state == PlayerActionState.NormalAttack
+            || _state == PlayerActionState.Guarding
+            || (_state == PlayerActionState.Charging && _chargeReady);
+        if (_motor != null && _motor.IsCrouching)
+            return canWalk && _moveInput.sqrMagnitude > 0.0001f
+                ? PlayerLocomotionMode.CrouchWalking
+                : PlayerLocomotionMode.Crouching;
+
         if (_state == PlayerActionState.Guarding)
             return PlayerLocomotionMode.GuardWalking;
         if (_state == PlayerActionState.Charging)
