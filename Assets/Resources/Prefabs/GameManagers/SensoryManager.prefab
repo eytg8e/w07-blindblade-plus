@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _observer: {fileID: 0}
-  _fullVisibilityDistance: 5
+  _fullVisibilityDistance: 2
   _maximumDistance: 15
   _footstepPrefab: {fileID: 102, guid: 95e3d4ea2a5643ca8b9380538d34ad33, type: 3}
   _wavePrefab: {fileID: 403, guid: 2363502e95a345d2b96fbe5cf9542e60, type: 3}

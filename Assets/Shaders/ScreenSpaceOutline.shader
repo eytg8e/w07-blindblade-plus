@@ -47,6 +47,11 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             float _OutlineSoundLifetime;
             float _OutlineEdgeFade;
             float _OutlinePerceptionTime;
+            TEXTURE2D(_OutlineTerrainMemory);
+            SAMPLER(sampler_OutlineTerrainMemory);
+            float4 _OutlineMemoryBounds;
+            float _OutlineMemoryEnabled;
+            float4 _OutlineMemoryColor;
 
             // 영역 반경의 안쪽 경계부터 가장자리까지 공간 가시성을 부드럽게 줄인다.
             float RegionVisibility(float3 position, float3 center, float radius)
@@ -57,13 +62,13 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 return 1.0 - smoothstep(innerRadius, radius, distance(position, center));
             }
 
-            // 실제 표면의 월드 위치에서 관측자와 소리 영역 중 최대 가시성을 반환한다.
-            float PerceptionVisibility(float2 uv, float rawDepth, float hasSurface)
+            // 현재 관측자·소리·적 공개 영역의 최대 가시성을 반환한다.
+            float3 PerceptionVisibility(float2 uv, float rawDepth, float hasSurface)
             {
                 if (hasSurface == 0.0)
                     return 0.0;
                 if (_UsePerceptionMask < 0.5)
-                    return 1.0;
+                    return _LineColor.rgb * _LineColor.a;
 
                 #if !UNITY_REVERSED_Z
                     rawDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, rawDepth);
@@ -71,6 +76,13 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float3 position = ComputeWorldSpacePosition(uv, rawDepth, UNITY_MATRIX_I_VP);
                 float visibility = RegionVisibility(
                     position, _OutlineObserverRegion.xyz, _OutlineObserverRegion.w);
+                float memoryVisibility = 0.0;
+                if (_OutlineMemoryEnabled > 0.5)
+                {
+                    float2 memoryUv = (position.xz - _OutlineMemoryBounds.xy) / _OutlineMemoryBounds.zw;
+                    if (all(memoryUv >= 0.0) && all(memoryUv <= 1.0))
+                        memoryVisibility = SAMPLE_TEXTURE2D_LOD(_OutlineTerrainMemory, sampler_OutlineTerrainMemory, memoryUv, 0).r;
+                }
                 [loop]
                 for (int i = 0; i < _OutlineSoundCount; i++)
                 {
@@ -80,7 +92,8 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                         position, _OutlineSoundRegions[i].xyz, _OutlineSoundRadius) * timeVisibility;
                     visibility = max(visibility, soundVisibility);
                 }
-                return visibility;
+                float3 memoryColor = _OutlineMemoryColor.rgb * _OutlineMemoryColor.a * memoryVisibility;
+                return memoryColor * (1.0 - visibility) + _LineColor.rgb * _LineColor.a * visibility;
             }
 
             // 깊이의 배경값을 구분하여 하늘의 노멀로 생기는 선을 제외한다.
@@ -94,7 +107,7 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             }
 
             // 두 픽셀의 상대 깊이와 노멀 차이를 사용해 경계 강도를 반환한다.
-            float EdgeBetween(float2 firstUv, float2 secondUv)
+            float3 EdgeBetween(float2 firstUv, float2 secondUv)
             {
                 float firstRawDepth = SampleSceneDepth(firstUv);
                 float secondRawDepth = SampleSceneDepth(secondUv);
@@ -149,8 +162,26 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float2 secondUv = saturate(uv + float2(upperOffset, upperOffset) * texelSize);
                 float2 thirdUv = saturate(uv + float2(-lowerOffset, upperOffset) * texelSize);
                 float2 fourthUv = saturate(uv + float2(upperOffset, -lowerOffset) * texelSize);
-                float edge = max(EdgeBetween(firstUv, secondUv), EdgeBetween(thirdUv, fourthUv));
-                return half4(_LineColor.rgb * (_LineColor.a * edge), 1.0);
+                float3 edge = max(EdgeBetween(firstUv, secondUv), EdgeBetween(thirdUv, fourthUv));
+                // 넓고 평평한 방문 바닥에 이동 거리를 읽을 수 있는 옅은 격자를 표시한다.
+                if (_OutlineMemoryEnabled > 0.5)
+                {
+                    float depth = SampleSceneDepth(uv);
+                    if (HasSurface(depth) > 0.5 && SampleSceneNormals(uv).y > 0.9)
+                    {
+                        float worldDepth = depth;
+                        #if !UNITY_REVERSED_Z
+                            worldDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, depth);
+                        #endif
+                        float3 world = ComputeWorldSpacePosition(uv, worldDepth, UNITY_MATRIX_I_VP);
+                        float2 grid = world.xz * 0.5;
+                        float2 lineDistance = abs(frac(grid - 0.5) - 0.5) / max(fwidth(grid), 0.0001);
+                        float gridLine = 1.0 - saturate(min(lineDistance.x, lineDistance.y));
+                        if (abs(world.y) < 0.1)
+                            edge = max(edge, gridLine * 0.22 * PerceptionVisibility(uv, depth, 1.0));
+                    }
+                }
+                return half4(edge, 1.0);
             }
             ENDHLSL
         }
