@@ -33,6 +33,8 @@ namespace BlindBlade.Enemies
         private float _lastSeenTime;
         private float _nextPerceptionTime;
         private float _nextRepathTime;
+        private Vector3 _heardPosition;
+        private float _noiseAlertUntil = float.NegativeInfinity;
 
         public EnemyState State => _state;
         public event Action<EnemyState> StateChanged;
@@ -57,6 +59,7 @@ namespace BlindBlade.Enemies
             _lastSeenTime = float.NegativeInfinity;
             _lastKnownPosition = transform.position;
             _hasVisibleTarget = false;
+            _noiseAlertUntil = float.NegativeInfinity;
         }
 
         protected virtual void Update()
@@ -145,6 +148,20 @@ namespace BlindBlade.Enemies
             ChangeState(EnemyState.Idle);
         }
 
+        /// <summary>position에서 들린 검 소음을 duration 동안 기억하고 순찰을 중단해 소음 위치로 접근한다.</summary>
+        public void HearNoise(Vector3 position, float duration)
+        {
+            if (!isActiveAndEnabled || _sensor.Target == null)
+                return;
+            _heardPosition = position;
+            _noiseAlertUntil = Time.time + Mathf.Max(0.1f, duration);
+            _lastKnownPosition = position;
+            _lastSeenTime = Time.time;
+            _nextPerceptionTime = 0f;
+            if (!_attackSelector.IsBusy)
+                ChangeState(EnemyState.Searching);
+        }
+
         /// <summary>
         /// 센서의 대상 가시성과 기억 시간을 사용하여 추적 상태를 갱신한다.
         /// 보이는 대상의 마지막 위치와 시간을 기록하고 공격 범위에서는 공격 상태로 전환한다.
@@ -167,6 +184,14 @@ namespace BlindBlade.Enemies
                 ChangeState(_attackSelector.isActiveAndEnabled &&
                     _attackSelector.CanAttack(_sensor.Target) ? EnemyState.Attacking :
                     (_allowWalkingChase ? EnemyState.Chasing : EnemyState.Idle));
+                return;
+            }
+
+            if (Time.time < _noiseAlertUntil)
+            {
+                _lastKnownPosition = _heardPosition;
+                _lastSeenTime = Time.time;
+                ChangeState(EnemyState.Searching);
                 return;
             }
 

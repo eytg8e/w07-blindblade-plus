@@ -1,5 +1,7 @@
 ### FMOD 사운드 매니저
 
+- 2026-10-10: 계단 BGM은 StairwellMusic이 FMOD EventInstance를 직접 생성·재생하고 씬 이탈 시 정지·해제한다. 이동 중 효과음 제한과 독립적으로 유지된다. Stairwell 씬의 StairwellBGM → StairwellMusic → Fmod Event에서 2D 루프 BGM 이벤트를 선택한다. 이벤트는 Bank에 포함하고 FMOD Studio에서 Build해야 한다. [스테이지 이동 명세](스테이지_이동.md) 참고.
+
 - 기능 설명: 협업자는 `Managers.Sound`에 사운드 ID와 위치 또는 오브젝트를 전달한다. FMOD 이벤트 생성, 재생 및 해제는 매니저가 처리한다.
 - 동작 조건 및 처리 흐름: Managers가 승인된 Resources 설정을 로드해 SoundManager를 생성한다. 단발 효과음은 자연 종료하고 BGM은 매니저가 하나만 유지한다. Update는 종료된 재생과 소유자 수명을 정리한다.
 - 구현 상태: 공개 재생 핸들과 미사용 지속 효과음 API를 제거하고 단발 효과음/BGM 중심으로 단순화했다. 기존 오브젝트별 정지와 음량 제어는 유지한다.
