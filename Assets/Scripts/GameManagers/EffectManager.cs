@@ -149,7 +149,7 @@ public sealed class EffectManager : MonoBehaviour
     /// </summary>
     public bool PlayHit(Vector3 position)
     {
-        return Play(EffectId.SwordClash, position);
+        return Play(EffectId.SwordHit, position);
     }
 
     /// <summary>
