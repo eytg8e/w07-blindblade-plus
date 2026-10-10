@@ -304,3 +304,11 @@ flowchart LR
 
 - 사용자 제작 이벤트 연결 갱신: SwordSwing GUID=34b2306a-d057-4bc6-8579-f36d9496be3b, SwordHit GUID=32ae2110-3bdf-454d-a088-2f26bbb2246a로 SoundLibrary를 교체했다. 새 이벤트의 Combat Bank 배정 및 SFX_Bus 라우팅 후 Desktop Combat/Master Bank를 빌드했다.
 - 이번 갱신 검증: 독립 FMOD 시스템의 무음 출력으로 Combat Bank 로드, 두 GUID 조회, 경로 일치, 단발음 여부 및 start=OK를 확인하고 시스템을 해제했다. 현재 프로젝트의 기존 EffectId/EffectManager CS0246 오류로 Play 검증은 진행하지 못했다. 앞 항목의 게임플레이 검증은 이전 구현 당시 결과다. 사용자 제작 FMOD 소스·음원 신규 파일은 작업 트리에 보존하고 연결 설정과 빌드 결과만 커밋한다.
+
+#### 돌진 WarCry 연결 (2026-10-10)
+
+- SoundId.WarCry(5)를 SoundLibrary의 event:/WarCry에 연결했다. EnemySoundSettings의 Charge Telegraph=WarCry, Charge Action=None으로 설정하여 돌진 전조 시작마다 한 번만 재생한다. 기존 EnemyAttackBehaviour.TryAttack → PlayActionSound → Managers.Sound.PlayAttached를 사용하며 적에 발음체를 부착한다.
+- FMOD WarCry가 Bank에 미배정되어 있어 Combat Bank에 배정하고 Desktop Combat 및 Master strings Bank를 빌드했다. Unity EventManager.RefreshBanks로 갱신했다.
+- 플레이어 이동 중에도 돌진 경고가 들리도록 SoundManager 이동 제한에서 WarCry를 허용한다. 이동 제한 진입 시 이미 재생 중인 WarCry도 유지한다.
+- 설정 위치: Assets/Resources/Enemies/EnemySoundSettings.asset 및 Assets/Resources/Sound/SoundLibrary.asset. 음원·볼륨은 FMOD Studio event:/WarCry에서 수정하고 Bank를 빌드한다.
+- 검증: Unity 컴파일 오류 없음. StraightCorridor Play에서 돌진 TryAttack 성공, Telegraph 진입, WarCry 인스턴스 1개 증가를 확인했다. 플레이어 이동 제한 중에도 재생 성공. 실제 스피커 청취는 미확인이다.

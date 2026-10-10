@@ -70,14 +70,23 @@ public class SoundManager
         }
     }
 
-    /// <summary>owner 지정 시 해당 플레이어의 발소리와 검 전투음만 허용하고 기존 효과음을 정지한다. null이면 제한을 해제하고 BGM 음량을 복구한다.</summary>
+    /// <summary>owner 지정 시 플레이어 발소리·검 전투음과 적 WarCry를 허용한다. 다른 효과음을 정지하고 null이면 제한과 BGM 음소거를 해제한다.</summary>
     public void SetFootstepOnlyOwner(GameObject owner)
     {
         if (_footstepOnlyOwner == owner)
             return;
         _footstepOnlyOwner = owner;
         if (owner != null)
-            StopEffects();
+        {
+            for (int i = _effects.Count - 1; i >= 0; i--)
+            {
+                if (_effects[i].Id == SoundId.WarCry)
+                    continue;
+                if (RuntimeManager.IsInitialized)
+                    StopEffect(_effects[i].Instance, false);
+                _effects.RemoveAt(i);
+            }
+        }
         if (_bgm.isValid() && RuntimeManager.IsInitialized)
             _bgm.setVolume(owner != null ? 0f : 1f);
     }
@@ -258,7 +267,7 @@ public class SoundManager
     /// </summary>
     private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume)
     {
-        if (_footstepOnlyOwner != null && (source != _footstepOnlyOwner
+        if (_footstepOnlyOwner != null && soundId != SoundId.WarCry && (source != _footstepOnlyOwner
             || (soundId != SoundId.Footstep && soundId != SoundId.SwordSwing && soundId != SoundId.SwordHit)))
             return false;
         if (!ReferenceEquals(source, null) && (source == null || !source.activeInHierarchy))
@@ -293,7 +302,7 @@ public class SoundManager
                 return false;
             }
             instance.release();
-            _effects.Add(new ActiveEffect(instance, source));
+            _effects.Add(new ActiveEffect(instance, source, soundId));
             return true;
         }
         catch (EventNotFoundException exception)
@@ -372,20 +381,23 @@ public class SoundManager
         private readonly FMOD.Studio.EventInstance _instance;
         private readonly GameObject _owner;
         private readonly bool _hasOwner;
+        private readonly SoundId _id;
 
         internal FMOD.Studio.EventInstance Instance => _instance;
         internal GameObject Owner => _owner;
         internal bool HasOwner => _hasOwner;
+        internal SoundId Id => _id;
 
         /// <summary>
-        /// 재생한 instance와 owner를 내부 정리용 데이터로 기록한다.
+        /// 재생한 instance와 owner 및 soundId를 내부 정리와 이동 중 허용 판정용 데이터로 기록한다.
         /// 소유자 지정 여부를 보관하여 파괴된 Unity 오브젝트와 소유자 없는 재생을 구분한다.
         /// </summary>
-        internal ActiveEffect(FMOD.Studio.EventInstance instance, GameObject owner)
+        internal ActiveEffect(FMOD.Studio.EventInstance instance, GameObject owner, SoundId soundId)
         {
             _instance = instance;
             _owner = owner;
             _hasOwner = owner != null;
+            _id = soundId;
         }
     }
 }

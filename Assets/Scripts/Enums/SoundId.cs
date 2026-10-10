@@ -5,4 +5,5 @@ public enum SoundId
     Ambience = 2,
     SwordSwing = 3,
     SwordHit = 4,
+    WarCry = 5,
 }

@@ -49,5 +49,14 @@ MonoBehaviour:
         Data3: 640649376
         Data4: 1780789947
       Path: event:/SwordHit
+  - _id: 5
+    _type: 1
+    _event:
+      Guid:
+        Data1: 2107516262
+        Data2: 1157059682
+        Data3: 1778078601
+        Data4: -1443737530
+      Path: event:/WarCry
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
