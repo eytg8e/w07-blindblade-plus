@@ -2,6 +2,8 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
+using BlindBlade.Enemies;
+
 /// <summary>
 /// 베기 구간에 검 궤적과 접촉을 관찰해 Trail 및 공용 Hit를 자동 요청한다.
 /// 피해·가드·사망 판정은 수행하지 않는다.
@@ -21,6 +23,7 @@ public sealed class SwordEffectEmitter : MonoBehaviour
     [SerializeField] private LayerMask _contactLayers = Physics.DefaultRaycastLayers;
     [SerializeField, Min(0.001f)] private float _contactRadius = 0.04f;
     [SerializeField, Min(0.1f)] private float _teleportDistance = 3f;
+    [SerializeField] private bool _bloodOnEnemyContact;
     private readonly RaycastHit[] _castHits = new RaycastHit[CONTACT_CAPACITY];
     private readonly Collider[] _overlaps = new Collider[CONTACT_CAPACITY];
     private readonly HashSet<Collider> _reportedContacts = new HashSet<Collider>();
@@ -219,12 +222,16 @@ public sealed class SwordEffectEmitter : MonoBehaviour
 
     /// <summary>
     /// collider의 접촉 position에 Library에 등록된 공용 타격 효과를 요청한다.
-    /// 성공한 충돌체를 기록해 같은 베기에서 한 번만 재생한다.
+    /// 성공한 충돌체를 기록하고 선택 설정이 켜진 적 접촉에는 혈흔을 추가한다.
     /// </summary>
     private void PlayContact(Collider collider, Vector3 position)
     {
         if (!_reportedContacts.Contains(collider) && _effects.PlayHit(position))
+        {
             _reportedContacts.Add(collider);
+            if (_bloodOnEnemyContact && collider.GetComponentInParent<EnemyHealth>(true) != null)
+                _effects.Play(EffectId.BloodHit, position);
+        }
     }
 
     /// <summary>

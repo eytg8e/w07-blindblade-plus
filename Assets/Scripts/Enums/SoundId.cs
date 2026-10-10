@@ -6,4 +6,6 @@ public enum SoundId
     SwordSwing = 3,
     SwordHit = 4,
     WarCry = 5,
+    SwordUnsheath = 6,
+    EnemyFootstep = 7,
 }
