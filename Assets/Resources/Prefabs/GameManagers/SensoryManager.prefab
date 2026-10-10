@@ -62,7 +62,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 042477b7c21e43da89a3fc7e6646d8a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _playerRadius: 6
+  _playerRadius: 4
   _soundRadius: 4
   _soundLifetime: 1
   _edgeFade: 0.75

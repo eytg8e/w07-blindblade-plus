@@ -11,12 +11,7 @@ public sealed class MainMapSession : MonoBehaviour
     [Header("플레이어 연결")]
     [SerializeField] private PlayerController _player;
 
-    [Header("이동 감각")]
-    [SerializeField, Min(0f)] private float _movementGrace = 0.12f;
-    [SerializeField] private bool _showEnemyFootsteps;
     private SensoryPerceptionMask _perceptionMask;
-    private Vector3 _previousPosition;
-    private float _lastMovementTime = float.NegativeInfinity;
 
     void Start()
     {
@@ -24,36 +19,24 @@ public sealed class MainMapSession : MonoBehaviour
         if (!Game.Instance.SensoryManager.IsReady)
             Game.Instance.SensoryManager.Initialize();
         _perceptionMask = Game.Instance.SensoryManager.GetComponent<SensoryPerceptionMask>();
-        _perceptionMask.SetFootstepOnly(true);
-        Game.Instance.SensoryManager.SetEffectsVisible(_showEnemyFootsteps);
-        _previousPosition = _player.transform.position;
-    }
-
-    void Update()
-    {
-        Vector3 position = _player.transform.position;
-        if (Vector3.ProjectOnPlane(position - _previousPosition, Vector3.up).sqrMagnitude > 0.000001f)
-            _lastMovementTime = Time.time;
-        _previousPosition = position;
-        bool moving = Time.time - _lastMovementTime <= _movementGrace;
-        Managers.Sound.SetFootstepOnlyOwner(moving ? _player.gameObject : null);
-        Game.Instance.SensoryManager.SetEffectsVisible(_showEnemyFootsteps);
-        Game.Instance.SensoryManager.SetFootstepsSuppressed(moving);
+        _perceptionMask.SetFootstepOnly(false);
+        Game.Instance.SensoryManager.SetEffectsVisible(true);
+        Game.Instance.SensoryManager.SetFootstepsSuppressed(false);
+        Managers.Sound.SetFootstepOnlyOwner(null);
     }
 
     void OnEnable()
     {
         _player.FootstepEmitted += HandlePlayerFootstep;
-        _previousPosition = _player.transform.position;
-        _lastMovementTime = float.NegativeInfinity;
         if (_perceptionMask != null)
         {
             Game.Instance.SensoryManager.SetObserver(_player.transform);
             if (!Game.Instance.SensoryManager.IsReady)
                 Game.Instance.SensoryManager.Initialize();
-            _perceptionMask.SetFootstepOnly(true);
-            _perceptionMask.GetComponent<SensoryManager>().SetEffectsVisible(_showEnemyFootsteps);
+            _perceptionMask.SetFootstepOnly(false);
+            _perceptionMask.GetComponent<SensoryManager>().SetEffectsVisible(true);
             _perceptionMask.GetComponent<SensoryManager>().SetFootstepsSuppressed(false);
+            Managers.Sound.SetFootstepOnlyOwner(null);
         }
     }
 
@@ -73,14 +56,10 @@ public sealed class MainMapSession : MonoBehaviour
 
     /// <summary>
     /// step의 지면 위치와 소음 강도를 사용하여 기존 Footstep 소리를 한 번 요청한다.
-    /// 착지 위치 주변을 잠깐 표시하고 재생 중 소리는 플레이어를 따라간다.
+    /// 재생 중 소리는 플레이어를 따라가며 주변 시야는 기존 상시 인지 설정을 사용한다.
     /// </summary>
     private void HandlePlayerFootstep(PlayerFootstepEvent step)
     {
-        _lastMovementTime = Time.time;
-        Game.Instance.SensoryManager.SetFootstepsSuppressed(true);
-        Managers.Sound.SetFootstepOnlyOwner(_player.gameObject);
-        _perceptionMask.RevealFootstep(step.WorldPosition);
         Managers.Sound.PlayAttached(SoundId.Footstep, _player.gameObject, step.NoiseStrength);
     }
 }

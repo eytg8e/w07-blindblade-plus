@@ -152,7 +152,8 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 공통 거리 판정을 통과한 사건을 알림으로 전달하고 효과를 재생하며 발자국 요청에 좌우 선택을 적용한다.
+    /// 공통 거리 판정을 통과한 일반 사건만 인지 알림으로 전달하고 효과를 재생한다.
+    /// 발자국 요청은 좌우 선택과 표시 정책을 적용하며 주변 시야 영역은 확장하지 않는다.
     /// </summary>
     private bool EmitEffects(SensoryEvent sensoryEvent, bool showFootstep, bool isLeft = false, bool showWhileMoving = false)
     {
@@ -168,7 +169,8 @@ public sealed class SensoryManager : MonoBehaviour
         float visibility = CalculateVisibility(Vector3.Distance(sensoryEvent.Position, _observer.position));
         if (visibility <= 0f)
             return false;
-        PerceptionRequested?.Invoke(sensoryEvent);
+        if (!showFootstep)
+            PerceptionRequested?.Invoke(sensoryEvent);
         if (!_effectsVisible || (showFootstep && _footstepsSuppressed && !showWhileMoving))
             return false;
         Quaternion rotation = Quaternion.LookRotation(sensoryEvent.Direction, sensoryEvent.SurfaceNormal);
