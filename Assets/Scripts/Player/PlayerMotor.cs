@@ -37,7 +37,7 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0f)] private float _walkSpeed = 1.388889f;
     [SerializeField, Min(0f)] private float _guardWalkSpeed = 0.6944445f;
     [SerializeField, Min(0f)] private float _chargingWalkSpeed = 0.5555556f;
-    [SerializeField, HideInInspector] private float _acceleration = 8f;
+    [SerializeField, Min(0.01f)] private float _acceleration = 8f;
     [SerializeField, Min(0f)] private float _deceleration = 12f;
     [SerializeField, Min(0f)] private float _gravity = 20f;
 
@@ -46,8 +46,7 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Range(1f, 89f)] private float _pitchLimit = 75f;
 
     [Header("Footsteps")]
-    [SerializeField, Min(0.01f)] private float _stepMoveDuration = 0.28f;
-    [SerializeField, Min(0f)] private float _stepPauseDuration = 0.08f;
+    [SerializeField, Min(0.01f), Tooltip("보행 중 발소리 사이의 시간. 이동을 멈추는 구간은 만들지 않습니다.")] private float _stepInterval = 0.36f;
     [SerializeField, Range(0f, 1f)] private float _normalFootstepNoise = 0.6f;
     [SerializeField, Range(0f, 1f)] private float _quietFootstepNoise = 0.2f;
 
@@ -64,8 +63,6 @@ public sealed class PlayerMotor : MonoBehaviour
     private float _pitch;
     private float _stepDistanceAccumulated;
     private float _stepElapsed;
-    private float _stepRestRemaining;
-    private float _stepTargetDistance;
     private bool _stepInProgress;
     private PlayerLocomotionMode _stepMode;
     private bool _leftStep;
@@ -422,72 +419,52 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
     }
 
     /// <summary>
-    /// mode의 평균 속도와 deltaTime으로 부드러운 한 걸음 이동과 착지 후 쉼을 반복한다.
-    /// 보폭은 평균 속도와 걸음 주기로 계산하며 각 이동 구간에 CharacterController 충돌을 적용한다.
+    /// mode와 이동 입력으로 목표 속도에 부드럽게 접근하고 deltaTime 동안 연속 이동한다.
+    /// 발소리 주기는 이동 속도와 독립적으로 진행하며 걸음 경계에서도 속도를 유지한다.
     /// </summary>
     private void TickSteppedWalk(PlayerLocomotionMode mode, float deltaTime)
     {
-        if (_stepInProgress && mode != _stepMode)
-        {
-            CompleteWalkStep();
-            _planarVelocity = Vector3.zero;
-        }
-
+        Vector3 direction = transform.TransformDirection(new Vector3(_moveInput.x, 0f, _moveInput.y));
+        Vector3 targetVelocity = direction * GetSpeed(mode);
+        float interval = Mathf.Max(0.01f, _stepInterval);
         float remaining = deltaTime;
-        float duration = Mathf.Max(0.01f, _stepMoveDuration);
         while (remaining > 0.000001f)
         {
-            if (_stepRestRemaining > 0f)
-            {
-                float rest = Mathf.Min(remaining, _stepRestRemaining);
-                MoveWalkSegment(Vector3.zero, rest);
-                _stepRestRemaining = Mathf.Max(0f, _stepRestRemaining - rest);
-                if (_stepRestRemaining < 0.000001f)
-                    _stepRestRemaining = 0f;
-                remaining = Mathf.Max(0f, remaining - rest);
-                continue;
-            }
-
-            if (!_stepInProgress)
-            {
-                _stepInProgress = true;
-                _stepMode = mode;
-                _stepElapsed = 0f;
-                _stepDistanceAccumulated = 0f;
-                _stepTargetDistance = GetSpeed(mode) * (duration + _stepPauseDuration) * _moveInput.magnitude;
-            }
-
-            float slice = Mathf.Min(remaining, duration - _stepElapsed);
-            float start = Mathf.Clamp01(_stepElapsed / duration);
-            _stepElapsed = Mathf.Min(duration, _stepElapsed + slice);
-            if (duration - _stepElapsed < 0.000001f)
-                _stepElapsed = duration;
-            float end = Mathf.Clamp01(_stepElapsed / duration);
-            float distance = _stepTargetDistance * (Mathf.SmoothStep(0f, 1f, end) - Mathf.SmoothStep(0f, 1f, start));
-            Vector3 direction = transform.TransformDirection(new Vector3(_moveInput.x, 0f, _moveInput.y).normalized);
-            _planarVelocity = direction * (_stepTargetDistance / duration * 6f * end * (1f - end));
-            MoveWalkSegment(direction * distance, slice);
+            _stepInProgress = true;
+            _stepMode = mode;
+            float slice = Mathf.Min(remaining, Mathf.Max(0.000001f, interval - _stepElapsed));
+            MoveTowardsWalkVelocity(targetVelocity, _acceleration, slice);
+            _stepElapsed += slice;
             remaining = Mathf.Max(0f, remaining - slice);
-            if (_stepElapsed >= duration)
-            {
-                _planarVelocity = Vector3.zero;
+            if (_stepElapsed + 0.000001f >= interval)
                 CompleteWalkStep();
-            }
         }
     }
 
     /// <summary>
     /// deltaTime과 감속 수치로 입력 해제 후 남은 속도를 줄여 짧게 정지한다.
-    /// 실제 움직인 걸음은 정지 시 착지시키며 쉼 시간은 입력 해제로 초기화하지 않는다.
+    /// 실제 움직인 걸음은 완전히 정지했을 때 한 번 착지시키며 남은 이동은 충돌을 적용한다.
     /// </summary>
     private void TickWalkStop(float deltaTime)
     {
-        _stepRestRemaining = Mathf.Max(0f, _stepRestRemaining - deltaTime);
-        Vector3 previousVelocity = _planarVelocity;
-        _planarVelocity = Vector3.MoveTowards(_planarVelocity, Vector3.zero, Mathf.Max(0.01f, _deceleration) * deltaTime);
-        MoveWalkSegment((previousVelocity + _planarVelocity) * (0.5f * deltaTime), deltaTime);
+        MoveTowardsWalkVelocity(Vector3.zero, _deceleration, deltaTime);
+        if (_stepInProgress)
+            _stepElapsed += deltaTime;
         if (_stepInProgress && _planarVelocity.sqrMagnitude <= 0.0001f)
             CompleteWalkStep();
+    }
+
+    /// <summary>targetVelocity에 acceleration으로 접근하고 deltaTime 안의 가속 구간과 등속 구간을 적분해 이동한다.</summary>
+    private void MoveTowardsWalkVelocity(Vector3 targetVelocity, float acceleration, float deltaTime)
+    {
+        Vector3 previousVelocity = _planarVelocity;
+        float changeDuration = Mathf.Min(deltaTime,
+            (targetVelocity - previousVelocity).magnitude / Mathf.Max(0.01f, acceleration));
+        _planarVelocity = Vector3.MoveTowards(previousVelocity, targetVelocity,
+            Mathf.Max(0.01f, acceleration) * deltaTime);
+        Vector3 displacement = (previousVelocity + _planarVelocity) * (0.5f * changeDuration)
+            + _planarVelocity * (deltaTime - changeDuration);
+        MoveWalkSegment(displacement, deltaTime);
     }
 
     /// <summary>
@@ -507,7 +484,7 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
 
     /// <summary>
     /// 완료된 걸음의 실제 이동량과 보행 유형으로 착지 이벤트를 한 번 발행한다.
-    /// 이동하지 않았거나 지면을 잃은 경우 소리를 생략하고 다음 걸음 전 쉼 시간을 예약한다.
+    /// 이동하지 않았거나 지면을 잃은 경우 소리를 생략하고 이동 속도는 유지한다.
     /// </summary>
     private void CompleteWalkStep()
     {
@@ -517,7 +494,6 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
         _stepInProgress = false;
         _stepElapsed = 0f;
         _stepDistanceAccumulated = 0f;
-        _stepRestRemaining = Mathf.Max(0f, _stepPauseDuration);
         if (!emit)
             return;
 
@@ -531,14 +507,13 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
     }
 
     /// <summary>
-    /// 입력 잠금, 대시 및 비활성화에 사용하도록 진행 중인 걸음과 쉼을 초기화한다.
+    /// 입력 잠금, 대시 및 비활성화에 사용하도록 진행 중인 걸음 주기를 초기화한다.
     /// 착지 이벤트를 발행하지 않고 보행 누적 상태만 제거한다.
     /// </summary>
     private void ResetWalkStep()
     {
         _stepInProgress = false;
         _stepElapsed = 0f;
-        _stepRestRemaining = 0f;
         _stepDistanceAccumulated = 0f;
     }
 

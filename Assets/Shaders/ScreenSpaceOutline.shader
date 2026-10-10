@@ -53,6 +53,11 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             float _OutlineSoundLifetime;
             float _OutlineEdgeFade;
             float _OutlinePerceptionTime;
+            TEXTURE2D(_OutlineTerrainMemory);
+            SAMPLER(sampler_OutlineTerrainMemory);
+            float4 _OutlineMemoryBounds;
+            float4 _OutlineMemoryColor;
+            float _OutlineMemoryEnabled;
 
             // 영역 반경의 안쪽 경계부터 가장자리까지 공간 가시성을 부드럽게 줄인다.
             float RegionVisibility(float3 position, float3 center, float radius)
@@ -63,15 +68,15 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 return 1.0 - smoothstep(innerRadius, radius, distance(position, center));
             }
 
-            // 실제 표면의 월드 위치에서 관측자와 소리 영역 중 최대 가시성을 반환한다.
-            float PerceptionVisibility(float2 uv, float rawDepth, float hasSurface)
+            // 현재 인지를 선 색상으로 표시하고 일반 지형에만 누적 기억 색상을 합성한다.
+            float3 PerceptionColor(float2 uv, float rawDepth, float hasSurface, float includeMemory)
             {
                 if (hasSurface == 0.0)
                     return 0.0;
                 if (SAMPLE_TEXTURE2D_X(_AlwaysVisibleOutlineMask, sampler_PointClamp, uv).r > 0.5)
-                    return 1.0;
+                    return _LineColor.rgb * _LineColor.a;
                 if (_UsePerceptionMask < 0.5)
-                    return 1.0;
+                    return _LineColor.rgb * _LineColor.a;
 
                 #if !UNITY_REVERSED_Z
                     rawDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, rawDepth);
@@ -88,7 +93,16 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                         position, _OutlineSoundRegions[i].xyz, _OutlineSoundRadius) * timeVisibility;
                     visibility = max(visibility, soundVisibility);
                 }
-                return visibility;
+                float memoryVisibility = 0.0;
+                if (includeMemory > 0.5 && _OutlineMemoryEnabled > 0.5)
+                {
+                    float2 memoryUv = (position.xz - _OutlineMemoryBounds.xy) / _OutlineMemoryBounds.zw;
+                    if (all(memoryUv >= 0.0) && all(memoryUv <= 1.0))
+                        memoryVisibility = SAMPLE_TEXTURE2D_LOD(_OutlineTerrainMemory,
+                            sampler_OutlineTerrainMemory, memoryUv, 0).r;
+                }
+                float3 memoryColor = _OutlineMemoryColor.rgb * _OutlineMemoryColor.a * memoryVisibility;
+                return memoryColor * (1.0 - visibility) + _LineColor.rgb * _LineColor.a * visibility;
             }
 
             // 깊이의 배경값을 구분하여 하늘의 노멀로 생기는 선을 제외한다.
@@ -116,7 +130,7 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             }
 
             // 두 픽셀의 상대 깊이와 노멀 차이를 사용해 경계 강도를 반환한다.
-            float EdgeBetween(float2 firstUv, float2 secondUv)
+            float3 EdgeBetween(float2 firstUv, float2 secondUv)
             {
                 float firstRawDepth = SampleSceneDepth(firstUv);
                 float secondRawDepth = SampleSceneDepth(secondUv);
@@ -125,8 +139,8 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 if (firstSurface != secondSurface)
                 {
                     return max(
-                        PerceptionVisibility(firstUv, firstRawDepth, firstSurface),
-                        PerceptionVisibility(secondUv, secondRawDepth, secondSurface));
+                        PerceptionColor(firstUv, firstRawDepth, firstSurface, 1.0),
+                        PerceptionColor(secondUv, secondRawDepth, secondSurface, 1.0));
                 }
                 if (firstSurface == 0.0)
                     return 0.0;
@@ -145,8 +159,8 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 if (edge <= 0.0)
                     return 0.0;
                 return edge * max(
-                    PerceptionVisibility(firstUv, firstRawDepth, firstSurface),
-                    PerceptionVisibility(secondUv, secondRawDepth, secondSurface));
+                    PerceptionColor(firstUv, firstRawDepth, firstSurface, 1.0),
+                    PerceptionColor(secondUv, secondRawDepth, secondSurface, 1.0));
             }
 
             // 선택 VFX의 실제 RGB 기여에서 모양을 검출하고 보이지 않는 알파 면은 제외한다.
@@ -159,15 +173,15 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             }
 
             // 보이는 RGB 모양의 경계만 표시하며 기하 깊이는 인지 위치 계산에만 사용한다.
-            float TransparentEdgeBetween(float2 firstUv, float2 secondUv)
+            float3 TransparentEdgeBetween(float2 firstUv, float2 secondUv)
             {
                 float first = TransparentCoverage(firstUv);
                 float second = TransparentCoverage(secondUv);
                 float firstDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, firstUv).r;
                 float secondDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, secondUv).r;
                 float edge = saturate(abs(first - second) * 1.5);
-                return edge * max(PerceptionVisibility(firstUv, firstDepth, first),
-                    PerceptionVisibility(secondUv, secondDepth, second));
+                return edge * max(PerceptionColor(firstUv, firstDepth, first, 0.0),
+                    PerceptionColor(secondUv, secondDepth, second, 0.0));
             }
 
             // 불투명 경계와 투명 이펙트 경계를 합성하고 모든 면과 배경은 검게 출력한다.
@@ -182,12 +196,12 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float2 secondUv = saturate(uv + float2(upperOffset, upperOffset) * texelSize);
                 float2 thirdUv = saturate(uv + float2(-lowerOffset, upperOffset) * texelSize);
                 float2 fourthUv = saturate(uv + float2(upperOffset, -lowerOffset) * texelSize);
-                float edge = max(EdgeBetween(firstUv, secondUv), EdgeBetween(thirdUv, fourthUv));
+                float3 edge = max(EdgeBetween(firstUv, secondUv), EdgeBetween(thirdUv, fourthUv));
                 edge *= 1.0 - TransparentCoverage(uv);
-                float transparentEdge = max(TransparentEdgeBetween(firstUv, secondUv),
+                float3 transparentEdge = max(TransparentEdgeBetween(firstUv, secondUv),
                     TransparentEdgeBetween(thirdUv, fourthUv));
                 edge = max(edge, transparentEdge);
-                return half4(_LineColor.rgb * (_LineColor.a * edge), 1.0);
+                return half4(edge, 1.0);
             }
             ENDHLSL
         }
