@@ -11,21 +11,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d4e56f78-704a-419d-8dc1-4a83f2dd9a13" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_MultiPattern.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_MultiPattern.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_RhythmCharge.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_RhythmCharge.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleMelee.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleMelee.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleRanged.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleRanged.prefab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AGENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/AGENTS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Fonts/ChosunCentennial_otf SDF.asset" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Fonts/ChosunCentennial_otf SDF.asset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Plugins/FMOD/platforms/mac/lib/fmodstudio.bundle/Contents/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Plugins/FMOD/platforms/mac/lib/fmodstudio.bundle/Contents/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Plugins/FMOD/platforms/mac/lib/fmodstudioL.bundle/Contents/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Plugins/FMOD/platforms/mac/lib/fmodstudioL.bundle/Contents/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Plugins/FMOD/platforms/mac/lib/resonanceaudio.bundle/Contents/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Plugins/FMOD/platforms/mac/lib/resonanceaudio.bundle/Contents/Info.plist" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Scenes/MainMap.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scenes/MainMap.unity" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyChargeAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyChargeAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyMeleeAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyMeleeAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyRhythmChargeAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyRhythmChargeAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Editor/EnemyPlacementTools.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Editor/EnemyPlacementTools.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Maps/MainMapSession.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Maps/MainMapSession.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FMODProject/week06-blindblade/.cache/buildrecords/Desktop/BGM.br" beforeDir="false" afterPath="$PROJECT_DIR$/FMODProject/week06-blindblade/.cache/buildrecords/Desktop/BGM.br" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FMODProject/week06-blindblade/.cache/buildrecords/Desktop/Master.br" beforeDir="false" afterPath="$PROJECT_DIR$/FMODProject/week06-blindblade/.cache/buildrecords/Desktop/Master.br" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FMODProject/week06-blindblade/.cache/buildrecords/Desktop/SFX.br" beforeDir="false" afterPath="$PROJECT_DIR$/FMODProject/week06-blindblade/.cache/buildrecords/Desktop/SFX.br" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FMODProject/week06-blindblade/Build/Desktop/Master.strings.bank" beforeDir="false" afterPath="$PROJECT_DIR$/FMODProject/week06-blindblade/Build/Desktop/Master.strings.bank" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FMODProject/week06-blindblade/Build/Desktop/SFX.bank" beforeDir="false" afterPath="$PROJECT_DIR$/FMODProject/week06-blindblade/Build/Desktop/SFX.bank" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FMODProject/week06-blindblade/Metadata/Event/{1b7ccc0a-2718-4465-bc92-d22b1be7326f}.xml" beforeDir="false" afterPath="$PROJECT_DIR$/FMODProject/week06-blindblade/Metadata/Event/{1b7ccc0a-2718-4465-bc92-d22b1be7326f}.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ProjectSettings/ShaderGraphSettings.asset" beforeDir="false" afterPath="$PROJECT_DIR$/ProjectSettings/ShaderGraphSettings.asset" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/FEATURE_SPEC.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/FEATURE_SPEC.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/features/메인맵.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/메인맵.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/적_공격_패턴.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/적_공격_패턴.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/적_추적.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/적_추적.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/features/플레이어_시스템.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/플레이어_시스템.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -125,7 +126,7 @@
     "cidr.known.project.marker": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "development/combat",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -156,10 +157,12 @@
     </configuration>
     <configuration name="Unity 에디터에 연결" type="UNITY_DEBUG_RUN_CONFIGURATION" factoryName="Unity Debug" show_console_on_std_err="false" show_console_on_std_out="false" port="50000" address="localhost" useMixedMode="false">
       <option name="allowRunningInParallel" value="false" />
-      <option name="coreClr" value="false" />
       <option name="listenPortForConnections" value="false" />
       <option name="pid" />
       <option name="projectPathOnTarget" />
+      <option name="runtimes">
+        <list />
+      </option>
       <option name="selectedOptions">
         <list />
       </option>

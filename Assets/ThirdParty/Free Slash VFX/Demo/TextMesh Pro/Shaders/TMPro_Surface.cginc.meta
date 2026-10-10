@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: ea9698aafaf31ac4dbb35dd886a3fd26
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 309498
+  packageName: Free Slash VFX
+  packageVersion: 1.0
+  assetPath: Assets/Free Slash VFX/Demo/TextMesh Pro/Shaders/TMPro_Surface.cginc
+  uploadId: 738318

@@ -23395,6 +23395,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _player: {fileID: 1647938498}
+  _movementGrace: 0.12
 --- !u!4 &891845622
 Transform:
   m_ObjectHideFlags: 0
@@ -40646,6 +40647,7 @@ GameObject:
   - component: {fileID: 1468965465}
   - component: {fileID: 1468965464}
   - component: {fileID: 1468965463}
+  - component: {fileID: 1468965466}
   m_Layer: 0
   m_Name: Player Camera
   m_TagString: Untagged
@@ -40720,7 +40722,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1468965461}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &1468965465
 Camera:
   m_ObjectHideFlags: 0
@@ -40772,6 +40774,20 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &1468965466
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1468965461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86c6556701af9e04380698b89f691b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nonRigidbodyVelocity: 0
+  attenuationObject: {fileID: 0}
 --- !u!1 &1470733796
 GameObject:
   m_ObjectHideFlags: 0
@@ -45540,6 +45556,7 @@ GameObject:
   - component: {fileID: 1647938496}
   - component: {fileID: 1647938494}
   - component: {fileID: 1647938492}
+  - component: {fileID: 1647938502}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -45670,7 +45687,7 @@ MonoBehaviour:
   _gravity: 20
   _lookSensitivity: 0.12
   _pitchLimit: 75
-  _stepMoveDuration: 0.28
+  _stepMoveDuration: 0.4
   _stepPauseDuration: 0.08
   _normalFootstepNoise: 0.6
   _quietFootstepNoise: 0.2
@@ -45720,6 +45737,22 @@ Transform:
   - {fileID: 1468965462}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1647938502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1647938490}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec09ef111d6ca7f45ada448eca1c417b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _onDamageReceived:
+    m_PersistentCalls:
+      m_Calls: []
+  _maxHealth: 100
 --- !u!1 &1648526323
 GameObject:
   m_ObjectHideFlags: 0
@@ -54565,6 +54598,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: bc024400d430c594999798e50db130d8, type: 2}
+    - target: {fileID: 3724893727897300803, guid: bb0b10bae09f6684aa3a42979a438bdf, type: 3}
+      propertyPath: _obstacleMask.m_Bits
+      value: 51
+      objectReference: {fileID: 0}
     - target: {fileID: 6570254151583680903, guid: bb0b10bae09f6684aa3a42979a438bdf, type: 3}
       propertyPath: _distance
       value: 4

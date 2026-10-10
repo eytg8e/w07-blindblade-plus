@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 00fb9d6db289cc643a3d5ee7ba415608
+timeCreated: 1480316860
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 309498
+  packageName: Free Slash VFX
+  packageVersion: 1.0
+  assetPath: Assets/Free Slash VFX/Demo/TextMesh Pro/Sprites/EmojiOne.json
+  uploadId: 738318

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 927bb322d7d700e478b49885d333af08
+timeCreated: 1425440388
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 309498
+  packageName: Free Slash VFX
+  packageVersion: 1.0
+  assetPath: Assets/Free Slash VFX/Demo/TextMesh Pro/Resources/LineBreaking Following
+    Characters.txt
+  uploadId: 738318

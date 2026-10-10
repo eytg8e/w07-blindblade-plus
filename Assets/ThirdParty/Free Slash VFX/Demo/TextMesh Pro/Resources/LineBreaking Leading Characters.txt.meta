@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 0d8beec4c3124b346bfbe62a8d0cf36a
+timeCreated: 1425440388
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 309498
+  packageName: Free Slash VFX
+  packageVersion: 1.0
+  assetPath: Assets/Free Slash VFX/Demo/TextMesh Pro/Resources/LineBreaking Leading
+    Characters.txt
+  uploadId: 738318

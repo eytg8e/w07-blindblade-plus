@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 86f3688b79fd9064fbdab0c7dd08fee8
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 309498
+  packageName: Free Slash VFX
+  packageVersion: 1.0
+  assetPath: Assets/Free Slash VFX/Demo/TextMesh Pro/Shaders/TMP_SDF.shader
+  uploadId: 738318
