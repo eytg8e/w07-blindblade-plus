@@ -7,22 +7,36 @@ using BlindBlade.Enemies;
 public sealed class StageSwordNoise : MonoBehaviour
 {
     [Header("스테이지 연결")]
-    [SerializeField] private PlayerController _player;
     [SerializeField] private EnemyController[] _enemies;
+    private PlayerController _player;
 
     [Header("검 소음")]
     [SerializeField, Min(1f)] private float _hearingDistance = 40f;
     [SerializeField, Min(0.1f)] private float _alertDuration = 15f;
     private int _lastActionId = -1;
 
+    void Start()
+    {
+        _player = Game.Player;
+        if (_player == null)
+        {
+            Debug.LogError("검 소음을 전달할 현재 플레이어가 등록되지 않았습니다.", this);
+            enabled = false;
+            return;
+        }
+        _player.ActionEvent += HandleAction;
+    }
+
     void OnEnable()
     {
-        _player.ActionEvent += HandleAction;
+        if (_player != null)
+            _player.ActionEvent += HandleAction;
     }
 
     void OnDisable()
     {
-        _player.ActionEvent -= HandleAction;
+        if (_player != null)
+            _player.ActionEvent -= HandleAction;
     }
 
     /// <summary>일반 베기 시작 또는 발도 베기 action의 소음을 행동당 한 번 복도에 전달한다.</summary>

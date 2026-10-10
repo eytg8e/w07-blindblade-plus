@@ -9,11 +9,11 @@ using BlindBlade.Enemies;
 public sealed class StageDoor : MonoBehaviour
 {
     [Header("문 연결")]
-    [SerializeField] private PlayerController _player;
     [SerializeField] private Transform _hinge;
     [SerializeField] private BoxCollider _passage;
     [SerializeField] private TMP_Text _prompt;
     [SerializeField] private EnemyHealth[] _requiredEnemies = System.Array.Empty<EnemyHealth>();
+    private PlayerController _player;
 
     [Header("이동 설정")]
     [SerializeField] private string _nextScene;
@@ -40,6 +40,16 @@ public sealed class StageDoor : MonoBehaviour
     {
         _closedRotation = _hinge.localRotation;
         _prompt.gameObject.SetActive(false);
+    }
+
+    void Start()
+    {
+        _player = Game.Player;
+        if (_player == null)
+        {
+            Debug.LogError("문에 연결할 현재 플레이어가 등록되지 않았습니다.", this);
+            enabled = false;
+        }
     }
 
     void Update()
@@ -76,7 +86,7 @@ public sealed class StageDoor : MonoBehaviour
     /// <summary>살아 있는 필수 적이 없고 플레이어가 문 근처에 있으면 개방을 시작하고 true를 반환한다.</summary>
     public bool TryOpen()
     {
-        if (_opened || _loading || !IsUnlocked || _player.IsPaused
+        if (_player == null || _opened || _loading || !IsUnlocked || _player.IsPaused
             || _player.CurrentState == PlayerActionState.Dead
             || Vector3.Distance(_player.transform.position, transform.position) > _interactionDistance)
             return false;

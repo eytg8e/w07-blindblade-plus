@@ -15,9 +15,17 @@ public sealed class TerrainMemory : MonoBehaviour
     private Texture2D _memory;
     private Color32[] _pixels;
     private Vector3 _lastPosition = new Vector3(float.PositiveInfinity, 0f, 0f);
+    public Vector2 Minimum => _minimum;
+    public Vector2 Size => _size;
 
-    void Awake()
+    /// <summary>observer와 맵 범위를 연결하고 방문 기억 텍스처 및 셰이더 상태를 초기화한다.</summary>
+    public void Initialize(Transform observer, Vector2 minimum, Vector2 size)
     {
+        _observer = observer;
+        _minimum = minimum;
+        _size = size;
+        if (_memory != null) Destroy(_memory);
+        _lastPosition = new Vector3(float.PositiveInfinity, 0f, 0f);
         _memory = new Texture2D(_resolution, _resolution, TextureFormat.RGBA32, false, true);
         _memory.name = "Visited terrain";
         _memory.wrapMode = TextureWrapMode.Clamp;
@@ -25,9 +33,11 @@ public sealed class TerrainMemory : MonoBehaviour
         _pixels = new Color32[_resolution * _resolution];
         _memory.SetPixels32(_pixels);
         _memory.Apply(false);
+        ApplyShaderState();
     }
 
-    void OnEnable()
+    /// <summary>초기화한 기억 텍스처와 범위·색상을 전역 셰이더에 적용한다.</summary>
+    private void ApplyShaderState()
     {
         Shader.SetGlobalTexture("_OutlineTerrainMemory", _memory);
         Shader.SetGlobalVector("_OutlineMemoryBounds", new Vector4(_minimum.x, _minimum.y, _size.x, _size.y));
@@ -37,6 +47,7 @@ public sealed class TerrainMemory : MonoBehaviour
 
     void LateUpdate()
     {
+        if (_memory == null) return;
         Shader.SetGlobalColor("_OutlineMemoryColor", _memoryColor);
         if (_observer == null || (_observer.position - _lastPosition).sqrMagnitude < 0.04f)
             return;
