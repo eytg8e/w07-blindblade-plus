@@ -1541,7 +1541,7 @@ PrefabInstance:
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _target
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1281375452}
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _detectionRange
       value: 6
@@ -1741,8 +1741,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _player: {fileID: 1281375451}
-  _movementGrace: 0.12
-  _showEnemyFootsteps: 1
 --- !u!4 &891845622
 Transform:
   m_ObjectHideFlags: 0
@@ -2227,7 +2225,7 @@ PrefabInstance:
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _target
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1281375452}
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _detectionRange
       value: 6
