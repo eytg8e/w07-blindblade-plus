@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.03.00">
+	<object class="ParameterPreset" id="{6424bf6a-6814-4554-90d7-d528c87040f7}">
+		<property name="name">
+			<value>SwingType</value>
+		</property>
+		<relationship name="folder">
+			<destination>{69a5b30f-b665-48bc-ae48-8a412b88045c}</destination>
+		</relationship>
+		<relationship name="parameter">
+			<destination>{df04fbec-4a1f-4633-8161-c2f2e6c6c672}</destination>
+		</relationship>
+	</object>
+	<object class="GameParameter" id="{df04fbec-4a1f-4633-8161-c2f2e6c6c672}">
+		<property name="parameterType">
+			<value>2</value>
+		</property>
+		<property name="maximum">
+			<value>3</value>
+		</property>
+		<property name="enumerationLabels">
+			<value>A</value>
+			<value>B</value>
+			<value>C</value>
+		</property>
+		<property name="initialValue">
+			<value>0</value>
+		</property>
+	</object>
+</objects>
