@@ -132,7 +132,7 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 사건 위치와 좌우 선택으로 발자국·웨이브를 생성하고 생성 성공 여부를 반환한다.
+    /// 사건 위치와 좌우 선택으로 발자국만 생성하고 생성 성공 여부를 반환한다.
     /// </summary>
     public bool EmitFootstep(SensoryEvent sensoryEvent, bool isLeft)
     {
@@ -172,7 +172,7 @@ public sealed class SensoryManager : MonoBehaviour
                 spawned |= Track(effect, sensoryEvent.Position);
             }
         }
-        if (_wavePrefab != null)
+        if (!showFootstep && _wavePrefab != null)
         {
             GameObject instance = Managers.Resource.Instantiate(_wavePrefab.gameObject,
                 sensoryEvent.Position + rotation * _wavePrefab.transform.localPosition, rotation);
