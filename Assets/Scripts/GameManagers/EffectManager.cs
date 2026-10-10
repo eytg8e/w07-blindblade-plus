@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+using BlindBlade.Rendering;
 using ReusableManagers;
 
 /// <summary>
@@ -24,6 +25,7 @@ public sealed class EffectManager : MonoBehaviour
     private bool _sessionActive;
     private bool _reportedNotReady;
     private int _nextTrailHandle = 1;
+    private bool _outlineVfxEnabled = true;
     public bool IsReady => _initialized && _sessionActive && isActiveAndEnabled;
     public int ActiveEffectCount => _activeEffects.Count;
 
@@ -92,7 +94,7 @@ public sealed class EffectManager : MonoBehaviour
     public bool Initialize()
     {
         if (_initialized)
-            return true;
+            return IsReady || BeginSession();
         if (_library == null || !_library.PreparePools())
         {
             Debug.LogError("[EffectManager] A valid EffectLibrary is required.", this);
@@ -128,6 +130,7 @@ public sealed class EffectManager : MonoBehaviour
         if (pooled == null)
             return false;
         ParticleSystem particles = pooled.GetComponent<ParticleSystem>();
+        ConfigureRendering(pooled.gameObject, prefab);
         particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         particles.Play(true);
         _activeEffects.Add(new ActiveEffect(pooled, particles, null, 0));
@@ -170,6 +173,7 @@ public sealed class EffectManager : MonoBehaviour
         if (pooled == null)
             return 0;
         SwordSlashTrail trail = pooled.GetComponent<SwordSlashTrail>();
+        ConfigureRendering(pooled.gameObject, prefab);
         int handle = _nextTrailHandle++;
         trail.BeginTrail(bladeBase, bladeTip);
         _activeEffects.Add(new ActiveEffect(pooled, null, trail, handle));
@@ -224,6 +228,27 @@ public sealed class EffectManager : MonoBehaviour
     }
 
     /// <summary>
+    /// enabled로 이후 요청의 선택 윤곽선 사용 여부를 지정한다.
+    /// 프리팹 에셋은 변경하지 않고 현재 세션의 재생 인스턴스에만 적용한다.
+    /// </summary>
+    internal void SetOutlineVfxEnabled(bool enabled)
+    {
+        _outlineVfxEnabled = enabled;
+    }
+
+    /// <summary>
+    /// instance와 prefab의 동일한 윤곽선 컴포넌트를 비교하여 세션의 표시 방식을 적용한다.
+    /// 재사용 인스턴스의 상태를 원본 설정과 현재 세션 설정으로 갱신한다.
+    /// </summary>
+    private void ConfigureRendering(GameObject instance, GameObject prefab)
+    {
+        OutlineVFX[] markers = instance.GetComponentsInChildren<OutlineVFX>(true);
+        OutlineVFX[] defaults = prefab.GetComponentsInChildren<OutlineVFX>(true);
+        for (int i = 0; i < markers.Length; i++)
+            markers[i].enabled = _outlineVfxEnabled && defaults[i].enabled;
+    }
+
+    /// <summary>
     /// effectId를 조회하기 전에 세션 준비 상태를 확인한다.
     /// 미준비 안내는 상태 구간마다 한 번 기록하고 유효한 prefab 조회 여부를 반환한다.
     /// </summary>
@@ -253,6 +278,7 @@ public sealed class EffectManager : MonoBehaviour
         EndSession();
         _reportedNotReady = false;
         _sessionScene = scene;
+        _outlineVfxEnabled = true;
         _sessionActive = true;
         return true;
     }

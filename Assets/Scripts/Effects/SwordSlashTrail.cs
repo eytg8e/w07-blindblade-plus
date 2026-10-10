@@ -6,6 +6,7 @@ using UnityEngine;
 /// 검 밑점과 끝점의 월드 위치를 기록해 시간에 따라 사라지는 띠 메시를 생성한다.
 /// </summary>
 [DisallowMultipleComponent]
+[DefaultExecutionOrder(200)]
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public sealed class SwordSlashTrail : MonoBehaviour
 {
