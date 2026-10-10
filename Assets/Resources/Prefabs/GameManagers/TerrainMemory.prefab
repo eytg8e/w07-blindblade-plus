@@ -49,4 +49,4 @@ MonoBehaviour:
   _size: {x: 48, y: 76}
   _resolution: 256
   _radius: 5
-  _memoryColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
+  _memoryColor: {r: 0.01, g: 0.01, b: 0.01, a: 1}
