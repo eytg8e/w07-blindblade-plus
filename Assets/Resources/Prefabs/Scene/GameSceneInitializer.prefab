@@ -45,7 +45,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _terrainMemoryPrefab: {fileID: 7300700179915431720, guid: 3d72d8a47c21f42a09c6cdd4a6705aa4, type: 3}
-  _useTerrainMemory: 0
+  _useTerrainMemory: 1
   _memoryMinimum: {x: -24, y: -6}
   _memorySize: {x: 48, y: 76}
-  _useCorridorRule: 0
+  _useCorridorRule: 1
+  _showGameplayControls: 1
+  _useSwordNoise: 1
+  _swordHearingDistance: 40
+  _swordAlertDuration: 15

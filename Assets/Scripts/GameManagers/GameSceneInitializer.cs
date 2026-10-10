@@ -43,21 +43,6 @@ public sealed class GameSceneInitializer : MonoBehaviour
             Initialize();
     }
 
-    /// <summary>미전환 씬의 round 규칙과 memory 범위를 런타임 구성에 전달한다.</summary>
-    public void ConfigureLegacy(CorridorRoundController round, TerrainMemory memory)
-    {
-        _useCorridorRule = round != null;
-        if (round != null) round.enabled = false;
-        _useTerrainMemory = memory != null;
-        if (memory != null)
-        {
-            _memoryMinimum = memory.Minimum;
-            _memorySize = memory.Size;
-            _terrainMemoryPrefab = memory;
-            memory.enabled = false;
-        }
-    }
-
     /// <summary>현재 플레이어와 공통 구성을 준비하고 초기화가 끝나면 입력을 허용한다.</summary>
     private void Initialize()
     {
