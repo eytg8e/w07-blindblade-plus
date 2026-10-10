@@ -178,11 +178,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _fmodEvent:
     Guid:
-      Data1: 0
-      Data2: 0
-      Data3: 0
-      Data4: 0
-    Path: 
+      Data1: 1247293882
+      Data2: 1209258227
+      Data3: -915227258
+      Data4: -883914691
+    Path: event:/StairWell
   _volume: 0.7
 --- !u!4 &86465161
 Transform:
