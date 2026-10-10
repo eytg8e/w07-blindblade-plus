@@ -7,9 +7,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.Universal;
 
-namespace BlindBlade.Rendering
-{
-    public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
+public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
     {
         private static readonly int _lineColorId = Shader.PropertyToID("_LineColor");
         private static readonly int _lineWidthId = Shader.PropertyToID("_LineWidth");
@@ -494,4 +492,3 @@ namespace BlindBlade.Rendering
 #pragma warning restore CS0618, CS0672
         }
     }
-}

@@ -1,8 +1,6 @@
 using UnityEngine;
 
-namespace BlindBlade.Rendering
-{
-    /// <summary>
+/// <summary>
     /// 관측자와 수신한 소리 위치로 윤곽선의 공간·시간 인지 영역을 셰이더에 전달한다.
     /// </summary>
     [DisallowMultipleComponent]
@@ -138,4 +136,3 @@ namespace BlindBlade.Rendering
             Shader.SetGlobalInt(_soundCountId, 0);
         }
     }
-}
