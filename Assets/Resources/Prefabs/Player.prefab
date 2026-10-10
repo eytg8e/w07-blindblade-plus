@@ -354,12 +354,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _player: {fileID: 6616511219798166873}
-  _normalChainWindow: 0.6
   _normalSheatheDelay: 0.8
-  _parryWindow: 0.15
-  _parryRetryInterval: 0.3
-  _parryMotionDuration: 0.4
-  _parryChainWindow: 3
   _sheatheDuration: 0.3
 --- !u!114 &4517625516249246978
 MonoBehaviour:
@@ -410,10 +405,7 @@ MonoBehaviour:
   _animator: {fileID: 8362338574495906464}
   _showWeapon: 1
   _blendTime: 0.025
-  _normalImpactProgress: 0.375
   _iaidoImpactProgress: 0.88461536
-  _attemptDuration: 0.1
-  _attemptLift: 0.015
   _drawnSheatheProgress: 0.2
   _minimumCancelSheatheDuration: 0.12
 --- !u!114 &7106073490442552728

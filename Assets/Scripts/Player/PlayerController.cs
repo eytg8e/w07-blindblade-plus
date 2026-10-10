@@ -276,6 +276,17 @@ public sealed class PlayerController : MonoBehaviour
         return true;
     }
 
+    /// <summary>actionId가 현재 일반 공격과 일치하면 공격 판정을 취소하고 일반 공격 Recovery를 적용합니다.</summary>
+    public bool CancelNormalAttack(int actionId)
+    {
+        if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId || _attackActionFinished)
+            return false;
+
+        _attackImpactResolved = true;
+        _currentAttackOutcome = PlayerAttackOutcome.None;
+        FinishAttackAction(_normalAttackRecovery, PlayerAttackOutcome.None);
+        return true;
+    }
     /// <summary>현재 일반 공격의 적중 프레임에서 적 시스템에 판정을 요청합니다. actionId가 현재 행동과 다르면 무시합니다.</summary>
     public void NotifyNormalAttackImpact(int actionId)
     {

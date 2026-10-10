@@ -18,6 +18,8 @@ public sealed class PlayerTestActionDriver : MonoBehaviour
     private float _elapsed;
     private bool _impactSent;
     private bool _endSent;
+    private bool _useIaidoTimingForNextNormalAttack;
+    private bool _activeNormalAttackUsesIaidoTiming;
 
     private void Awake()
     {
@@ -50,14 +52,20 @@ public sealed class PlayerTestActionDriver : MonoBehaviour
             _elapsed = 0f;
             _impactSent = false;
             _endSent = false;
+            _activeNormalAttackUsesIaidoTiming = state == PlayerActionState.NormalAttack
+                && _useIaidoTimingForNextNormalAttack;
+            if (state == PlayerActionState.NormalAttack)
+                _useIaidoTimingForNextNormalAttack = false;
         }
 
         if (_endSent)
             return;
 
         _elapsed += Time.deltaTime;
-        float hitTime = state == PlayerActionState.NormalAttack ? _normalHitTime : _iaidoHitTime;
-        float actionDuration = state == PlayerActionState.NormalAttack ? _normalActionDuration : _iaidoSlashDuration;
+        bool iaidoTiming = state == PlayerActionState.IaidoSlash
+            || state == PlayerActionState.NormalAttack && _activeNormalAttackUsesIaidoTiming;
+        float hitTime = iaidoTiming ? _iaidoHitTime : _normalHitTime;
+        float actionDuration = iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
 
         if (!_impactSent && _elapsed >= hitTime)
         {
@@ -104,6 +112,12 @@ public sealed class PlayerTestActionDriver : MonoBehaviour
         bool iaido = kind == PlayerAttackKind.IaidoFinisher;
         impactTime = iaido ? _iaidoHitTime : _normalHitTime;
         duration = iaido ? _iaidoSlashDuration : _normalActionDuration;
+    }
+
+    /// <summary>다음 일반 공격을 발도 모션에 맞춘 적중·종료 시간으로 처리하도록 예약한다.</summary>
+    public void UseIaidoTimingForNextNormalAttack()
+    {
+        _useIaidoTimingForNextNormalAttack = true;
     }
 
     /// <summary>현재 actionId의 게임 시간 경과를 반환한다. 아직 시작되지 않았거나 다른 행동이면 0을 반환한다.</summary>

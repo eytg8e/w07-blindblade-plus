@@ -20,10 +20,7 @@ namespace BlindBlade.Player.Katana
         [Header("Presentation")]
         [SerializeField] private bool _showWeapon = true;
         [SerializeField, Min(0f)] private float _blendTime = 0.025f;
-        [SerializeField, Range(0.01f, 0.99f)] private float _normalImpactProgress = 0.375f;
         [SerializeField, Range(0.01f, 0.99f)] private float _iaidoImpactProgress = 0.88461536f;
-        [SerializeField, Min(0.01f)] private float _attemptDuration = 0.1f;
-        [SerializeField, Min(0f)] private float _attemptLift = 0.015f;
         [SerializeField, Range(0.01f, 0.99f)] private float _drawnSheatheProgress = 0.2f;
         [SerializeField, Min(0.01f)] private float _minimumCancelSheatheDuration = 0.12f;
 
@@ -35,14 +32,12 @@ namespace BlindBlade.Player.Katana
         private float _impactTime;
         private float _impactProgress;
         private float _entryProgress;
-        private float _attemptRemaining;
         private float _flash;
         private float _lastCharge;
         private int _actionId;
         private bool _attack;
         private bool _parry;
         private bool _wasVisible;
-        private Vector3 _rootPosition;
         private Renderer[] _renderers;
         private Renderer _blade;
         private Color _bladeColor;
@@ -88,7 +83,6 @@ namespace BlindBlade.Player.Katana
             _animator.applyRootMotion = false;
             _animator.fireEvents = false;
             _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            _rootPosition = _animator.transform.localPosition;
             _poseTargets = new[] { _animator.transform.Find("Sword"), _animator.transform.Find("Saya") };
             _blendPositions = new Vector3[_poseTargets.Length];
             _blendRotations = new Quaternion[_poseTargets.Length];
@@ -112,7 +106,6 @@ namespace BlindBlade.Player.Katana
         void OnDisable()
         {
             if (_combat != null) _combat.EventRaised -= HandleKatana;
-            if (_animator != null) _animator.transform.localPosition = _rootPosition;
         }
 
         void Update()
@@ -126,7 +119,6 @@ namespace BlindBlade.Player.Katana
             if (_combat.Player.IsPaused) return;
             float dt = Time.deltaTime;
             _elapsed += dt;
-            _attemptRemaining = Mathf.Max(0f, _attemptRemaining - dt);
             _flash = Mathf.Max(0f, _flash - dt * 5f);
             if (_finishingInsertion)
             {
@@ -174,31 +166,32 @@ namespace BlindBlade.Player.Katana
                 }
                 if (_poseBlendElapsed >= _poseBlendDuration) _poseBlendDuration = 0f;
             }
-            float progress = 1f - _attemptRemaining / Mathf.Max(0.01f, _attemptDuration);
-            float lift = _attemptRemaining > 0f ? Mathf.Sin(progress * Mathf.PI) * _attemptLift : 0f;
-            _animator.transform.localPosition = _rootPosition + Vector3.up * lift;
         }
 
-        /// <summary>e의 전투 종류를 클립 선택으로만 변환한다. 쳐내기는 Normal 클립을 써도 공격 판정을 요청하지 않는다.</summary>
+    /// <summary>e의 전투 이벤트를 발도 공격 클립과 성공 피드백으로 변환한다. 피해 판정은 호출하지 않는다.</summary>
         private void HandleKatana(KatanaEvent e)
         {
             switch (e.Stage)
             {
                 case KatanaStage.NormalStarted:
-                    BeginStrike("Normal" + e.Strike, e, false);
+                    BeginStrike("IaidoDoubleSlash", e);
                     break;
                 case KatanaStage.ParrySucceeded:
                     _flash = 1f;
-                    BeginStrike("Normal" + e.Strike, e, true);
-                    break;
-                case KatanaStage.ParryAttempted:
-                    _attemptRemaining = _attemptDuration;
+                    if (_attack)
+                        _parry = true;
                     break;
                 case KatanaStage.ParryMotionEnded:
-                case KatanaStage.StrikeEnded:
                 case KatanaStage.DrawnWaiting:
                     _attack = false;
                     _animator.SetFloat(ActionProgressId, 1f);
+                    break;
+                case KatanaStage.StrikeEnded:
+                    if (!_parry)
+                    {
+                        _attack = false;
+                        _animator.SetFloat(ActionProgressId, 1f);
+                    }
                     break;
                 case KatanaStage.SheatheStarted:
                     string sheath = _motion == "IaidoDoubleSlash" ? "SheatheIaido" : _motion == "Normal2" ? "Sheathe2" : "Sheathe1";
@@ -220,33 +213,25 @@ namespace BlindBlade.Player.Katana
                     Play("SheathedHold", _blendTime);
                     break;
                 case KatanaStage.SlashStarted:
-                    BeginStrike("IaidoDoubleSlash", e, false);
+                    BeginStrike("IaidoDoubleSlash", e);
                     break;
                 case KatanaStage.Died:
-                    _attemptRemaining = 0f;
                     Play("Dead", _blendTime);
                     break;
             }
         }
 
-        /// <summary>클립 name을 기존 공격 시간 또는 쳐내기 표현 시간에 맞춘다. 이전 발도 여부로 Normal1 진입 구간을 선택한다.</summary>
-        private void BeginStrike(string name, KatanaEvent e, bool parry)
+        /// <summary>발도 클립 name을 기존 Iaido 적중·종료 시간에 맞추고 진행도를 초기화한다.</summary>
+        private void BeginStrike(string name, KatanaEvent e)
         {
             Play(name, _blendTime);
             _attack = true;
-            _parry = parry;
+            _parry = false;
             _actionId = e.ActionId;
-            _attemptRemaining = 0f;
-            bool iaido = name == "IaidoDoubleSlash";
-            _impactProgress = iaido ? _iaidoImpactProgress : _normalImpactProgress;
-            _entryProgress = name == "Normal1" && e.WasDrawn ? 0.13125f : 0f;
-            if (parry)
-            {
-                _duration = _combat.ParryMotionDuration;
-                _impactTime = _duration * _impactProgress;
-            }
-            else if (_actionDriver != null)
-                _actionDriver.GetPresentationTiming(iaido ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal, out _impactTime, out _duration);
+            _impactProgress = _iaidoImpactProgress;
+            _entryProgress = 0f;
+            if (_actionDriver != null)
+                _actionDriver.GetPresentationTiming(PlayerAttackKind.IaidoFinisher, out _impactTime, out _duration);
             else
                 _impactTime = _duration * _impactProgress;
             _animator.SetFloat(ActionProgressId, _entryProgress);

@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace BlindBlade.Player.Katana
 {
-    /// <summary>이동·시점·일반 공격·쳐내기·웅크리기 입력을 카타나 명령과 플레이어 시스템에 전달한다.</summary>
+    /// <summary>이동·시점·단일 발도 공격·웅크리기 입력을 카타나 명령과 플레이어 시스템에 전달한다.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(KatanaCombatCoordinator))]
     [DefaultExecutionOrder(-40)]
@@ -17,7 +17,6 @@ namespace BlindBlade.Player.Katana
         private InputSystem_Actions _actions;
         private InputAction _crouchHold;
         private InputAction _crouchToggle;
-        private InputAction _parry;
         private bool _crouchToggled;
 
         void Awake()
@@ -28,7 +27,6 @@ namespace BlindBlade.Player.Katana
             _crouchHold.AddBinding("<Keyboard>/leftCtrl");
             _crouchHold.AddBinding("<Keyboard>/rightCtrl");
             _crouchToggle = new InputAction("KatanaCrouchToggle", InputActionType.Button, "<Keyboard>/c");
-            _parry = new InputAction("KatanaParry", InputActionType.Button, "<Mouse>/rightButton");
         }
 
         void OnEnable()
@@ -36,7 +34,6 @@ namespace BlindBlade.Player.Katana
             _actions.Player.Enable();
             _crouchHold.Enable();
             _crouchToggle.Enable();
-            _parry.Enable();
         }
 
         void OnDisable()
@@ -44,7 +41,6 @@ namespace BlindBlade.Player.Katana
             _actions?.Player.Disable();
             _crouchHold?.Disable();
             _crouchToggle?.Disable();
-            _parry?.Disable();
             _crouchToggled = false;
             if (_combat != null)
             {
@@ -60,7 +56,6 @@ namespace BlindBlade.Player.Katana
             _actions?.Dispose();
             _crouchHold?.Dispose();
             _crouchToggle?.Dispose();
-            _parry?.Dispose();
         }
 
         void Update()
@@ -74,7 +69,7 @@ namespace BlindBlade.Player.Katana
             }
             if (_lockCursorOnClick && Cursor.lockState != CursorLockMode.Locked)
             {
-                if (_actions.Player.Attack.WasPressedThisFrame() || _parry.WasPressedThisFrame())
+                if (_actions.Player.Attack.WasPressedThisFrame())
                     SetCursor(true);
                 return;
             }
@@ -85,8 +80,7 @@ namespace BlindBlade.Player.Katana
             _combat.Player.SetCrouchInput(_crouchHold.IsPressed() || _crouchToggled);
             _combat.SetMovementInput(_actions.Player.Move.ReadValue<Vector2>());
             _combat.AddLookInput(_actions.Player.Look.ReadValue<Vector2>());
-            if (_parry.WasPressedThisFrame()) _combat.RequestParry();
-            if (_actions.Player.Attack.WasPressedThisFrame()) _combat.RequestNormalAttack();
+            if (_actions.Player.Attack.WasPressedThisFrame()) _combat.RequestAttack();
         }
 
         void OnApplicationFocus(bool focused)
