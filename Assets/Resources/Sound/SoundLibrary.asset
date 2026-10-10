@@ -35,20 +35,20 @@ MonoBehaviour:
     _type: 1
     _event:
       Guid:
-        Data1: 884093034
-        Data2: 1271320663
-        Data3: 1844672901
-        Data4: 1002346132
-      Path: event:/SwordSwing
+        Data1: 176830034
+        Data2: 1274157573
+        Data3: 1284546458
+        Data4: -1998290846
+      Path: event:/Sword/Sword_Swing/Swing_No_Impact
   - _id: 4
     _type: 1
     _event:
       Guid:
-        Data1: 850272528
-        Data2: 1162689503
-        Data3: 640649376
-        Data4: 1780789947
-      Path: event:/SwordHit
+        Data1: 1500451467
+        Data2: 1275304294
+        Data3: -1263986257
+        Data4: -1929883585
+      Path: event:/Sword/Sword_Hit/Enemy_Damaged
   - _id: 5
     _type: 1
     _event:
@@ -58,5 +58,23 @@ MonoBehaviour:
         Data3: 1778078601
         Data4: -1443737530
       Path: event:/WarCry
+  - _id: 6
+    _type: 1
+    _event:
+      Guid:
+        Data1: -1097931935
+        Data2: 1211882313
+        Data3: -942904443
+        Data4: 2061359677
+      Path: event:/Sword/Unsheath/Player_Sword_Release
+  - _id: 7
+    _type: 1
+    _event:
+      Guid:
+        Data1: 596428109
+        Data2: 1292131727
+        Data3: 1131030957
+        Data4: -1012374735
+      Path: event:/EnemyFootsteps
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus

@@ -12,10 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbbd07b56d900244ea52df8f070e9cc7, type: 3}
   m_Name: EnemySoundSettings
   m_EditorClassIdentifier: 
-  _meleeTelegraph: 1
-  _meleeAction: 1
-  _rangedTelegraph: 1
-  _rangedAction: 1
-  _chargeTelegraph: 1
-  _chargeAction: 1
-  _footstep: 1
+  _meleeTelegraph: 0
+  _meleeAction: 0
+  _rangedTelegraph: 0
+  _rangedAction: 0
+  _chargeTelegraph: 5
+  _chargeAction: 0
+  _footstep: 7
+  _rhythmChargeTelegraph: 5
+  _rhythmChargeAction: 0

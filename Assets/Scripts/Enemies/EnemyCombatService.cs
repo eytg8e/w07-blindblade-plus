@@ -17,6 +17,12 @@ namespace BlindBlade.Enemies
         private bool _hasResolution;
         private PlayerAttackResolution _lastResolution;
 
+        /// <summary>
+        /// 새 공격 판정이 끝나면 요청, 최초 접촉체, 접촉 위치, 실제 적 피해 여부를 알린다.
+        /// 접촉이 없으면 Collider는 null이며 동일 ActionId의 캐시 조회에는 다시 알리지 않는다.
+        /// </summary>
+        public event Action<PlayerAttackRequest, Collider, Vector3, bool> AttackContactResolved;
+
         void OnEnable()
         {
             _hasResolution = false;
@@ -56,6 +62,7 @@ namespace BlindBlade.Enemies
         /// <summary>
         /// request의 원점·방향·사거리로 가장 가까운 적 또는 장애물을 검사하여 피해·사망 결과를 반환한다.
         /// 일반 공격은 설정 피해를 적용하고 발도는 남은 HP를 소진하며 같은 ActionId는 중복 적용하지 않는다.
+        /// 새 판정의 접촉체·위치·적 피해 여부는 AttackContactResolved로 구독자에게 알린다.
         /// </summary>
         public PlayerAttackResolution ResolvePlayerAttack(PlayerAttackRequest request)
         {
@@ -63,9 +70,11 @@ namespace BlindBlade.Enemies
                 return _lastResolution;
 
             PlayerAttackResolution result = new PlayerAttackResolution(request.ActionId, false, null, false);
+            Collider collider = null;
+            Vector3 point = request.Origin;
             if (isActiveAndEnabled && request.Range > 0f && request.Direction.sqrMagnitude > 0f)
             {
-                Collider collider = FindFirstContact(request, out Vector3 point);
+                collider = FindFirstContact(request, out point);
                 EnemyHealth health = collider != null ? collider.GetComponentInParent<EnemyHealth>() : null;
                 if (health != null && health.IsAlive && health.gameObject.scene == gameObject.scene &&
                     (string.IsNullOrEmpty(request.PreferredTargetId) || request.PreferredTargetId == health.TargetId))
@@ -78,6 +87,7 @@ namespace BlindBlade.Enemies
             }
             _hasResolution = true;
             _lastResolution = result;
+            AttackContactResolved?.Invoke(request, collider, point, result.HitConfirmed);
             return result;
         }
 

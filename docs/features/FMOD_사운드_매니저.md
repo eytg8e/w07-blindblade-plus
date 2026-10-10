@@ -1,6 +1,7 @@
 ### FMOD 사운드 매니저
 
-- 2026-10-10: 계단 BGM은 StairwellMusic이 FMOD EventInstance를 직접 생성·재생하고 씬 이탈 시 정지·해제한다. 이동 중 효과음 제한과 독립적으로 유지된다. Stairwell 씬의 StairwellBGM → StairwellMusic → Fmod Event에서 2D 루프 BGM 이벤트를 선택한다. 이벤트는 Bank에 포함하고 FMOD Studio에서 Build해야 한다. [스테이지 이동 명세](스테이지_이동.md) 참고.
+- 2026-10-10 현재 적용: Stairwell, StraightCorridor, TCorridor의 플레이어/적 발걸음, 검 뽑기, 미충돌 스윙, 적 피격 및 일반 충돌을 연결했다. 아래 「게임 씬 적용」이 현재 구성의 기준이며 뒤의 이전 구현 기록과 구분한다.
+- 계단 BGM은 기존 StairwellMusic이 FMOD EventInstance를 직접 생성·재생하고 씬 이탈 시 정지·해제한다. 이동 중 효과음 제한과 독립적으로 유지된다. 이번에 재생은 확인했지만 현재 event:/StairWell은 145.894초 단발 이벤트다. 반복이 필요하면 Studio에서 Loop Region을 설정하고 Bank를 빌드해야 한다. 기존 BGM 코드와 루프 설정은 이번 효과음 적용에서 변경하지 않았다. [스테이지 이동 명세](스테이지_이동.md) 참고.
 
 - 기능 설명: 협업자는 `Managers.Sound`에 사운드 ID와 위치 또는 오브젝트를 전달한다. FMOD 이벤트 생성, 재생 및 해제는 매니저가 처리한다.
 - 동작 조건 및 처리 흐름: Managers가 승인된 Resources 설정을 로드해 SoundManager를 생성한다. 단발 효과음은 자연 종료하고 BGM은 매니저가 하나만 유지한다. Update는 종료된 재생과 소유자 수명을 정리한다.
@@ -48,7 +49,7 @@
 
 1. Unity 상단의 `FMOD > Edit Settings`를 열고 Source Type이 Studio 프로젝트를 사용하는지 확인한다.
 2. 연결 파일이 `FMODProject/week06-blindblade/week06-blindblade.fspro`인지 확인한다. 새 씬을 추가하기 위해 프로젝트 연결이나 Bank 로딩 설정을 변경하지 않는다.
-3. `FMOD > Event Browser`에서 `event:/Test/TestFootsteps`, `event:/Test/TestAmbience`가 보이는지 확인한다. 표시되지 않으면 Studio의 Bank 빌드 및 연결 경로부터 확인한다.
+3. `FMOD > Event Browser`에서 아래 현재 이벤트 표의 발걸음과 검 이벤트가 보이는지 확인한다. Ambience를 사용할 경우 기존 `event:/Test/TestAmbience`도 확인한다. 표시되지 않으면 Studio의 Bank 빌드 및 연결 경로부터 확인한다.
 4. Project 창에서 `Assets/Resources/Sound/SoundLibrary.asset`을 선택한다. Inspector의 Events에 Footstep/Effect/발소리 이벤트와 Ambience/BGM/배경음 이벤트가 연결되어 있는지 확인한다.
 5. Mixer의 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SFX_Bus`를 확인한다. 이 에셋은 씬마다 복제하거나 Hierarchy에 배치하지 않는다.
 
@@ -150,12 +151,13 @@ public class SceneAudioController : MonoBehaviour
 | --- | --- |
 | 지정 위치에서 효과음 1회 | `Play(id, position)` |
 | 이동하는 오브젝트에서 효과음 1회 | `PlayAttached(id, gameObject)` |
+| Label을 선택한 뒤 단발음 재생 | `PlayAttachedWithLabel(id, gameObject, parameterName, label)` |
 | BGM 재생 | `PlayBgm(id)` |
 | BGM 정지 | `StopBgm()` |
 | 이 오브젝트의 소리만 정지 | `StopFor(gameObject)` |
 | 모든 효과음 정지 | `StopEffects()` |
 
-현재 사용 가능한 ID는 `SoundId.Footstep`(효과음)과 `SoundId.Ambience`(BGM)다.
+현재 등록한 ID는 아래 이벤트 표를 기준으로 사용한다. None은 재생하지 않는 설정값이다.
 
 ```csharp
 // 발이 바닥에 닿을 때 한 번 호출한다.
@@ -201,11 +203,11 @@ Managers.Sound.Clear();
 
 #### API의 결과와 제한
 
-- Play, PlayAttached, PlayBgm은 성공하면 true를 반환한다. 이벤트 누락, 사운드 종류 불일치, 비활성 발음체 등은 false와 영어 경고로 전달한다.
+- Play, PlayAttached, PlayAttachedWithLabel, PlayBgm은 성공하면 true를 반환한다. 이벤트 누락, 사운드 종류 불일치, 비활성 발음체 등은 false와 영어 경고로 전달한다. 기존 이동 제한에 의해 거부된 요청은 false를 반환하며 경고를 반복 출력하지 않는다.
 - Play와 PlayAttached에는 단발 이벤트만 등록한다. 루프 효과음을 이 API로 재생하면 거부한다.
 - BGM 반복은 Studio의 Loop Region을 사용한다. 같은 BGM은 중복 생성하지 않으며, 페이드 정지 중 같은 ID의 재생 요청은 false를 반환한다.
 - BGM을 다른 곡으로 전환할 때 이전 음악은 즉시 정지한다. 크로스페이드는 지원하지 않는다.
-- 현재는 BGM 외의 지속 효과음, 재생 한 건의 일시정지 및 파라미터 제어 API를 제공하지 않는다. 실제 충전음이나 기계음 기능이 필요할 때 구체적인 요구에 맞춰 추가한다.
+- PlayAttachedWithLabel은 Labeled Parameter를 start 전에 설정한다. Label이 잘못되면 재생하지 않고 false와 영어 오류를 반환한다. 재생 중 파라미터 변경, BGM 외의 지속 효과음, 재생 한 건의 일시정지 API는 제공하지 않는다.
 - `Stop(SoundType)`은 기존 호출과의 호환을 위해 유지한다. 새 호출부는 의미가 드러나는 StopBgm 또는 StopEffects를 사용한다.
 
 #### 사운드 담당자의 등록 방법
@@ -220,7 +222,7 @@ SoundId는 게임 코드가 사용하는 이름이고, SoundLibrary는 그 이�
 6. None, 중복 Id, 비어 있는 Event를 확인하고 에셋을 저장한다. 중복은 임의로 첫 항목을 재생하지 않고 오류로 거부한다.
 7. 협업자에게 사용할 SoundId와 호출 시점을 전달한다. [수동 검증 절차](FMOD_사운드_검증.md)를 수행한 뒤 결과를 기록한다.
 
-예를 들어 새로운 타격음을 추가한다면 아래처럼 명시적인 숫자를 배정한다. SwordHit는 등록 방법을 보여주는 예시이며 현재 enum에 존재하지 않는다.
+현재 enum은 아래와 같다. 새로운 사운드는 기존 숫자를 유지하며 사용하지 않은 숫자를 추가한다.
 
 ```csharp
 public enum SoundId
@@ -230,10 +232,13 @@ public enum SoundId
     Ambience = 2,
     SwordSwing = 3,
     SwordHit = 4,
+    WarCry = 5,
+    SwordUnsheath = 6,
+    EnemyFootstep = 7,
 }
 ```
 
-그다음 Library에 Id=SwordHit, Type=Effect, Event=실제로 제작한 단발 타격음 이벤트를 연결한다. 등록까지 끝난 뒤에만 `Managers.Sound.Play(SoundId.SwordHit, hitPosition)`을 사용한다.
+SwordHit는 이미 Library에 등록되어 있다. 새 사운드도 같은 방식으로 등록까지 끝낸 뒤 게임 코드에서 사용한다.
 
 Library의 Mixer 설정은 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SFX_Bus`다. Studio의 실제 Bus 경로가 바뀌면 이 값도 갱신한다. Bank 이름과 Bus 경로는 다른 개념이다.
 
@@ -245,8 +250,87 @@ Library의 Mixer 설정은 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SF
 | --- | --- | --- |
 | Footstep=1 | Effect | event:/Footsteps |
 | Ambience=2 | BGM | event:/Test/TestAmbience |
-| SwordSwing=3 | Effect | event:/SwordSwing |
-| SwordHit=4 | Effect | event:/SwordHit |
+| SwordSwing=3 | Effect | event:/Sword/Sword_Swing/Swing_No_Impact |
+| SwordHit=4 | Effect | event:/Sword/Sword_Hit/Enemy_Damaged |
+| WarCry=5 | Effect | event:/WarCry |
+| SwordUnsheath=6 | Effect | event:/Sword/Unsheath/Player_Sword_Release |
+| EnemyFootstep=7 | Effect | event:/EnemyFootsteps |
+
+#### 게임 씬 적용 (2026-10-10 현재)
+
+- 기능 설명: 플레이어/적의 실제 행동 알림을 재사용해 세 씬에서 공통 SoundManager로 효과음을 재생한다. 별도 발걸음 타이머, SoundPlayback, SoundTest, 영구 Editor 도구는 추가하지 않았다.
+- 동작 조건 및 처리 흐름: 아래 컴포넌트가 활성 상태이고 Library와 Bank가 유효해야 한다. C# 이벤트를 OnEnable에서 구독하고 OnDisable에서 해제한다. 사운드 선택·중복 방지는 행동 연결 컴포넌트가 담당하고, FMOD 인스턴스와 수명은 SoundManager가 담당한다.
+- 구현 상태: Unity Editor/Play 연결과 재생 상태를 확인했다. 직접 청취, 표면별 발소리 선택, 긴 플레이의 성능 검증은 미확인이다.
+
+| 씬 | 플레이어 | 적 | 청취 위치 |
+| --- | --- | --- | --- |
+| Assets/Scenes/Stairwell.unity | PlayerCombatAudio + 기존 KatanaCombatCoordinator | 현재 적 없음 | Player Camera의 StudioListener 1개 |
+| Assets/Scenes/StraightCorridor.unity | PlayerCombatAudio + 기존 KatanaCombatCoordinator | EnemyDamageAudio 1개 | Player Camera의 StudioListener 1개 |
+| Assets/Scenes/TCorridor.unity | PlayerCombatAudio + 기존 PlayerWeaponDebugVisual | EnemyDamageAudio 2개 | Player Camera의 StudioListener 1개 |
+
+Stairwell의 비어 있던 PlayerController.Combat Service Source와 EnemyCombatService.Player Root에는 씬의 기존 서비스와 Player를 연결했다. 프리팹 원본은 변경하지 않고 씬의 참조/컴포넌트로 저장했다. 향후 적을 추가하는 경우 EnemyHealth와 EnemyDamageAudio를 함께 배치해야 한다.
+
+##### 실제 인터페이스와 담당 영역
+
+| 입력/알림 | 연결 코드 | 호출 시점과 전달 데이터 |
+| --- | --- | --- |
+| PlayerController.FootstepEmitted | 기존 MainMapSession | 실제 발 접촉에 FootstepEmitted의 NoiseStrength로 Footstep을 player에 부착 재생 |
+| FootstepEmitter.OnFootstepEmitted | 기존 EnemyFootsteps | 실제 적 발 접촉 위치에 EnemySoundSettings의 EnemyFootstep을 재생 |
+| PlayerController.ActionEvent | PlayerCombatAudio.HandleAction | 일반 공격 시작에 A/B 선택, 발도 베기 시작에 C 선택, 미충돌 결과에 스윙 요청 |
+| EnemyCombatService.AttackContactResolved | PlayerCombatAudio.HandleContact | 피해 판정 완료 후 PlayerAttackRequest, Collider, Vector3 point, bool enemyDamaged 전달. Collider=null은 스윙, 일반 접촉은 임시 충돌음, 실제 적 피해는 EnemyDamageAudio에 위임 |
+| EnemyHealth.Damaged | EnemyDamageAudio.HandleDamage | DamageContext의 플레이어 Instigator와 실제 Point로 피격음 재생 |
+| KatanaCombatCoordinator.EventRaised | PlayerCombatAudio.HandleKatana | 납도 상태의 일반 공격/쳐내기 또는 발도 베기 시작에 검 뽑기 소리 |
+| KatanaCombatCoordinator.ParrySucceeded | PlayerCombatAudio.HandleParry | 실제 쳐내기 접촉 Point에 임시 충돌음 |
+| PlayerWeaponDebugVisual.IsPlayingIntro | PlayerCombatAudio.Update | TCorridor의 기존 등장 시 검 뽑기 동작에 한 번 재생 |
+
+EnemyCombatService에는 승인받은 판정 완료 알림만 추가했다. 기존 피해량, 대상 선택, 사망 판정은 유지한다. 동일 ActionId의 판정 캐시 반환에는 알림을 재발행하지 않는다. PlayerCombatAudio도 ActionId로 중복 재생을 차단한다. 성공 피격은 EnemyDamageAudio 한 곳에서 재생하여 같은 공격에 피격음 두 개가 생기지 않게 한다.
+
+```mermaid
+flowchart TD
+    Player["PlayerController / KatanaCombatCoordinator"] -->|"행동과 발도 알림"| CombatAudio["PlayerCombatAudio"]
+    Contact["EnemyCombatService"] -->|"요청·최초 접촉·위치·피해 여부"| CombatAudio
+    Contact -->|"기존 피해 적용"| Health["EnemyHealth"]
+    Health -->|"Damaged: DamageContext"| DamageAudio["EnemyDamageAudio"]
+    Player -->|"FootstepEmitted"| Session["MainMapSession"]
+    Emitter["FootstepEmitter"] -->|"OnFootstepEmitted"| Footsteps["EnemyFootsteps"]
+    CombatAudio --> Sound["Managers.Sound"]
+    DamageAudio --> Sound
+    Session --> Sound
+    Footsteps --> Sound
+    Library["SoundLibrary.asset: EventReference"] --> Sound
+    Sound --> FMOD["FMOD 재생·수명 관리"]
+```
+
+##### 스윙 선택과 충돌 정책
+
+- 사용자가 선택한 배분은 일반 1타 A, 일반 2타 B, 발도 C다. A/B/C에 방향이나 공격 이름을 임의 부여하지 않는다. TCorridor의 기존 전투 시각화는 판정 시점의 CurrentNormalStrike로 A/B를 정한다.
+- Swing_No_Impact는 이름과 용도에 맞게 실제 충돌 없는 판정에서만 재생한다. 적이나 벽과 접촉하면 피격/충돌음을 사용한다. 공격 시작부터 항상 스윙과 피격음을 겹쳐 내는 대안은 사용하지 않았다.
+- 플레이어 발도음과 No_Impact 이벤트는 현재 Studio의 2D 설정을 유지한다. 적 발소리와 피격음은 3D다. Unity에서 임의로 공간음향을 바꾸지 않았다.
+- 피격 이벤트는 Multi Instrument이므로 Unity에서 샘플을 선택하지 않는다. 일반 벽/물체/쳐내기 충돌도 사용자 승인으로 같은 Enemy_Damaged 이벤트를 임시 사용한다. 전용 충돌음을 제작한 뒤 별도 SoundId와 필드로 분리할 수 있다.
+- 피격음 위치는 접촉 Point에 고정한다. 사망 시 적이 즉시 비활성화되므로 소유자는 플레이어 Instigator로 지정하여 꼬리 소리를 유지한다. 발소리와 스윙은 정상적으로 자연 종료하며 공격 전환을 이유로 StopFor를 호출하지 않는다.
+
+협업자가 Label을 직접 선택할 필요가 있는 새 행동은 다음 API를 호출한다. 현재 세 씬은 PlayerCombatAudio가 이미 호출하므로 기존 공격 코드에 같은 호출을 추가하지 않는다.
+
+```csharp
+Managers.Sound.PlayAttachedWithLabel(
+    SoundId.SwordSwing, gameObject, "SwingType", "A", volume: 0.8f);
+```
+
+##### 직접 조절할 설정
+
+- Player의 PlayerCombatAudio: Volume 기본 0.8, First Swing Label=A, Second Swing Label=B, Iaido Swing Label=C, Contact Service=씬의 EnemyCombatService. 잘못된 Label은 재생 실패를 일으킨다.
+- Enemy의 EnemyDamageAudio: Damage Sound=SwordHit, Volume 기본 0.8. 플레이어가 가한 실제 피해만 연결한다.
+- EnemySoundSettings.asset: Footstep=EnemyFootstep. 일반 근접/원거리 전조와 행동에 임시로 배정됐던 Footstep은 None으로 바꿔 실제 발 접촉과 구분했다. 기존 Charge/RhythmCharge 전조 WarCry는 유지한다. 미등록 적 공격음은 새로 만들지 않았다.
+- 기존 EnemyFootsteps의 +5dB 배율 1.7782794와 플레이어 NoiseStrength를 유지한다. 모든 효과음의 옵션 음량은 Managers.Sound.EffectVolume, 원본 음량/거리 감쇠는 Studio에서 조정한다.
+- 세 새 검 이벤트는 기존 SFX_Bus에 라우팅하여 EffectVolume을 함께 받는다. Labeled Parameter, Multi Instrument, 음원 자체는 수정하지 않았다. Desktop의 SFX/BGM/Master Bank를 다시 빌드했다.
+- 기존 이동 정책은 보존한다. 일반 적 발소리는 플레이어 이동 중 제한되고 돌진 발소리/WarCry는 예외다. 플레이어의 Footstep/SwordSwing/SwordHit/SwordUnsheath는 제한 진입 전후 모두 허용한다. 기존 계단 BGM은 StairwellMusic의 독립 재생을 유지한다.
+- 공통 Managers.cs와 _sound.Update()는 수정하지 않았다. 다른 팀원이 추가 씬에 연결할 일은 Listener 중복 확인, PlayerCombatAudio의 Contact Service 연결, 적 EnemyDamageAudio 배치다. 게임플레이 코드는 FMOD 타입을 사용할 필요가 없다.
+
+검증 결과와 남은 청취 절차는 [현재 게임 씬 검증 기록](FMOD_사운드_검증.md#게임-씬-적용-검증-2026-10-10)을 따른다.
+
+#### 이전 구현 및 검증 기록
+
+아래는 각 작업 당시의 기록이다. 현재 이벤트 경로와 동작은 위 게임 씬 적용 및 현재 이벤트 표를 기준으로 한다.
 
 #### 내부 구조를 이해하고 싶을 때
 

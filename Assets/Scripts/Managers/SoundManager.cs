@@ -80,7 +80,7 @@ public class SoundManager
         {
             for (int i = _effects.Count - 1; i >= 0; i--)
             {
-                if (_effects[i].Id == SoundId.WarCry || _effects[i].PlayDuringMovement)
+                if (CanPlayDuringMovement(_effects[i].Id, _effects[i].Owner, _effects[i].PlayDuringMovement))
                     continue;
                 if (RuntimeManager.IsInitialized)
                     StopEffect(_effects[i].Instance, false);
@@ -112,6 +112,20 @@ public class SoundManager
             return false;
         }
         return PlayEffect(soundId, source.transform.position, source, true, volume);
+    }
+
+    /// <summary>
+    /// soundId의 단발음을 source에 연결하고 parameterName의 Label을 재생 전에 지정한다.
+    /// label과 volume을 FMOD에 전달하며 이벤트 설정과 재생이 성공하면 true를 반환한다.
+    /// </summary>
+    public bool PlayAttachedWithLabel(SoundId soundId, GameObject source, string parameterName, string label, float volume = 1f)
+    {
+        if (source == null || string.IsNullOrWhiteSpace(parameterName) || string.IsNullOrWhiteSpace(label))
+        {
+            Debug.LogWarning("[SoundManager] A source, parameter name and label are required.");
+            return false;
+        }
+        return PlayEffect(soundId, source.transform.position, source, true, volume, parameterName: parameterName, label: label);
     }
 
     /// <summary>
@@ -263,12 +277,12 @@ public class SoundManager
 
     /// <summary>
     /// soundId의 단발 효과음을 position 또는 source에서 volume 배율로 재생한다.
-    /// attach로 위치 추적과 playDuringMovement로 이동 중 재생 예외를 선택하며 성공하면 true를 반환한다.
+    /// attach로 위치 추적과 playDuringMovement로 이동 예외를 선택하고 parameterName과 label을 시작 전에 적용한다.
+    /// 이벤트 설정과 재생이 성공하면 true를 반환한다.
     /// </summary>
-    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false)
+    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false, string parameterName = null, string label = null)
     {
-        if (_footstepOnlyOwner != null && !playDuringMovement && soundId != SoundId.WarCry && (source != _footstepOnlyOwner
-            || (soundId != SoundId.Footstep && soundId != SoundId.SwordSwing && soundId != SoundId.SwordHit)))
+        if (!CanPlayDuringMovement(soundId, source, playDuringMovement))
             return false;
         if (!ReferenceEquals(source, null) && (source == null || !source.activeInHierarchy))
         {
@@ -292,6 +306,8 @@ public class SoundManager
             else
                 instance.set3DAttributes(RuntimeUtils.To3DAttributes(position));
             FMOD.RESULT result = instance.setVolume(Mathf.Max(0f, volume));
+            if (result == FMOD.RESULT.OK && parameterName != null)
+                result = instance.setParameterByNameWithLabel(parameterName, label);
             if (result == FMOD.RESULT.OK)
                 result = instance.start();
             if (result != FMOD.RESULT.OK)
@@ -310,6 +326,17 @@ public class SoundManager
             Debug.LogWarning("[SoundManager] Effect event not found in loaded banks: " + exception.Message);
             return false;
         }
+    }
+
+    /// <summary>
+    /// soundId와 source, playDuringMovement를 기존 이동 중 사운드 정책에 대조한다.
+    /// 플레이어 발걸음과 전투음, 발도음 및 기존 전조 예외가 허용되면 true를 반환한다.
+    /// </summary>
+    private bool CanPlayDuringMovement(SoundId soundId, GameObject source, bool playDuringMovement)
+    {
+        return _footstepOnlyOwner == null || playDuringMovement || soundId == SoundId.WarCry
+            || (source == _footstepOnlyOwner && (soundId == SoundId.Footstep || soundId == SoundId.SwordSwing
+                || soundId == SoundId.SwordHit || soundId == SoundId.SwordUnsheath));
     }
 
     /// <summary>
