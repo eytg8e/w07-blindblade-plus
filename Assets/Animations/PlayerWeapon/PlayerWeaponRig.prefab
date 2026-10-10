@@ -149,7 +149,7 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 1073741825
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: e41ccd25f7f64ac4f8a2bfebf59ff2a5, type: 2}
@@ -235,7 +235,7 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 1073741825
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: e41ccd25f7f64ac4f8a2bfebf59ff2a5, type: 2}
@@ -321,7 +321,7 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 1073741825
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 98afc2b301dc0014894b880cc29225ba, type: 2}
@@ -408,7 +408,7 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_RenderingLayerMask: 1
+  m_RenderingLayerMask: 1073741825
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 765972eaf015ab24bb7c58ba4d71b0ee, type: 2}

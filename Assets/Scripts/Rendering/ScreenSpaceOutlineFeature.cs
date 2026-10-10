@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using UnityEngine;
 
 using UnityEngine.Rendering;
@@ -27,7 +29,9 @@ namespace BlindBlade.Rendering
         [Header("렌더링 연결")]
         [SerializeField, Tooltip("화면 공간 윤곽선 셰이더. PC_Renderer에 기본 연결되어 있다.")]
         private Shader _shader;
+        [SerializeField] private Shader _alwaysVisibleMaskShader;
         private Material _material;
+        private Material _maskMaterial;
         private OutlinePass _pass;
 
         /// <summary>
@@ -36,17 +40,20 @@ namespace BlindBlade.Rendering
         public override void Create()
         {
             CoreUtils.Destroy(_material);
+            CoreUtils.Destroy(_maskMaterial);
+            _pass?.Dispose();
             _material = null;
             _pass = null;
 
-            if (_shader == null)
+            if (_shader == null || _alwaysVisibleMaskShader == null)
             {
                 Debug.LogError("ScreenSpaceOutlineFeature에 윤곽선 셰이더를 연결해야 합니다.", this);
                 return;
             }
 
             _material = CoreUtils.CreateEngineMaterial(_shader);
-            _pass = new OutlinePass(_material);
+            _maskMaterial = CoreUtils.CreateEngineMaterial(_alwaysVisibleMaskShader);
+            _pass = new OutlinePass(_material, _maskMaterial);
         }
 
         /// <summary>
@@ -77,6 +84,8 @@ namespace BlindBlade.Rendering
         protected override void Dispose(bool disposing)
         {
             CoreUtils.Destroy(_material);
+            CoreUtils.Destroy(_maskMaterial);
+            _pass?.Dispose();
             _material = null;
             _pass = null;
         }
@@ -85,6 +94,20 @@ namespace BlindBlade.Rendering
         {
             private const string PASS_NAME = "Screen Space Outline";
             private readonly Material _material;
+            private readonly Material _maskMaterial;
+            private RTHandle _maskTarget;
+            private static readonly int MaskId = Shader.PropertyToID("_AlwaysVisibleOutlineMask");
+            private static readonly List<ShaderTagId> Tags = new List<ShaderTagId>
+            {
+                new ShaderTagId("UniversalForward"), new ShaderTagId("UniversalForwardOnly"),
+                new ShaderTagId("SRPDefaultUnlit")
+            };
+            private const uint ALWAYS_VISIBLE_LAYER = 1u << 30;
+
+            private sealed class MaskPassData
+            {
+                internal RendererListHandle Renderers;
+            }
 
             private sealed class PassData
             {
@@ -94,9 +117,10 @@ namespace BlindBlade.Rendering
             /// <summary>
             /// 머티리얼을 보관하고 투명 오브젝트 이전에 깊이·노멀 입력을 요청한다.
             /// </summary>
-            public OutlinePass(Material material)
+            public OutlinePass(Material material, Material maskMaterial)
             {
                 _material = material;
+                _maskMaterial = maskMaterial;
                 renderPassEvent = RenderPassEvent.BeforeRenderingTransparents;
                 ConfigureInput(ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal);
             }
@@ -107,15 +131,54 @@ namespace BlindBlade.Rendering
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
                 UniversalResourceData resources = frameData.Get<UniversalResourceData>();
+                UniversalRenderingData rendering = frameData.Get<UniversalRenderingData>();
+                UniversalCameraData camera = frameData.Get<UniversalCameraData>();
+                UniversalLightData light = frameData.Get<UniversalLightData>();
+                TextureDesc description = renderGraph.GetTextureDesc(resources.activeColorTexture);
+                description.name = "Always Visible Outline Mask";
+                description.colorFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R8_UNorm;
+                description.depthBufferBits = DepthBits.None;
+                description.clearBuffer = true;
+                description.clearColor = Color.clear;
+                TextureHandle mask = renderGraph.CreateTexture(description);
+                DrawingSettings drawing = RenderingUtils.CreateDrawingSettings(Tags, rendering, camera, light,
+                    SortingCriteria.CommonOpaque);
+                drawing.overrideMaterial = _maskMaterial;
+                drawing.overrideMaterialPassIndex = 0;
+                FilteringSettings filter = new FilteringSettings(RenderQueueRange.opaque, -1, ALWAYS_VISIBLE_LAYER);
+                using (IRasterRenderGraphBuilder builder = renderGraph.AddRasterRenderPass<MaskPassData>(
+                    "Always Visible Outline Mask", out MaskPassData data))
+                {
+                    data.Renderers = renderGraph.CreateRendererList(new RendererListParams(rendering.cullResults, drawing, filter));
+                    builder.UseRendererList(data.Renderers);
+                    builder.SetRenderAttachment(mask, 0, AccessFlags.Write);
+                    builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.Read);
+                    builder.SetGlobalTextureAfterPass(mask, MaskId);
+                    builder.SetRenderFunc<MaskPassData>(DrawMask);
+                }
                 using (IRasterRenderGraphBuilder builder =
                     renderGraph.AddRasterRenderPass<PassData>(PASS_NAME, out PassData passData))
                 {
                     passData.Material = _material;
                     builder.UseTexture(resources.cameraDepthTexture, AccessFlags.Read);
                     builder.UseTexture(resources.cameraNormalsTexture, AccessFlags.Read);
+                    builder.UseTexture(mask, AccessFlags.Read);
                     builder.SetRenderAttachment(resources.activeColorTexture, 0, AccessFlags.WriteAll);
                     builder.SetRenderFunc<PassData>(DrawOutline);
                 }
+            }
+
+            /// <summary>선택 렌더러 목록을 깊이 검사한 흰색 마스크로 그린다.</summary>
+            private static void DrawMask(MaskPassData data, RasterGraphContext context)
+            {
+                context.cmd.DrawRendererList(data.Renderers);
+            }
+
+            /// <summary>호환 모드에서 사용하는 임시 마스크 타깃을 해제한다.</summary>
+            internal void Dispose()
+            {
+                _maskTarget?.Release();
+                _maskTarget = null;
             }
 
             /// <summary>
@@ -133,6 +196,20 @@ namespace BlindBlade.Rendering
             public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
             {
                 CommandBuffer commandBuffer = CommandBufferPool.Get(PASS_NAME);
+                RenderTextureDescriptor descriptor = renderingData.cameraData.cameraTargetDescriptor;
+                descriptor.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R8_UNorm;
+                descriptor.depthBufferBits = 0;
+                RenderingUtils.ReAllocateHandleIfNeeded(ref _maskTarget, descriptor, FilterMode.Point,
+                    TextureWrapMode.Clamp, name: "Always Visible Outline Mask");
+                CoreUtils.SetRenderTarget(commandBuffer, _maskTarget,
+                    renderingData.cameraData.renderer.cameraDepthTargetHandle, ClearFlag.Color, Color.clear);
+                context.ExecuteCommandBuffer(commandBuffer);
+                commandBuffer.Clear();
+                DrawingSettings drawing = CreateDrawingSettings(Tags, ref renderingData, SortingCriteria.CommonOpaque);
+                drawing.overrideMaterial = _maskMaterial;
+                FilteringSettings filter = new FilteringSettings(RenderQueueRange.opaque, -1, ALWAYS_VISIBLE_LAYER);
+                context.DrawRenderers(renderingData.cullResults, ref drawing, ref filter);
+                commandBuffer.SetGlobalTexture(MaskId, _maskTarget);
                 CoreUtils.SetRenderTarget(
                     commandBuffer,
                     renderingData.cameraData.renderer.cameraColorTargetHandle,

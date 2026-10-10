@@ -47,6 +47,7 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             float _OutlineSoundLifetime;
             float _OutlineEdgeFade;
             float _OutlinePerceptionTime;
+            TEXTURE2D_X(_AlwaysVisibleOutlineMask);
 
             // 영역 반경의 안쪽 경계부터 가장자리까지 공간 가시성을 부드럽게 줄인다.
             float RegionVisibility(float3 position, float3 center, float radius)
@@ -62,6 +63,8 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             {
                 if (hasSurface == 0.0)
                     return 0.0;
+                if (SAMPLE_TEXTURE2D_X(_AlwaysVisibleOutlineMask, sampler_PointClamp, uv).r > 0.5)
+                    return 1.0;
                 if (_UsePerceptionMask < 0.5)
                     return 1.0;
 
