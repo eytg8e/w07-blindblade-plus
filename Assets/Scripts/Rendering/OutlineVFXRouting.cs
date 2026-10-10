@@ -10,7 +10,9 @@ namespace BlindBlade.Rendering
     internal sealed class OutlineVFXRouting
     {
         internal const uint SELECTED_MASK = 1u << 31;
+        internal const uint ALWAYS_VISIBLE_MASK = 1u << 30;
         private readonly HashSet<Renderer> _selected = new HashSet<Renderer>();
+        private readonly HashSet<Renderer> _alwaysVisible = new HashSet<Renderer>();
         private readonly Dictionary<Renderer, Route> _cache = new Dictionary<Renderer, Route>();
         private readonly List<Route> _changed = new List<Route>();
         private readonly List<Renderer> _removed = new List<Renderer>();
@@ -31,7 +33,7 @@ namespace BlindBlade.Rendering
         public void Prepare()
         {
             Restore();
-            OutlineVFX.Collect(_selected);
+            OutlineVFX.Collect(_selected, _alwaysVisible);
             foreach (Renderer renderer in _selected)
                 Apply(renderer, true);
             foreach (ParticleSystemRenderer renderer in Object.FindObjectsByType<ParticleSystemRenderer>(FindObjectsSortMode.None))
@@ -103,6 +105,8 @@ namespace BlindBlade.Rendering
                 renderer.sharedMaterials = route.Copies;
             }
             renderer.renderingLayerMask = selected ? route.Mask | SELECTED_MASK : route.Mask;
+            if (selected && _alwaysVisible.Contains(renderer))
+                renderer.renderingLayerMask |= ALWAYS_VISIBLE_MASK;
             _changed.Add(route);
         }
 

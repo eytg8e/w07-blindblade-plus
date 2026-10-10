@@ -25,7 +25,7 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float _iaidoWindupFraction = 0.8f;
     [SerializeField, Range(0.5f, 1f)] private float _followThroughFraction = 0.85f;
 
-    [Header("씬 표시")]
+    [Header("플레이어 검기 표시")]
     [SerializeField] private bool _useOutlineVfx;
     private EffectManager _effects;
     private int _actionId;
@@ -50,7 +50,8 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         _effects = Game.Instance.EffectManager;
         if (!_effects.IsReady)
             _effects.Initialize();
-        _effects.SetOutlineVfxEnabled(_useOutlineVfx);
+        _effects.SetOutlineVfxEnabled(false);
+        _effects.SetPlayerTrailOutlineEnabled(_useOutlineVfx);
     }
 
     void OnDisable()

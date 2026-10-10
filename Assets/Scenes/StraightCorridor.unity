@@ -4066,7 +4066,7 @@ MonoBehaviour:
   _normalWindupFraction: 0.45
   _iaidoWindupFraction: 0.8
   _followThroughFraction: 0.85
-  _useOutlineVfx: 0
+  _useOutlineVfx: 1
 --- !u!1 &2018541262
 GameObject:
   m_ObjectHideFlags: 0
