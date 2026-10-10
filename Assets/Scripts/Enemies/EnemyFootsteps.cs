@@ -10,6 +10,8 @@ namespace BlindBlade.Enemies
     [RequireComponent(typeof(NavMeshAgent), typeof(FootstepEmitter), typeof(EnemySensor))]
     public sealed class EnemyFootsteps : MonoBehaviour
     {
+        private const float FOOTSTEP_VOLUME = 1.7782794f; // +5 dB = 10^(5/20).
+
         [Header("발걸음 설정")]
         [SerializeField] private bool _useAnimationEvents;
         [SerializeField, Min(0.01f)] private float _stepDistance = 1.2f;
@@ -109,14 +111,14 @@ namespace BlindBlade.Enemies
         }
 
         /// <summary>
-        /// position에서 공통 설정의 발걸음 소리를 한 번 요청하고 C# 이벤트에 위치를 전달한다.
+        /// position에서 공통 발걸음 소리를 5dB 증폭하여 한 번 요청하고 C# 이벤트에 위치를 전달한다.
         /// 이동 상태를 변경하지 않으며 공통 발걸음 설정이 None이면 사운드 요청을 생략한다.
         /// </summary>
         private void EmitFootstep(Vector3 position)
         {
             SoundId soundId = EnemySoundSettings.GetSound(EnemySoundAction.Footstep, EnemySoundStage.Action);
             if (soundId != SoundId.None)
-                Managers.Sound.Play(soundId, position, owner: gameObject);
+                Managers.Sound.Play(soundId, position, volume: FOOTSTEP_VOLUME, owner: gameObject);
             Footstep?.Invoke(position);
         }
     }
