@@ -16,8 +16,6 @@ MonoBehaviour:
   _meleeAction: 1
   _rangedTelegraph: 1
   _rangedAction: 1
-  _chargeTelegraph: 5
-  _chargeAction: 0
+  _chargeTelegraph: 1
+  _chargeAction: 1
   _footstep: 1
-  _rhythmChargeTelegraph: 1
-  _rhythmChargeAction: 1

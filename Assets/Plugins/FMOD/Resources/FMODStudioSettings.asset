@@ -20,8 +20,8 @@ MonoBehaviour:
       Value: 1
       HasValue: 1
     LiveUpdatePort:
-      Value: 9265
-      HasValue: 1
+      Value: 0
+      HasValue: 0
     Overlay:
       Value: 1
       HasValue: 1
@@ -407,8 +407,8 @@ MonoBehaviour:
   - Master
   Banks:
   - BGM
-  - Combat
   - SFX
+  - Test
   BanksToLoad: []
   LiveUpdatePort: 9264
   EnableMemoryTracking: 0
