@@ -43,6 +43,7 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
 
             TEXTURE2D_X(_AlwaysVisibleOutlineMask);
             TEXTURE2D_X(_OutlineOpaqueColor);
+            TEXTURE2D_X(_OutlineAlwaysVisibleVfxColor);
             TEXTURE2D_X(_OutlineTransparentDepth);
 
             #define MAX_SOUND_REGIONS 16
@@ -180,6 +181,11 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float firstDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, firstUv).r;
                 float secondDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, secondUv).r;
                 float edge = saturate(abs(first - second) * 1.5);
+                float3 alwaysVisible = max(
+                    abs(SAMPLE_TEXTURE2D_X(_OutlineAlwaysVisibleVfxColor, sampler_LinearClamp, firstUv).rgb),
+                    abs(SAMPLE_TEXTURE2D_X(_OutlineAlwaysVisibleVfxColor, sampler_LinearClamp, secondUv).rgb));
+                if (max(alwaysVisible.r, max(alwaysVisible.g, alwaysVisible.b)) > _TransparentThreshold)
+                    return edge * _LineColor.rgb * _LineColor.a;
                 return edge * max(PerceptionColor(firstUv, firstDepth, first, 0.0),
                     PerceptionColor(secondUv, secondDepth, second, 0.0));
             }

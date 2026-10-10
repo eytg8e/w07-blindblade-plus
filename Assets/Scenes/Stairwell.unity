@@ -1839,8 +1839,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _player: {fileID: 1133116035}
-  _movementGrace: 0.12
-  _showEnemyFootsteps: 0
 --- !u!4 &891845622
 Transform:
   m_ObjectHideFlags: 0
@@ -4199,7 +4197,7 @@ MonoBehaviour:
   _normalWindupFraction: 0.45
   _iaidoWindupFraction: 0.8
   _followThroughFraction: 0.85
-  _useOutlineVfx: 0
+  _useOutlineVfx: 1
 --- !u!1 &1904871671
 GameObject:
   m_ObjectHideFlags: 0

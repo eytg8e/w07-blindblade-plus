@@ -26,6 +26,8 @@ public sealed class EffectManager : MonoBehaviour
     private bool _reportedNotReady;
     private int _nextTrailHandle = 1;
     private bool _outlineVfxEnabled = true;
+    private bool _playerTrailOutlineEnabled = true;
+    private bool _playerTrailIgnoresPerception;
     public bool IsReady => _initialized && _sessionActive && isActiveAndEnabled;
     public int ActiveEffectCount => _activeEffects.Count;
 
@@ -130,7 +132,7 @@ public sealed class EffectManager : MonoBehaviour
         if (pooled == null)
             return false;
         ParticleSystem particles = pooled.GetComponent<ParticleSystem>();
-        ConfigureRendering(pooled.gameObject, prefab);
+        ConfigureRendering(pooled.gameObject, prefab, _outlineVfxEnabled, false);
         particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         particles.Play(true);
         _activeEffects.Add(new ActiveEffect(pooled, particles, null, 0));
@@ -173,7 +175,7 @@ public sealed class EffectManager : MonoBehaviour
         if (pooled == null)
             return 0;
         SwordSlashTrail trail = pooled.GetComponent<SwordSlashTrail>();
-        ConfigureRendering(pooled.gameObject, prefab);
+        ConfigureRendering(pooled.gameObject, prefab, _playerTrailOutlineEnabled, _playerTrailIgnoresPerception);
         int handle = _nextTrailHandle++;
         trail.BeginTrail(bladeBase, bladeTip);
         _activeEffects.Add(new ActiveEffect(pooled, null, trail, handle));
@@ -237,15 +239,28 @@ public sealed class EffectManager : MonoBehaviour
     }
 
     /// <summary>
-    /// instance와 prefab의 동일한 윤곽선 컴포넌트를 비교하여 세션의 표시 방식을 적용한다.
+    /// enabled로 플레이어 검기의 윤곽선 표시와 인지 예외를 지정한다.
+    /// 다른 단발 효과와 원본 프리팹의 설정은 변경하지 않는다.
+    /// </summary>
+    internal void SetPlayerTrailOutlineEnabled(bool enabled)
+    {
+        _playerTrailOutlineEnabled = enabled;
+        _playerTrailIgnoresPerception = enabled;
+    }
+
+    /// <summary>
+    /// instance와 prefab의 컴포넌트에 enabled·ignorePerception 표시 설정을 적용한다.
     /// 재사용 인스턴스의 상태를 원본 설정과 현재 세션 설정으로 갱신한다.
     /// </summary>
-    private void ConfigureRendering(GameObject instance, GameObject prefab)
+    private void ConfigureRendering(GameObject instance, GameObject prefab, bool enabled, bool ignorePerception)
     {
         OutlineVFX[] markers = instance.GetComponentsInChildren<OutlineVFX>(true);
         OutlineVFX[] defaults = prefab.GetComponentsInChildren<OutlineVFX>(true);
         for (int i = 0; i < markers.Length; i++)
-            markers[i].enabled = _outlineVfxEnabled && defaults[i].enabled;
+        {
+            markers[i].IgnorePerception = defaults[i].IgnorePerception || ignorePerception;
+            markers[i].enabled = enabled && defaults[i].enabled;
+        }
     }
 
     /// <summary>
@@ -279,6 +294,8 @@ public sealed class EffectManager : MonoBehaviour
         _reportedNotReady = false;
         _sessionScene = scene;
         _outlineVfxEnabled = true;
+        _playerTrailOutlineEnabled = true;
+        _playerTrailIgnoresPerception = false;
         _sessionActive = true;
         return true;
     }
