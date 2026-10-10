@@ -5,7 +5,7 @@ using UnityEngine;
 using BlindBlade.Enemies;
 
 /// <summary>
-/// 베기 구간에 검 궤적과 접촉을 관찰해 Trail 및 공용 Hit를 자동 요청한다.
+/// 베기 구간에 검의 이동 경로와 접촉을 관찰해 공용 Hit를 자동 요청한다.
 /// 피해·가드·사망 판정은 수행하지 않는다.
 /// </summary>
 [DisallowMultipleComponent]
@@ -30,7 +30,6 @@ public sealed class SwordEffectEmitter : MonoBehaviour
     private EffectManager _effects;
     private Vector3 _previousBase;
     private Vector3 _previousTip;
-    private int _trailHandle;
     private bool _swinging;
     private bool _reportedCapacity;
     public bool IsSwinging => _swinging;
@@ -83,8 +82,8 @@ public sealed class SwordEffectEmitter : MonoBehaviour
     }
 
     /// <summary>
-    /// Inspector의 검 끝점·소유자·레이어 설정으로 베기 표현과 접촉 감지를 시작한다.
-    /// 이전 요청을 취소하고 Trail 핸들을 보관하며 시작 성공 여부를 반환한다.
+    /// Inspector의 검 끝점·소유자·레이어 설정으로 접촉 감지를 시작한다.
+    /// 이전 감지를 취소하고 시작 위치와 중복 기록을 초기화하며 성공 여부를 반환한다.
     /// </summary>
     public bool BeginSwing()
     {
@@ -95,9 +94,6 @@ public sealed class SwordEffectEmitter : MonoBehaviour
             return false;
         }
         CancelSwing();
-        _trailHandle = _effects.BeginTrail(_bladeBase, _bladeTip);
-        if (_trailHandle == 0)
-            return false;
         _previousBase = _bladeBase.position;
         _previousTip = _bladeTip.position;
         _reportedCapacity = false;
@@ -106,30 +102,24 @@ public sealed class SwordEffectEmitter : MonoBehaviour
     }
 
     /// <summary>
-    /// 입력 없이 현재 검 접촉 감지와 Trail 기록을 종료한다.
-    /// Trail 잔상은 자연 종료하도록 유지하고 보관 핸들과 중복 기록을 해제한다.
+    /// 입력 없이 마지막 검 접촉을 확인하고 현재 접촉 감지를 종료한다.
+    /// 감지 상태와 중복 기록을 해제하며 이미 재생된 Hit는 자연 종료한다.
     /// </summary>
     public void EndSwing()
     {
         if (_swinging && Time.deltaTime > 0f && _effects != null
             && _effects.IsReady && HasActiveEndpoints())
             DetectContacts();
-        if (_effects != null)
-            _effects.EndTrail(_trailHandle);
-        _trailHandle = 0;
         _swinging = false;
         _reportedContacts.Clear();
     }
 
     /// <summary>
-    /// 입력 없이 진행 중인 베기 감지와 Trail을 즉시 정리한다.
-    /// 취소·무기 교체·비활성화 시 핸들과 중복 기록을 해제한다.
+    /// 입력 없이 진행 중인 접촉 감지를 즉시 중단한다.
+    /// 취소·무기 교체·비활성화 시 감지 상태와 중복 기록을 해제한다.
     /// </summary>
     public void CancelSwing()
     {
-        if (_effects != null)
-            _effects.StopTrail(_trailHandle);
-        _trailHandle = 0;
         _swinging = false;
         _reportedContacts.Clear();
     }

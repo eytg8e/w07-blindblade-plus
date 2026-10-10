@@ -4902,7 +4902,6 @@ GameObject:
   - component: {fileID: 817327337323177240}
   - component: {fileID: 7540474685291860206}
   - component: {fileID: 3379026069473691663}
-  - component: {fileID: 4237829867574136301}
   m_Layer: 0
   m_Name: Slash Water VFX
   m_TagString: Untagged
@@ -9787,18 +9786,6 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
---- !u!114 &4237829867574136301
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 856368647163548680}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db16b22a0bc65e848923ce4a72f46787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1908965869915170937
 GameObject:
   m_ObjectHideFlags: 0
