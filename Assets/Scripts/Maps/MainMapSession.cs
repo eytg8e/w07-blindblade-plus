@@ -35,8 +35,9 @@ public sealed class MainMapSession : MonoBehaviour
         if (Vector3.ProjectOnPlane(position - _previousPosition, Vector3.up).sqrMagnitude > 0.000001f)
             _lastMovementTime = Time.time;
         _previousPosition = position;
-        Managers.Sound.SetFootstepOnlyOwner(
-            Time.time - _lastMovementTime <= _movementGrace ? _player.gameObject : null);
+        bool moving = Time.time - _lastMovementTime <= _movementGrace;
+        Managers.Sound.SetFootstepOnlyOwner(moving ? _player.gameObject : null);
+        Game.Instance.SensoryManager.SetEffectsVisible(_showEnemyFootsteps && !moving);
     }
 
     void OnEnable()
@@ -71,6 +72,7 @@ public sealed class MainMapSession : MonoBehaviour
     private void HandlePlayerFootstep(PlayerFootstepEvent step)
     {
         _lastMovementTime = Time.time;
+        Game.Instance.SensoryManager.SetEffectsVisible(false);
         Managers.Sound.SetFootstepOnlyOwner(_player.gameObject);
         _perceptionMask.RevealFootstep(step.WorldPosition);
         Managers.Sound.PlayAttached(SoundId.Footstep, _player.gameObject, step.NoiseStrength);
