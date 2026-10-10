@@ -2,7 +2,6 @@ using UnityEngine;
 
 using UnityEngine.InputSystem;
 
-using BlindBlade.Enemies;
 
 /// <summary>근처 플레이어의 문 열기 입력과 다음 씬으로 이동하는 통과 영역을 처리한다.</summary>
 public sealed class StageDoor : MonoBehaviour

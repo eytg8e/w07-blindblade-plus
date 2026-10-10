@@ -9,13 +9,13 @@ EditorBuildSettings:
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
-    path: Assets/Scenes/StraightCorridor.unity
+    path: Assets/Scenes/Map/StraightCorridor.unity
     guid: 7c5251c5b5c4f5349a753a153955a6ea
   - enabled: 1
-    path: Assets/Scenes/Stairwell.unity
+    path: Assets/Scenes/Map/Stairwell.unity
     guid: 5d4cd76d16945ed47ae900865ea5db63
   - enabled: 1
-    path: Assets/Scenes/TCorridor.unity
+    path: Assets/Scenes/Map/TCorridor.unity
     guid: dbb24552915473b4d83ca838cbe5d50b
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

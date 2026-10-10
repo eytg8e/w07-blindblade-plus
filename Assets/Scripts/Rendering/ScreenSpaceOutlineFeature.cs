@@ -8,7 +8,6 @@ using UnityEngine.Rendering.RenderGraphModule;
 using UnityEngine.Rendering.RenderGraphModule.Util;
 using UnityEngine.Rendering.Universal;
 
-using BlindBlade.Rendering;
 
 public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
     {

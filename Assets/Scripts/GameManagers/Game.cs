@@ -14,7 +14,7 @@ public class Game : MonoSingleton<Game>
     private EffectManager _effectManager;
     public SensoryManager SensoryManager => _sensoryManager;
     public EffectManager EffectManager => _effectManager;
-    public BlindBlade.Gameplay.InputManager InputManager { get; private set; }
+    public InputManager InputManager { get; private set; }
     public GameStateManager GameStateManager { get; private set; }
     public UIManager UIManager { get; private set; }
 
@@ -88,7 +88,7 @@ public class Game : MonoSingleton<Game>
             _effectManager = effectManagerGo.GetComponent<EffectManager>();
         }
         _effectManager.Initialize();
-        InputManager = LoadManager<BlindBlade.Gameplay.InputManager>(ResourcePaths.INPUT_MANAGER_PATH);
+        InputManager = LoadManager<InputManager>(ResourcePaths.INPUT_MANAGER_PATH);
         GameStateManager = LoadManager<GameStateManager>(ResourcePaths.GAME_STATE_MANAGER_PATH);
         UIManager = LoadManager<UIManager>(ResourcePaths.UI_MANAGER_PATH);
     }

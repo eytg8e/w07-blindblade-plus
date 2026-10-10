@@ -1,6 +1,5 @@
 using UnityEngine;
 
-using ReusableManagers;
 
 public class Managers : MonoSingleton<Managers>
 {

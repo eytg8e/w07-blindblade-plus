@@ -2,7 +2,6 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-using BlindBlade.Enemies;
 
 /// <summary>
 /// 베기 구간에 검 궤적과 접촉을 관찰해 Trail 및 공용 Hit를 자동 요청한다.

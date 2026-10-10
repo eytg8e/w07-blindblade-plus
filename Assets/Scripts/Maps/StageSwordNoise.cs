@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-using BlindBlade.Enemies;
 
 /// <summary>같은 스테이지의 연결된 복도에 검 휘두르기 소음을 전달한다.</summary>
 public sealed class StageSwordNoise : MonoBehaviour

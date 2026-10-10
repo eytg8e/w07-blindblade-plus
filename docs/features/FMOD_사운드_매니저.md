@@ -264,9 +264,9 @@ Library의 Mixer 설정은 Bgm Bus Path=`bus:/BGM_Bus`, Effect Bus Path=`bus:/SF
 
 | 씬 | 플레이어 | 적 | 청취 위치 |
 | --- | --- | --- | --- |
-| Assets/Scenes/Stairwell.unity | PlayerCombatAudio + 기존 KatanaCombatCoordinator | 현재 적 없음 | Player Camera의 StudioListener 1개 |
-| Assets/Scenes/StraightCorridor.unity | PlayerCombatAudio + 기존 KatanaCombatCoordinator | EnemyDamageAudio 1개 | Player Camera의 StudioListener 1개 |
-| Assets/Scenes/TCorridor.unity | PlayerCombatAudio + 기존 PlayerWeaponDebugVisual | EnemyDamageAudio 2개 | Player Camera의 StudioListener 1개 |
+| Assets/Scenes/Map/Stairwell.unity | PlayerCombatAudio + KatanaCombatCoordinator | 현재 적 없음 | Player Camera의 StudioListener 1개 |
+| Assets/Scenes/Map/StraightCorridor.unity | PlayerCombatAudio + KatanaCombatCoordinator | EnemyDamageAudio 1개 | Player Camera의 StudioListener 1개 |
+| Assets/Scenes/Map/TCorridor.unity | PlayerCombatAudio + KatanaWeaponVisual | EnemyDamageAudio 2개 | Player Camera의 StudioListener 1개 |
 
 Stairwell의 비어 있던 PlayerController.Combat Service Source와 EnemyCombatService.Player Root에는 씬의 기존 서비스와 Player를 연결했다. 프리팹 원본은 변경하지 않고 씬의 참조/컴포넌트로 저장했다. 향후 적을 추가하는 경우 EnemyHealth와 EnemyDamageAudio를 함께 배치해야 한다.
 
@@ -274,14 +274,14 @@ Stairwell의 비어 있던 PlayerController.Combat Service Source와 EnemyCombat
 
 | 입력/알림 | 연결 코드 | 호출 시점과 전달 데이터 |
 | --- | --- | --- |
-| PlayerController.FootstepEmitted | 기존 MainMapSession | 실제 발 접촉에 FootstepEmitted의 NoiseStrength로 Footstep을 player에 부착 재생 |
+| PlayerController.FootstepEmitted | GameSceneInitializer.HandlePlayerFootstep | 실제 발 접촉에 PlayerFootstepEvent.NoiseStrength로 Footstep을 플레이어에 부착 재생 |
 | FootstepEmitter.OnFootstepEmitted | 기존 EnemyFootsteps | 실제 적 발 접촉 위치에 EnemySoundSettings의 EnemyFootstep을 재생 |
 | PlayerController.ActionEvent | PlayerCombatAudio.HandleAction | 일반 공격 시작에 A/B 선택, 발도 베기 시작에 C 선택, 미충돌 결과에 스윙 요청 |
 | EnemyCombatService.AttackContactResolved | PlayerCombatAudio.HandleContact | 피해 판정 완료 후 PlayerAttackRequest, Collider, Vector3 point, bool enemyDamaged 전달. Collider=null은 스윙, 일반 접촉은 임시 충돌음, 실제 적 피해는 EnemyDamageAudio에 위임 |
 | EnemyHealth.Damaged | EnemyDamageAudio.HandleDamage | DamageContext의 플레이어 Instigator와 실제 Point로 피격음 재생 |
 | KatanaCombatCoordinator.EventRaised | PlayerCombatAudio.HandleKatana | 납도 상태의 일반 공격/쳐내기 또는 발도 베기 시작에 검 뽑기 소리 |
 | KatanaCombatCoordinator.ParrySucceeded | PlayerCombatAudio.HandleParry | 실제 쳐내기 접촉 Point에 임시 충돌음 |
-| PlayerWeaponDebugVisual.IsPlayingIntro | PlayerCombatAudio.Update | TCorridor의 기존 등장 시 검 뽑기 동작에 한 번 재생 |
+| PlayerCombatAudio.Update | 첫 Update에서 검 뽑기 소리를 한 번 재생 | 플레이어별 1회 |
 
 EnemyCombatService에는 승인받은 판정 완료 알림만 추가했다. 기존 피해량, 대상 선택, 사망 판정은 유지한다. 동일 ActionId의 판정 캐시 반환에는 알림을 재발행하지 않는다. PlayerCombatAudio도 ActionId로 중복 재생을 차단한다. 성공 피격은 EnemyDamageAudio 한 곳에서 재생하여 같은 공격에 피격음 두 개가 생기지 않게 한다.
 
@@ -291,7 +291,7 @@ flowchart TD
     Contact["EnemyCombatService"] -->|"요청·최초 접촉·위치·피해 여부"| CombatAudio
     Contact -->|"기존 피해 적용"| Health["EnemyHealth"]
     Health -->|"Damaged: DamageContext"| DamageAudio["EnemyDamageAudio"]
-    Player -->|"FootstepEmitted"| Session["MainMapSession"]
+    Player -->|"FootstepEmitted"| Initializer["GameSceneInitializer"]
     Emitter["FootstepEmitter"] -->|"OnFootstepEmitted"| Footsteps["EnemyFootsteps"]
     CombatAudio --> Sound["Managers.Sound"]
     DamageAudio --> Sound
@@ -367,16 +367,16 @@ flowchart LR
 - 검증 중 사용한 런타임 음량, 발음체 위치 및 실행 상태를 복구했다. 일회성 관찰 스크립트는 제거했으며 Editor 폴더나 테스트 프레임워크 코드는 추가하지 않았다.
 - 현재 전용 검증 코드와 씬은 삭제된 상태다. 실제 게임의 재생 호출부와 StudioListener를 준비한 뒤 [수동 검증 절차](FMOD_사운드_검증.md)를 사용한다.
 
-#### MainMap 플레이어 발소리 연결
+#### 씬 초기화와 플레이어 발소리 연결
 
-- MainMapSession의 OnEnable/OnDisable에서 PlayerController.FootstepEmitted 구독을 연결·해제한다. 주석 처리되었던 재생 연결을 복구했다.
-- 착지 시 Managers.Sound.PlayAttached(SoundId.Footstep, _player.gameObject, step.NoiseStrength)를 호출한다. FMOD 인스턴스는 재생 중 플레이어 위치를 따라가며 일반·가드 음량 배율은 0.6, 충전 보행은 0.2다.
+- GameSceneInitializer.InitializeSensory에서 PlayerController.FootstepEmitted를 구독하고 OnDisable에서 구독을 해제한다.
+- 착지 시 Managers.Sound.PlayAttached(SoundId.Footstep, _player.gameObject, step.NoiseStrength)를 호출한다. FMOD 인스턴스는 재생 중 플레이어 위치를 따라간다. 일반·가드 음량 배율은 0.6, 충전 보행은 0.2다.
 - Player Camera의 활성 StudioListener 하나와 기존 Studio 프로젝트·Master/BGM/SFX Bank 자동 로딩을 확인했다. 중복 Listener나 별도 Managers를 추가하지 않았다.
 - SoundLibrary의 기존 event:/Test/TestFootsteps 연결을 유지한다. 새 event:/Footsteps도 Event Browser에 있지만 이번 설정에서 선택하지 않았다. 사용자가 편집한 Studio 음원·이벤트·Bank 파일은 수정하거나 커밋에 포함하지 않았다.
 - Unity 컴파일 성공. 현재 씬의 Step Move Duration 0.4초와 Step Pause Duration 0.08초를 사용한 Play 검증에서 실제 착지 1회 → FMOD 인스턴스 1개, PLAYING, 3D, 음량 0.6, WASAPI 출력 상태를 확인했다. 체감 음질·크기의 청취 검증은 미확인이다.
 - 런타임 검증 후 Play를 종료했다. 테스트 코드·씬 오브젝트를 추가하지 않았다.
 
-- MainMap 이동 감각: SetFootstepOnlyOwner(GameObject)는 지정 플레이어의 Footstep, SwordSwing, SwordHit을 허용하고 기존 효과음을 정지하며 BGM을 음소거한다. null로 제한을 해제한다. 이동 상태 판단과 해제는 MainMapSession이 소유하며 옵션 Bus 음량은 변경하지 않는다. 직접 FMOD/AudioSource 호출에는 적용되지 않는다.
+- 이동 상태에 따른 효과음 제한은 현재 적용하지 않는다. 세션을 종료할 때 GameSceneInitializer가 SetFootstepOnlyOwner(null)을 호출해 소유자 제한을 해제한다.
 
 - 2026-10-10: 사용자 요청으로 SoundLibrary의 Footstep Event 경로와 GUID를 event:/Footsteps로 변경했다. 기존 테스트 이벤트 대신 Footsteps_Wood_Walk 음원을 포함한 새 이벤트를 사용한다. Unity Play에서 Managers.Sound.PlayAttached 호출 성공과 실제 이벤트 경로 event:/Footsteps, PLAYING 상태를 확인했다. Studio 음원·Bank의 기존 사용자 변경은 커밋에 포함하지 않았다.
 

@@ -1,7 +1,5 @@
 using UnityEngine;
 
-using BlindBlade.Enemies;
-using BlindBlade.Player.Katana;
 
 /// <summary>
 /// 플레이어 행동 이벤트를 검 발도와 헛스윙 및 쳐내기 소리에 연결한다.
@@ -25,7 +23,6 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     [SerializeField] private string _iaidoSwingLabel = "C";
     private PlayerController _player;
     private KatanaCombatCoordinator _katana;
-    private PlayerWeaponDebugVisual _legacyVisual;
     private string _swingLabel;
     private int _lastSwingAction = -1;
     private int _lastHitAction = -1;
@@ -36,7 +33,6 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     {
         _player = GetComponent<PlayerController>();
         _katana = GetComponent<KatanaCombatCoordinator>();
-        _legacyVisual = GetComponent<PlayerWeaponDebugVisual>();
     }
 
     void OnEnable()
@@ -71,7 +67,7 @@ public sealed class PlayerCombatAudio : MonoBehaviour
 
     void Update()
     {
-        if (!_introPlayed && _legacyVisual != null && _legacyVisual.isActiveAndEnabled && _legacyVisual.IsPlayingIntro)
+        if (!_introPlayed)
         {
             _introPlayed = true;
             PlayUnsheath();
@@ -87,7 +83,7 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         if (action.Stage == PlayerActionStage.AttackStarted && action.State == PlayerActionState.NormalAttack)
         {
             int strike = _katana != null && _katana.isActiveAndEnabled ? _katana.Strike
-                : _legacyVisual != null ? _legacyVisual.CurrentNormalStrike : 1;
+                :  1;
             _swingLabel = strike > 1 ? _secondSwingLabel : _firstSwingLabel;
         }
         if (action.Stage == PlayerActionStage.SlashStarted)
@@ -152,9 +148,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     {
         if (_lastSwingAction == actionId)
             return;
-        if ((_katana == null || !_katana.isActiveAndEnabled) && _legacyVisual != null
-            && _player.CurrentState == PlayerActionState.NormalAttack)
-            _swingLabel = _legacyVisual.CurrentNormalStrike > 1 ? _secondSwingLabel : _firstSwingLabel;
+        if ((_katana == null || !_katana.isActiveAndEnabled) && _player.CurrentState == PlayerActionState.NormalAttack)
+            _swingLabel = _secondSwingLabel;
         _lastSwingAction = actionId;
         Managers.Sound.PlayAttachedWithLabel(_swingSound, gameObject, "SwingType", _swingLabel ?? _firstSwingLabel, _volume);
     }

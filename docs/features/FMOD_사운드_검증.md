@@ -79,7 +79,7 @@
 #### 게임 씬 적용 검증 (2026-10-10)
 
 - 환경: Unity 6000.0.55f1, FMOD Studio/Unity 2.03.15, Windows의 실행 중인 Unity Editor. Unity CLI MCP/Pipeline에서 씬 구성을 확인하고 Play Mode의 실제 게임 공개 명령과 판정 콜백을 실행했다. 스피커/헤드폰의 사람이 듣는 검증은 하지 않았다.
-- 대상: `Assets/Scenes/Stairwell.unity`, `Assets/Scenes/StraightCorridor.unity`, `Assets/Scenes/TCorridor.unity`. Library의 실제 EventReference와 GUID를 Event Browser에서 확인했다. Desktop SFX/BGM/Master Bank 빌드와 Unity Bank 갱신을 수행했다.
+- 대상: `Assets/Scenes/Map/Stairwell.unity`, `Assets/Scenes/Map/StraightCorridor.unity`, `Assets/Scenes/Map/TCorridor.unity`. Library의 실제 EventReference와 GUID를 Event Browser에서 확인했다. Desktop SFX/BGM/Master Bank 빌드와 Unity Bank 갱신을 수행했다.
 - 승인: A 자동 구현, 일반 1타 A / 2타 B / 발도 C, 일반 충돌에 Enemy_Damaged 임시 사용, EnemyCombatService에 접촉 판정 완료 알림 추가. 전투 피해/사망 로직과 공통 Managers는 변경하지 않았다.
 
 | 항목 | Stairwell | StraightCorridor | TCorridor |

@@ -4,7 +4,7 @@ using UnityEngine;
 /// Drives impact and action-end callbacks with simple scaled-time timings for sandbox play.
 /// Replace with animation events when _player animations are available.
 /// </summary>
-public sealed class PlayerTestActionDriver : MonoBehaviour
+public sealed class PlayerActionDriver : MonoBehaviour
 {
     [SerializeField] private PlayerController _player;
     [SerializeField] private PlayerAnimationEventRelay _animationEventRelay;

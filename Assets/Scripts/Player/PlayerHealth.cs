@@ -2,7 +2,6 @@ using System;
 
 using UnityEngine;
 
-using BlindBlade.Combat;
 
 /// <summary>
 /// 공통 피해 수신 계약을 플레이어 가드, 체력 및 사망 상태에 연결한다.
