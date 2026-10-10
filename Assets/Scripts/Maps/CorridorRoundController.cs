@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 
 using BlindBlade.Combat;
 using BlindBlade.Enemies;
+using BlindBlade.Player.Katana;
 
 /// <summary>복도에서 첫 적중 전 피격을 패배로 처리하고 재시작 UI를 연결한다.</summary>
 public sealed class CorridorRoundController : MonoBehaviour
@@ -11,6 +12,7 @@ public sealed class CorridorRoundController : MonoBehaviour
     [SerializeField] private PlayerController _player;
     [SerializeField] private DamageReceiver _damageReceiver;
     [SerializeField] private PlayerInputCommandAdapter _input;
+    private KatanaInputCommandAdapter _katanaInput;
 
     [Header("GameOver UI")]
     [SerializeField] private GameObject _panel;
@@ -27,6 +29,7 @@ public sealed class CorridorRoundController : MonoBehaviour
 
     void Awake()
     {
+        _katanaInput = _player.GetComponent<KatanaInputCommandAdapter>();
         _panel.SetActive(false);
     }
 
@@ -79,6 +82,8 @@ public sealed class CorridorRoundController : MonoBehaviour
         _previousCursorLock = Cursor.lockState;
         _previousCursorVisible = Cursor.visible;
         _input.enabled = false;
+        if (_katanaInput != null)
+            _katanaInput.enabled = false;
         _player.SetDead();
         Managers.Sound.SetFootstepOnlyOwner(null);
         Managers.Sound.StopEffects();
