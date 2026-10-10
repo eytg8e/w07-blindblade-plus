@@ -20,6 +20,7 @@ namespace BlindBlade.Enemies
         private NavMeshAgent _agent;
         private FootstepEmitter _emitter;
         private EnemySensor _sensor;
+        private EnemyAttackBehaviour[] _attacks;
         private Vector3 _previousPosition;
         private float _distanceSinceStep;
 
@@ -30,6 +31,7 @@ namespace BlindBlade.Enemies
             _agent = GetComponent<NavMeshAgent>();
             _emitter = GetComponent<FootstepEmitter>();
             _sensor = GetComponent<EnemySensor>();
+            _attacks = GetComponents<EnemyAttackBehaviour>();
         }
 
         void Start()
@@ -112,13 +114,23 @@ namespace BlindBlade.Enemies
 
         /// <summary>
         /// position에서 공통 발걸음 소리를 5dB 증폭하여 한 번 요청하고 C# 이벤트에 위치를 전달한다.
-        /// 이동 상태를 변경하지 않으며 공통 발걸음 설정이 None이면 사운드 요청을 생략한다.
+        /// 공격 이동 중에는 플레이어 이동 음소거를 우회하고 None 설정이면 사운드 요청을 생략한다.
         /// </summary>
         private void EmitFootstep(Vector3 position)
         {
             SoundId soundId = EnemySoundSettings.GetSound(EnemySoundAction.Footstep, EnemySoundStage.Action);
+            bool attackMovement = false;
+            foreach (EnemyAttackBehaviour attack in _attacks)
+            {
+                if (attack.isActiveAndEnabled && attack.Phase == EnemyAttackPhase.Active && attack.AllowsMovement)
+                {
+                    attackMovement = true;
+                    break;
+                }
+            }
             if (soundId != SoundId.None)
-                Managers.Sound.Play(soundId, position, volume: FOOTSTEP_VOLUME, owner: gameObject);
+                Managers.Sound.Play(soundId, position, volume: FOOTSTEP_VOLUME, owner: gameObject,
+                    playDuringMovement: attackMovement);
             Footstep?.Invoke(position);
         }
     }

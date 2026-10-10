@@ -312,3 +312,10 @@ flowchart LR
 - 플레이어 이동 중에도 돌진 경고가 들리도록 SoundManager 이동 제한에서 WarCry를 허용한다. 이동 제한 진입 시 이미 재생 중인 WarCry도 유지한다.
 - 설정 위치: Assets/Resources/Enemies/EnemySoundSettings.asset 및 Assets/Resources/Sound/SoundLibrary.asset. 음원·볼륨은 FMOD Studio event:/WarCry에서 수정하고 Bank를 빌드한다.
 - 검증: Unity 컴파일 오류 없음. StraightCorridor Play에서 돌진 TryAttack 성공, Telegraph 진입, WarCry 인스턴스 1개 증가를 확인했다. 플레이어 이동 제한 중에도 재생 성공. 실제 스피커 청취는 미확인이다.
+
+#### 돌진 발자국과 단발음 동기화 (2026-10-10)
+
+- 발자국 생성과 소리는 기존 FootstepEmitter의 동일한 지면 접촉 이벤트를 사용한다. EnemyFootsteps는 Active 상태에서 AllowsMovement가 참인 돌진 발걸음마다 Footsteps 이벤트를 한 번 재생한다. 프레임별 소리 재생이나 별도 반복 타이머는 추가하지 않는다.
+- 기존에는 플레이어 이동 제한이 적 발소리를 거부하고 제한 진입 시 재생 중인 소리도 즉시 정지했다. SoundManager.Play에 playDuringMovement 예외를 추가하고 돌진 발걸음에만 적용했다. 예외 음원은 새 재생과 이동 제한 진입 시 모두 보존한다. 일반 순찰 발소리 제한은 유지한다.
+- +5dB 배율과 적 지면 접촉 위치의 3D 공간음향은 유지한다. 각 발소리는 이전 발소리를 중단하지 않고 자연 종료한다.
+- 검증: Unity C# 컴파일 오류 없음. StraightCorridor Play에서 돌진 Phase를 임시 설정하고 실제 Emitter의 지면 접촉 경로를 4회 호출하여 접촉 4회·발자국 4개·Footsteps 인스턴스 4개를 확인했다. 이동 제한을 해제 후 다시 적용해도 4개 모두 PLAYING/STARTING 상태를 유지했다. 실제 돌진 리듬의 스피커 청취는 미확인이다.

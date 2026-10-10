@@ -70,7 +70,7 @@ public class SoundManager
         }
     }
 
-    /// <summary>owner 지정 시 플레이어 발소리·검 전투음과 적 WarCry를 허용한다. 다른 효과음을 정지하고 null이면 제한과 BGM 음소거를 해제한다.</summary>
+    /// <summary>owner 지정 시 플레이어 전투음·WarCry·이동 중 재생 예외를 유지한다. 다른 효과음을 정지하고 null이면 제한과 BGM 음소거를 해제한다.</summary>
     public void SetFootstepOnlyOwner(GameObject owner)
     {
         if (_footstepOnlyOwner == owner)
@@ -80,7 +80,7 @@ public class SoundManager
         {
             for (int i = _effects.Count - 1; i >= 0; i--)
             {
-                if (_effects[i].Id == SoundId.WarCry)
+                if (_effects[i].Id == SoundId.WarCry || _effects[i].PlayDuringMovement)
                     continue;
                 if (RuntimeManager.IsInitialized)
                     StopEffect(_effects[i].Instance, false);
@@ -93,11 +93,11 @@ public class SoundManager
 
     /// <summary>
     /// soundId의 단발 효과음을 position에서 volume 배율로 재생한다.
-    /// owner를 지정하면 해당 오브젝트의 수명을 따르며, 2D 이벤트는 위치를 사용하지 않고 성공 시 true를 반환한다.
+    /// owner로 수명을 연결하고 playDuringMovement로 이동 중 재생 예외를 지정하며 성공 시 true를 반환한다.
     /// </summary>
-    public bool Play(SoundId soundId, Vector3 position = default, float volume = 1f, GameObject owner = null)
+    public bool Play(SoundId soundId, Vector3 position = default, float volume = 1f, GameObject owner = null, bool playDuringMovement = false)
     {
-        return PlayEffect(soundId, position, owner, false, volume);
+        return PlayEffect(soundId, position, owner, false, volume, playDuringMovement);
     }
 
     /// <summary>
@@ -263,11 +263,11 @@ public class SoundManager
 
     /// <summary>
     /// soundId의 단발 효과음을 position 또는 source에서 volume 배율로 재생한다.
-    /// attach로 위치 추적을 선택하고 해제를 요청한 인스턴스와 소유자만 내부에 보관하며 성공하면 true를 반환한다.
+    /// attach로 위치 추적과 playDuringMovement로 이동 중 재생 예외를 선택하며 성공하면 true를 반환한다.
     /// </summary>
-    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume)
+    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false)
     {
-        if (_footstepOnlyOwner != null && soundId != SoundId.WarCry && (source != _footstepOnlyOwner
+        if (_footstepOnlyOwner != null && !playDuringMovement && soundId != SoundId.WarCry && (source != _footstepOnlyOwner
             || (soundId != SoundId.Footstep && soundId != SoundId.SwordSwing && soundId != SoundId.SwordHit)))
             return false;
         if (!ReferenceEquals(source, null) && (source == null || !source.activeInHierarchy))
@@ -302,7 +302,7 @@ public class SoundManager
                 return false;
             }
             instance.release();
-            _effects.Add(new ActiveEffect(instance, source, soundId));
+            _effects.Add(new ActiveEffect(instance, source, soundId, playDuringMovement));
             return true;
         }
         catch (EventNotFoundException exception)
@@ -382,22 +382,25 @@ public class SoundManager
         private readonly GameObject _owner;
         private readonly bool _hasOwner;
         private readonly SoundId _id;
+        private readonly bool _playDuringMovement;
 
         internal FMOD.Studio.EventInstance Instance => _instance;
         internal GameObject Owner => _owner;
         internal bool HasOwner => _hasOwner;
         internal SoundId Id => _id;
+        internal bool PlayDuringMovement => _playDuringMovement;
 
         /// <summary>
-        /// 재생한 instance와 owner 및 soundId를 내부 정리와 이동 중 허용 판정용 데이터로 기록한다.
+        /// instance와 owner, soundId 및 playDuringMovement를 내부 정리와 이동 중 허용 판정용 데이터로 기록한다.
         /// 소유자 지정 여부를 보관하여 파괴된 Unity 오브젝트와 소유자 없는 재생을 구분한다.
         /// </summary>
-        internal ActiveEffect(FMOD.Studio.EventInstance instance, GameObject owner, SoundId soundId)
+        internal ActiveEffect(FMOD.Studio.EventInstance instance, GameObject owner, SoundId soundId, bool playDuringMovement)
         {
             _instance = instance;
             _owner = owner;
             _hasOwner = owner != null;
             _id = soundId;
+            _playDuringMovement = playDuringMovement;
         }
     }
 }
