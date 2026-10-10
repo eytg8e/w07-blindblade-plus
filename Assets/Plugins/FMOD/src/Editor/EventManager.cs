@@ -64,6 +64,7 @@ namespace FMODUnity
             }
         }
 
+        /// <summary>Bank 변경을 이벤트 캐시에 반영하고 미리보기 시스템이 없으면 캐시를 보존하며 실패 이유를 반환한다.</summary>
         private static string UpdateCache()
         {
             if (eventCache == null)
@@ -155,6 +156,9 @@ namespace FMODUnity
             {
                 return null;
             }
+
+            if (!EditorUtils.System.isValid())
+                return "FMOD editor audio is unavailable. Use FMOD/Retry Editor Audio or restart this Unity Editor.";
 
             eventCache.CacheTime = lastWriteTime;
 

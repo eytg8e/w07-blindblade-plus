@@ -1,4 +1,4 @@
-﻿#if UNITY_ADDRESSABLES_EXIST
+#if UNITY_ADDRESSABLES_EXIST
     // The Addressables package depends on the ScriptableBuildPipeline package
     #define UNITY_SCRIPTABLEBUILDPIPELINE_EXIST
 #endif
@@ -27,6 +27,7 @@ namespace FMODUnity
         private static FMOD.Studio.System system;
         private static FMOD.SPEAKERMODE speakerMode;
         private static string encryptionKey;
+        private static bool initializationFailed;
 
         private static List<FMOD.Studio.Bank> loadedPreviewBanks = new List<FMOD.Studio.Bank>();
         private static FMOD.Studio.EventDescription previewEventDesc;
@@ -519,6 +520,7 @@ namespace FMODUnity
             SetupWizardWindow.Startup();
         }
 
+        /// <summary>기존 미리보기 시스템을 해제하고 실패 상태를 초기화한 뒤 기존 Bank 연결을 복구한다.</summary>
         public static void RecreateSystem()
         {
             // If preview banks loaded, reload them after the system is recreated
@@ -526,6 +528,7 @@ namespace FMODUnity
 
             StopAllPreviews();
             DestroySystem();
+            initializationFailed = false;
             CreateSystem();
 
             if (reloadBanks)
@@ -545,8 +548,11 @@ namespace FMODUnity
             }
         }
 
+        /// <summary>미리보기 시스템을 생성하며 실패를 한 번 기록하고 명시적 재시도까지 재생성을 중단한다.</summary>
         private static void CreateSystem()
         {
+            if (initializationFailed)
+                return;
             RuntimeUtils.DebugLog("FMOD Studio: Creating editor system instance");
             RuntimeUtils.EnforceLibraryOrder();
 
@@ -557,54 +563,92 @@ namespace FMODUnity
             }
 
             result = AttemptInitialize(out system);
+            if (result != FMOD.RESULT.OK && result != FMOD.RESULT.ERR_MEMORY)
+            {
+                RuntimeUtils.DebugLogWarningFormat("[FMOD] Editor audio initialization returned {0}, retrying in no-sound mode.", result);
+                result = AttemptInitialize(out system, FMOD.OUTPUTTYPE.NOSOUND);
+            }
+            initializationFailed = result != FMOD.RESULT.OK;
+            if (initializationFailed)
+                RuntimeUtils.DebugLogErrorFormat("[FMOD] Editor preview initialization failed: {0}. Preview is disabled until FMOD/Retry Editor Audio is selected. Restart this Unity Editor if native system resources are exhausted.", result);
+        }
+
+        /// <summary>outputType으로 미리보기 시스템을 초기화하고 실패 시 생성한 핸들을 해제한 뒤 결과를 반환한다.</summary>
+        private static FMOD.RESULT AttemptInitialize(out FMOD.Studio.System system, FMOD.OUTPUTTYPE outputType = FMOD.OUTPUTTYPE.AUTODETECT)
+        {
+            FMOD.RESULT result = FMOD.Studio.System.create(out system);
             if (result != FMOD.RESULT.OK)
             {
-                RuntimeUtils.DebugLogErrorFormat("[FMOD] Studio::System::initialize returned {0}, defaulting to no-sound mode.", result.ToString());
-                CheckResult(AttemptInitialize(out system, FMOD.OUTPUTTYPE.NOSOUND));
+                system.clearHandle();
+                return result;
+            }
+            bool initialized = false;
+            try
+            {
+
+                FMOD.System lowlevel;
+                result = system.getCoreSystem(out lowlevel);
+                if (result != FMOD.RESULT.OK) return result;
+
+                // Use play-in-editor speaker mode for event browser preview and metering
+                speakerMode = Settings.Instance.PlayInEditorPlatform.SpeakerMode;
+                result = lowlevel.setSoftwareFormat(0, speakerMode, 0);
+                if (result != FMOD.RESULT.OK) return result;
+
+                result = lowlevel.setOutput(outputType);
+                if (result != FMOD.RESULT.OK) return result;
+
+                encryptionKey = Settings.Instance.EncryptionKey;
+                if (!string.IsNullOrEmpty(encryptionKey))
+                {
+                    FMOD.Studio.ADVANCEDSETTINGS studioAdvancedSettings = new FMOD.Studio.ADVANCEDSETTINGS();
+                    result = system.setAdvancedSettings(studioAdvancedSettings, encryptionKey);
+                    if (result != FMOD.RESULT.OK) return result;
+                }
+
+                Settings.Instance.PlayInEditorPlatform.LoadDynamicPlugins(lowlevel, (dynamicLoadResult, cause) => {
+                    if (dynamicLoadResult != FMOD.RESULT.OK)
+                    {
+                        RuntimeUtils.DebugLogError($"[FMOD] Error loading dynamic plugins: {dynamicLoadResult.ToString()} ({FMOD.Error.String(dynamicLoadResult)}): {cause}");
+                    }
+                });
+
+                result = system.initialize(256, FMOD.Studio.INITFLAGS.ALLOW_MISSING_PLUGINS | FMOD.Studio.INITFLAGS.SYNCHRONOUS_UPDATE, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
+                if (result == FMOD.RESULT.OK)
+                {
+                    FMOD.ChannelGroup master;
+                    result = lowlevel.getMasterChannelGroup(out master);
+                    if (result != FMOD.RESULT.OK) return result;
+                    FMOD.DSP masterHead;
+                    result = master.getDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, out masterHead);
+                    if (result != FMOD.RESULT.OK) return result;
+                    result = masterHead.setMeteringEnabled(false, true);
+                    if (result != FMOD.RESULT.OK) return result;
+                    initialized = true;
+                    return FMOD.RESULT.OK;
+                }
+                else
+                {
+                    return result;
+                }
+            }
+            finally
+            {
+                if (!initialized)
+                {
+                    system.release();
+                    system.clearHandle();
+                }
             }
         }
 
-        private static FMOD.RESULT AttemptInitialize(out FMOD.Studio.System system, FMOD.OUTPUTTYPE outputType = FMOD.OUTPUTTYPE.AUTODETECT)
+        /// <summary>실패 상태를 초기화하고 미리보기 시스템 및 필요한 Bank의 재연결을 요청한다.</summary>
+        [MenuItem("FMOD/Retry Editor Audio", priority = 3)]
+        public static void RetryEditorAudio()
         {
-            CheckResult(FMOD.Studio.System.create(out system));
-
-            FMOD.System lowlevel;
-            CheckResult(system.getCoreSystem(out lowlevel));
-
-            // Use play-in-editor speaker mode for event browser preview and metering
-            speakerMode = Settings.Instance.PlayInEditorPlatform.SpeakerMode;
-            CheckResult(lowlevel.setSoftwareFormat(0, speakerMode, 0));
-
-            CheckResult(lowlevel.setOutput(outputType));
-
-            encryptionKey = Settings.Instance.EncryptionKey;
-            if (!string.IsNullOrEmpty(encryptionKey))
-            {
-                FMOD.Studio.ADVANCEDSETTINGS studioAdvancedSettings = new FMOD.Studio.ADVANCEDSETTINGS();
-                CheckResult(system.setAdvancedSettings(studioAdvancedSettings, encryptionKey));
-            }
-
-            Settings.Instance.PlayInEditorPlatform.LoadDynamicPlugins(lowlevel, (dynamicLoadResult, cause) => {
-                if (dynamicLoadResult != FMOD.RESULT.OK)
-                {
-                    RuntimeUtils.DebugLogError($"[FMOD] Error loading dynamic plugins: {dynamicLoadResult.ToString()} ({FMOD.Error.String(dynamicLoadResult)}): {cause}");
-                }
-            });
-
-            FMOD.RESULT result = system.initialize(256, FMOD.Studio.INITFLAGS.ALLOW_MISSING_PLUGINS | FMOD.Studio.INITFLAGS.SYNCHRONOUS_UPDATE, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
-            if (result == FMOD.RESULT.OK)
-            {
-                FMOD.ChannelGroup master;
-                CheckResult(lowlevel.getMasterChannelGroup(out master));
-                FMOD.DSP masterHead;
-                CheckResult(master.getDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, out masterHead));
-                CheckResult(masterHead.setMeteringEnabled(false, true));
-                return FMOD.RESULT.OK;
-            }
-            else
-            {
-                return result;
-            }
+            RecreateSystem();
+            if (system.isValid())
+                LoadPreviewBanks();
         }
 
         public static void UpdateParamsOnEmitter(SerializedObject serializedObject, string path)
@@ -747,6 +791,7 @@ namespace FMODUnity
             get { return loadedPreviewBanks.Count > 0; }
         }
 
+        /// <summary>사용 가능한 미리보기 시스템에 이벤트 Bank를 로드하고 유효한 핸들만 보관한다.</summary>
         public static void LoadPreviewBanks()
         {
             if (PreviewBanksLoaded)
@@ -754,15 +799,19 @@ namespace FMODUnity
                 return;
             }
 
+            var previewSystem = System;
+            if (!previewSystem.isValid())
+                return;
             foreach (var bank in EventManager.Banks)
             {
                 FMOD.Studio.Bank previewBank;
-                FMOD.RESULT result = System.loadBankFile(bank.Path, FMOD.Studio.LOAD_BANK_FLAGS.NORMAL, out previewBank);
+                FMOD.RESULT result = previewSystem.loadBankFile(bank.Path, FMOD.Studio.LOAD_BANK_FLAGS.NORMAL, out previewBank);
                 if (result != FMOD.RESULT.ERR_EVENT_ALREADY_LOADED) // ignore error when a bank is already loaded, e.g. localized banks.
                 {
                     CheckResult(result);
                 }
-                loadedPreviewBanks.Add(previewBank);
+                if (previewBank.isValid())
+                    loadedPreviewBanks.Add(previewBank);
             }
         }
 
@@ -777,8 +826,11 @@ namespace FMODUnity
             loadedPreviewBanks.Clear();
         }
 
+        /// <summary>eventRef와 파라미터·볼륨·시작 시간을 적용해 미리보기를 재생하고 시스템이 없으면 빈 핸들을 반환한다.</summary>
         public static FMOD.Studio.EventInstance PreviewEvent(EditorEventRef eventRef, Dictionary<string, float> previewParamValues, float volume = 1, float startTime = 0.0f)
         {
+            if (!System.isValid())
+                return default;
             FMOD.Studio.EventDescription eventDescription;
             FMOD.Studio.EventInstance eventInstance;
 
@@ -851,17 +903,25 @@ namespace FMODUnity
             }
         }
 
+        /// <summary>이미 초기화된 시스템의 출력 레벨을 반환하고 시스템이나 DSP가 없으면 빈 배열을 반환한다.</summary>
         public static float[] GetMetering()
         {
+            // Meter polling must not create a new native system every editor frame.
+            if (!system.isValid())
+                return Array.Empty<float>();
             FMOD.System lowlevel;
-            CheckResult(System.getCoreSystem(out lowlevel));
+            if (system.getCoreSystem(out lowlevel) != FMOD.RESULT.OK)
+                return Array.Empty<float>();
             FMOD.ChannelGroup master;
-            CheckResult(lowlevel.getMasterChannelGroup(out master));
+            if (lowlevel.getMasterChannelGroup(out master) != FMOD.RESULT.OK)
+                return Array.Empty<float>();
             FMOD.DSP masterHead;
-            CheckResult(master.getDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, out masterHead));
+            if (master.getDSP(FMOD.CHANNELCONTROL_DSP_INDEX.HEAD, out masterHead) != FMOD.RESULT.OK)
+                return Array.Empty<float>();
 
             FMOD.DSP_METERING_INFO outputMetering;
-            CheckResult(masterHead.getMeteringInfo(IntPtr.Zero, out outputMetering));
+            if (masterHead.getMeteringInfo(IntPtr.Zero, out outputMetering) != FMOD.RESULT.OK)
+                return Array.Empty<float>();
 
             FMOD.SPEAKERMODE mode;
             int rate, raw;
