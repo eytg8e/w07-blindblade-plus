@@ -37,7 +37,8 @@ public sealed class MainMapSession : MonoBehaviour
         _previousPosition = position;
         bool moving = Time.time - _lastMovementTime <= _movementGrace;
         Managers.Sound.SetFootstepOnlyOwner(moving ? _player.gameObject : null);
-        Game.Instance.SensoryManager.SetEffectsVisible(_showEnemyFootsteps && !moving);
+        Game.Instance.SensoryManager.SetEffectsVisible(_showEnemyFootsteps);
+        Game.Instance.SensoryManager.SetFootstepsSuppressed(moving);
     }
 
     void OnEnable()
@@ -49,6 +50,7 @@ public sealed class MainMapSession : MonoBehaviour
         {
             _perceptionMask.SetFootstepOnly(true);
             _perceptionMask.GetComponent<SensoryManager>().SetEffectsVisible(_showEnemyFootsteps);
+            _perceptionMask.GetComponent<SensoryManager>().SetFootstepsSuppressed(false);
         }
     }
 
@@ -60,6 +62,7 @@ public sealed class MainMapSession : MonoBehaviour
         {
             _perceptionMask.SetFootstepOnly(false);
             _perceptionMask.GetComponent<SensoryManager>().SetEffectsVisible(true);
+            _perceptionMask.GetComponent<SensoryManager>().SetFootstepsSuppressed(false);
         }
         if (Managers.IsInitialized)
             Managers.Sound.SetFootstepOnlyOwner(null);
@@ -72,7 +75,7 @@ public sealed class MainMapSession : MonoBehaviour
     private void HandlePlayerFootstep(PlayerFootstepEvent step)
     {
         _lastMovementTime = Time.time;
-        Game.Instance.SensoryManager.SetEffectsVisible(false);
+        Game.Instance.SensoryManager.SetFootstepsSuppressed(true);
         Managers.Sound.SetFootstepOnlyOwner(_player.gameObject);
         _perceptionMask.RevealFootstep(step.WorldPosition);
         Managers.Sound.PlayAttached(SoundId.Footstep, _player.gameObject, step.NoiseStrength);

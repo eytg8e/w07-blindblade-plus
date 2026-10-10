@@ -26,6 +26,7 @@ public sealed class SensoryManager : MonoBehaviour
     private bool _initialized;
     private bool _reportedUnavailable;
     private bool _effectsVisible = true;
+    private bool _footstepsSuppressed;
     public bool IsReady => _initialized && _observer != null && isActiveAndEnabled;
     public Transform Observer => _observer;
     public int ActiveEffectCount => _activeEffects.Count;
@@ -36,15 +37,17 @@ public sealed class SensoryManager : MonoBehaviour
         public readonly SensoryEffect Effect;
         public readonly int Version;
         public readonly Vector3 Position;
+        public readonly bool ShowWhileMoving;
 
         /// <summary>
-        /// 활성 효과와 사건 위치 및 재생 버전을 보관한다.
+        /// 활성 효과와 사건 위치, 재생 버전 및 이동 중 표시 예외를 보관한다.
         /// </summary>
-        public ActiveEffect(SensoryEffect effect, Vector3 position)
+        public ActiveEffect(SensoryEffect effect, Vector3 position, bool showWhileMoving)
         {
             Effect = effect;
             Version = effect.PlaybackVersion;
             Position = position;
+            ShowWhileMoving = showWhileMoving;
         }
     }
 
@@ -76,7 +79,8 @@ public sealed class SensoryManager : MonoBehaviour
                 _activeEffects.RemoveAt(i);
                 continue;
             }
-            float visibility = _effectsVisible && _observer != null
+            bool allowed = !_footstepsSuppressed || entry.ShowWhileMoving || !(entry.Effect is FootstepObject);
+            float visibility = _effectsVisible && allowed && _observer != null
                 ? CalculateVisibility(Vector3.Distance(entry.Position, _observer.position))
                 : 0f;
             entry.Effect.SetVisibility(visibility);
@@ -123,6 +127,13 @@ public sealed class SensoryManager : MonoBehaviour
         LateUpdate();
     }
 
+    /// <summary>suppressed로 일반 발자국을 숨긴다. 공격 이동 중 생성한 발자국은 거리와 수명에 따라 계속 표시한다.</summary>
+    public void SetFootstepsSuppressed(bool suppressed)
+    {
+        _footstepsSuppressed = suppressed;
+        LateUpdate();
+    }
+
     /// <summary>
     /// 사건 위치와 관측자 거리로 웨이브를 생성하고 생성 성공 여부를 반환한다.
     /// </summary>
@@ -133,16 +144,17 @@ public sealed class SensoryManager : MonoBehaviour
 
     /// <summary>
     /// 사건 위치와 좌우 선택으로 발자국만 생성하고 생성 성공 여부를 반환한다.
+    /// showWhileMoving이면 플레이어 이동 중 숨김을 우회하되 전체 표시 설정과 거리 제한은 유지한다.
     /// </summary>
-    public bool EmitFootstep(SensoryEvent sensoryEvent, bool isLeft)
+    public bool EmitFootstep(SensoryEvent sensoryEvent, bool isLeft, bool showWhileMoving = false)
     {
-        return EmitEffects(sensoryEvent, true, isLeft);
+        return EmitEffects(sensoryEvent, true, isLeft, showWhileMoving);
     }
 
     /// <summary>
     /// 공통 거리 판정을 통과한 사건을 알림으로 전달하고 효과를 재생하며 발자국 요청에 좌우 선택을 적용한다.
     /// </summary>
-    private bool EmitEffects(SensoryEvent sensoryEvent, bool showFootstep, bool isLeft = false)
+    private bool EmitEffects(SensoryEvent sensoryEvent, bool showFootstep, bool isLeft = false, bool showWhileMoving = false)
     {
         if (!IsReady)
         {
@@ -157,7 +169,7 @@ public sealed class SensoryManager : MonoBehaviour
         if (visibility <= 0f)
             return false;
         PerceptionRequested?.Invoke(sensoryEvent);
-        if (!_effectsVisible)
+        if (!_effectsVisible || (showFootstep && _footstepsSuppressed && !showWhileMoving))
             return false;
         Quaternion rotation = Quaternion.LookRotation(sensoryEvent.Direction, sensoryEvent.SurfaceNormal);
         bool spawned = false;
@@ -169,7 +181,7 @@ public sealed class SensoryManager : MonoBehaviour
             {
                 FootstepObject effect = instance.GetComponent<FootstepObject>();
                 effect.Play(isLeft, visibility);
-                spawned |= Track(effect, sensoryEvent.Position);
+                spawned |= Track(effect, sensoryEvent.Position, showWhileMoving);
             }
         }
         if (!showFootstep && _wavePrefab != null)
@@ -209,11 +221,11 @@ public sealed class SensoryManager : MonoBehaviour
     /// <summary>
     /// 재생 중인 효과와 위치를 등록하고 생성 성공 여부를 반환한다.
     /// </summary>
-    private bool Track(SensoryEffect effect, Vector3 position)
+    private bool Track(SensoryEffect effect, Vector3 position, bool showWhileMoving = false)
     {
         if (!effect.IsPlaying)
             return false;
-        _activeEffects.Add(new ActiveEffect(effect, position));
+        _activeEffects.Add(new ActiveEffect(effect, position, showWhileMoving));
         return true;
     }
 
