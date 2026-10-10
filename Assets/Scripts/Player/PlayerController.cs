@@ -148,6 +148,18 @@ public sealed class PlayerController : MonoBehaviour
         _hasSenseContext = false;
     }
 
+    /// <summary>
+    /// combatSource를 공격 판정 서비스로 연결하고 이동 장치에도 전달한다.
+    /// 기존 감지 및 맵 서비스 연결은 유지한다.
+    /// </summary>
+    public void ConfigureCombatService(MonoBehaviour combatSource)
+    {
+        _combatServiceSource = combatSource;
+        _combatService = combatSource as IPlayerCombatService;
+        _motor.ConfigureCombatService(_combatService);
+        _hasSenseContext = false;
+    }
+
     /// <summary>이동 입력을 저장하고 이동 장치에 전달합니다. 회복, 정지, 사망, 발도 동작 중에는 입력을 0으로 제한합니다.</summary>
     public void SetMovementInput(Vector2 value)
     {

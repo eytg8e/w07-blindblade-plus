@@ -29,6 +29,16 @@ namespace BlindBlade.Enemies
         }
 
         /// <summary>
+        /// playerRoot를 공격 발생원 및 자기 충돌 제외 대상으로 연결한다.
+        /// 이전 공격 판정 캐시를 초기화한다.
+        /// </summary>
+        public void ConfigurePlayer(Transform playerRoot)
+        {
+            _playerRoot = playerRoot;
+            _hasResolution = false;
+        }
+
+        /// <summary>
         /// targetId로 같은 씬의 생존 적을 찾아 플레이어 전투 대상 정보를 target으로 반환한다.
         /// 등록되지 않은 식별자나 다른 씬의 적이면 false를 반환한다.
         /// </summary>
