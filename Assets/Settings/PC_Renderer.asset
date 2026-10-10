@@ -67,12 +67,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   _lineColor: {r: 1, g: 1, b: 1, a: 1}
-  _lineWidth: 1
+  _lineWidth: 2
   _depthSensitivity: 50
   _normalSensitivity: 4
-  _transparentThreshold: 0.015
   _shader: {fileID: 4800000, guid: c7c52e823b854534adfb6cc98ed70499, type: 3}
-  _transparentDepthShader: {fileID: 4800000, guid: a93ad5573676a1a4fbb7f81bd5031075, type: 3}
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0
