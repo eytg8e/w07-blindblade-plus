@@ -6,23 +6,37 @@ using BlindBlade.Enemies;
 /// <summary>같은 스테이지의 연결된 복도에 검 휘두르기 소음을 전달한다.</summary>
 public sealed class StageSwordNoise : MonoBehaviour
 {
-    [Header("스테이지 연결")]
-    [SerializeField] private PlayerController _player;
-    [SerializeField] private EnemyController[] _enemies;
+    private EnemyController[] _enemies;
+    private PlayerController _player;
 
-    [Header("검 소음")]
-    [SerializeField, Min(1f)] private float _hearingDistance = 40f;
-    [SerializeField, Min(0.1f)] private float _alertDuration = 15f;
+    private float _hearingDistance;
+    private float _alertDuration;
     private int _lastActionId = -1;
 
-    void OnEnable()
+    /// <summary>player와 현재 씬 enemies를 연결하고 hearingDistance 및 alertDuration으로 검 소음 전달을 준비한다.</summary>
+    public void Initialize(PlayerController player, EnemyController[] enemies, float hearingDistance, float alertDuration)
     {
+        Shutdown();
+        _player = player;
+        _enemies = enemies;
+        _hearingDistance = hearingDistance;
+        _alertDuration = alertDuration;
+        _lastActionId = -1;
         _player.ActionEvent += HandleAction;
     }
 
     void OnDisable()
     {
-        _player.ActionEvent -= HandleAction;
+        Shutdown();
+    }
+
+    /// <summary>현재 플레이어의 검 행동 구독을 해제하고 씬 참조를 정리한다.</summary>
+    public void Shutdown()
+    {
+        if (_player != null)
+            _player.ActionEvent -= HandleAction;
+        _player = null;
+        _enemies = System.Array.Empty<EnemyController>();
     }
 
     /// <summary>일반 베기 시작 또는 발도 베기 action의 소음을 행동당 한 번 복도에 전달한다.</summary>

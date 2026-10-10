@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 2106216074076612516}
   m_Layer: 0
   m_Name: Player Camera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -159,8 +159,7 @@ GameObject:
   - component: {fileID: 4517625516249246978}
   - component: {fileID: 2388544270244161858}
   - component: {fileID: 7354578201373670101}
-  - component: {fileID: 7106073490442552728}
-  - component: {fileID: 4790241969511068409}
+  - component: {fileID: 3069561028829267960}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -231,8 +230,7 @@ MonoBehaviour:
   _gravity: 20
   _lookSensitivity: 0.12
   _pitchLimit: 75
-  _stepMoveDuration: 0.28
-  _stepPauseDuration: 0.08
+  _stepInterval: 0.36
   _normalFootstepNoise: 0.6
   _quietFootstepNoise: 0.2
   _iaidoSpeed: 14
@@ -255,7 +253,7 @@ MonoBehaviour:
   _motor: {fileID: 1215301452296053969}
   _viewCamera: {fileID: 421133909551674746}
   _perceptionProviderSource: {fileID: 0}
-  _combatServiceSource: {fileID: 0}
+  _combatServiceSource: {fileID: 3069561028829267960}
   _mapServiceSource: {fileID: 0}
   _minimumChargeTime: 1
   _normalAttackRange: 1.5
@@ -408,7 +406,7 @@ MonoBehaviour:
   _iaidoImpactProgress: 0.88461536
   _drawnSheatheProgress: 0.2
   _minimumCancelSheatheDuration: 0.12
---- !u!114 &7106073490442552728
+--- !u!114 &3069561028829267960
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -417,32 +415,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 2147414133172360306}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d89eba03c73fe846a1b6fe7dcc5955f, type: 3}
+  m_Script: {fileID: 11500000, guid: 458ebb8608561cb419b77df2896b5afd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _showOverlay: 1
-  _logEvents: 1
---- !u!114 &4790241969511068409
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2147414133172360306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c9e95c5d4cbbe844ab57a6d09c83871f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _player: {fileID: 6616511219798166873}
-  _motor: {fileID: 0}
-  _testWorld: {fileID: 0}
-  _showOverlay: 0
-  _logEvents: 1
-  _logFootsteps: 1
-  _drawGizmos: 1
-  _targetRefreshInterval: 0.2
-  _feedbackDuration: 0.65
+  _playerRoot: {fileID: 9061784569180931348}
+  _normalDamage: 10
+  _hitRadius: 0.2
+  _attackMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1001 &4942158160852825287
 PrefabInstance:
   m_ObjectHideFlags: 0

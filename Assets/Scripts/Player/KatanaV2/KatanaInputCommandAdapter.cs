@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace BlindBlade.Player.Katana
 {
-    /// <summary>이동·시점·단일 발도 공격·웅크리기 입력을 카타나 명령과 플레이어 시스템에 전달한다.</summary>
+    /// <summary>입력 정책에 따라 카타나 명령 전달과 유지 입력 정리를 담당한다.</summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(KatanaCombatCoordinator))]
     [DefaultExecutionOrder(-40)]
@@ -14,14 +14,37 @@ namespace BlindBlade.Player.Katana
         [Header("Cursor")]
         [SerializeField] private bool _lockCursorOnClick = true;
 
+        private BlindBlade.Gameplay.InputManager _inputManager;
+        private PlayerInputCommandAdapter _legacyAdapter;
+        private PlayerMotor _motor;
         private InputSystem_Actions _actions;
+
         private InputAction _crouchHold;
         private InputAction _crouchToggle;
         private bool _crouchToggled;
+        private InputAction _charge;
+        private InputAction _parry;
+        private bool _inputAllowed = true;
 
+        /// <summary>allowed에 따라 카타나 명령 전달을 허용하고 차단 시 유지 행동을 정리한다.</summary>
+        public void SetInputAllowed(bool allowed)
+        {
+            _inputAllowed = allowed && (_legacyAdapter == null || !_legacyAdapter.enabled);
+            if (!_inputAllowed && _combat != null)
+            {
+                _combat.SetMovementInput(Vector2.zero);
+                _combat.CancelParryAttempt();
+                _combat.EndCharge();
+                _combat.Player.EndGuard();
+                _motor.ClearInput();
+            }
+        }
+        
         void Awake()
         {
             if (_combat == null) _combat = GetComponent<KatanaCombatCoordinator>();
+            _legacyAdapter = GetComponent<PlayerInputCommandAdapter>();
+            _motor = _combat.Player.GetComponent<PlayerMotor>();
             _actions = new InputSystem_Actions();
             _crouchHold = new InputAction("KatanaCrouchHold", InputActionType.Button);
             _crouchHold.AddBinding("<Keyboard>/leftCtrl");
@@ -31,6 +54,8 @@ namespace BlindBlade.Player.Katana
 
         void OnEnable()
         {
+            if (Game.Instance.InputManager != null && Game.Instance.InputManager.IsInitialized) Initialize();
+            else SetInputAllowed(true);
             _actions.Player.Enable();
             _crouchHold.Enable();
             _crouchToggle.Enable();
@@ -38,6 +63,7 @@ namespace BlindBlade.Player.Katana
 
         void OnDisable()
         {
+            Shutdown();
             _actions?.Player.Disable();
             _crouchHold?.Disable();
             _crouchToggle?.Disable();
@@ -60,6 +86,7 @@ namespace BlindBlade.Player.Katana
 
         void Update()
         {
+            if (!_inputAllowed) return;
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 SetCursor(false);
@@ -91,6 +118,23 @@ namespace BlindBlade.Player.Katana
             _combat.Player.SetMovementInput(Vector2.zero);
             _combat.Player.SetCrouchInput(false);
             _combat.CancelParryAttempt();
+        }
+
+        /// <summary>Game에 등록된 입력 매니저를 구독하고 현재 입력 허용 상태를 적용한다.</summary>
+        public void Initialize()
+        {
+            Shutdown();
+            _inputManager = Game.Instance.InputManager;
+            _inputManager.GameplayInputEnabledChanged += SetInputAllowed;
+            SetInputAllowed(_inputManager.IsGameplayInputEnabled);
+        }
+
+        /// <summary>입력을 차단하고 이전 입력 정책 구독과 매니저 참조를 해제한다.</summary>
+        public void Shutdown()
+        {
+            SetInputAllowed(false);
+            if (_inputManager != null) _inputManager.GameplayInputEnabledChanged -= SetInputAllowed;
+            _inputManager = null;
         }
 
         /// <summary>locked에 따라 커서 잠금과 표시를 함께 변경한다.</summary>
