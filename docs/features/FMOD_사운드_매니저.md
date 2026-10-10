@@ -298,6 +298,9 @@ flowchart LR
 
 - Assets/Scripts/Player/PlayerCombatAudio.cs를 StraightCorridor의 Player에 추가했다. PlayerController.ActionEvent를 구독하여 일반 공격 AttackStarted 또는 발도 SlashStarted에 SwordSwing을, HitConfirmed에 SwordHit을 재생한다. ActionId를 기록하여 각 소리를 행동당 한 번만 요청한다. 헛스윙은 명중음이 없다.
 - PlayAttached로 플레이어에 소리를 부착한다. 이동 중에도 해당 플레이어의 두 전투음은 허용한다. 적의 다른 소리 및 BGM에 대한 기존 이동 제한은 유지한다.
-- 새 FMOD 이벤트 event:/SwordSwing 및 event:/SwordHit은 Combat Bank와 SFX_Bus에 연결한 단발음이다. 원본은 FMODProject/week06-blindblade/Assets/Combat/SwordSwing.wav 및 SwordHit.wav이며 이번 작업에서 생성한 임시 음원이다. 기존 발소리 음원은 교체하지 않는다.
+- FMOD 이벤트 event:/SwordSwing 및 event:/SwordHit은 Combat Bank와 SFX_Bus에 연결한 단발음이다. 사용자가 제작한 새 이벤트를 연결했고 기존 임시 음원 이벤트는 TemporarySwordSwing 및 TemporarySwordHit으로 이름을 구분했다. 기존 발소리 음원은 교체하지 않는다.
 - 음원 교체: FMOD Studio에서 위 이벤트의 Single Instrument 음원을 바꾸고 Desktop Bank를 Build한다. Unity FMOD Bank Source는 기존 FMODProject Build/Desktop이다. SoundLibrary의 SwordSwing=3, SwordHit=4 연결과 FMOD Settings의 Combat 자동 로드를 사용한다. PlayerCombatAudio의 Volume 기본값은 0.8이다.
 - 검증: 실제 RequestNormalAttack → NotifyNormalAttackImpact 호출에서 휘두르기 1개, 성공 명중 후 총 2개 FMOD 인스턴스 생성과 적 사망을 확인했다. 이동 사운드 제한 상태에서도 성공했다. 헛스윙 시 인스턴스는 1개였다. 재시작 직후 체력 100 및 감각 준비 상태를 확인했고 플레이어 선제 명중 후 비치명 피해에는 GameOver가 발생하지 않았다. Unity 컴파일 성공. 체감 음질과 사용자의 스피커 출력 청취는 미확인이다.
+
+- 사용자 제작 이벤트 연결 갱신: SwordSwing GUID=34b2306a-d057-4bc6-8579-f36d9496be3b, SwordHit GUID=32ae2110-3bdf-454d-a088-2f26bbb2246a로 SoundLibrary를 교체했다. 새 이벤트의 Combat Bank 배정 및 SFX_Bus 라우팅 후 Desktop Combat/Master Bank를 빌드했다.
+- 이번 갱신 검증: 독립 FMOD 시스템의 무음 출력으로 Combat Bank 로드, 두 GUID 조회, 경로 일치, 단발음 여부 및 start=OK를 확인하고 시스템을 해제했다. 현재 프로젝트의 기존 EffectId/EffectManager CS0246 오류로 Play 검증은 진행하지 못했다. 앞 항목의 게임플레이 검증은 이전 구현 당시 결과다. 사용자 제작 FMOD 소스·음원 신규 파일은 작업 트리에 보존하고 연결 설정과 빌드 결과만 커밋한다.

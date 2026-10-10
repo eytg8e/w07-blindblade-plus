@@ -35,19 +35,19 @@ MonoBehaviour:
     _type: 1
     _event:
       Guid:
-        Data1: 1658974810
-        Data2: 1261509514
-        Data3: -157734982
-        Data4: -318955813
+        Data1: 884093034
+        Data2: 1271320663
+        Data3: 1844672901
+        Data4: 1002346132
       Path: event:/SwordSwing
   - _id: 4
     _type: 1
     _event:
       Guid:
-        Data1: -602247626
-        Data2: 1288995397
-        Data3: -1835342190
-        Data4: 1286039222
+        Data1: 850272528
+        Data2: 1162689503
+        Data3: 640649376
+        Data4: 1780789947
       Path: event:/SwordHit
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
