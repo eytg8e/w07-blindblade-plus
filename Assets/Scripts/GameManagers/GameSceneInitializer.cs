@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using UnityEngine;
 
 using BlindBlade.Enemies;
@@ -15,6 +17,11 @@ public sealed class GameSceneInitializer : MonoBehaviour
     [SerializeField] private Vector2 _memorySize = new Vector2(48f, 76f);
     [SerializeField] private bool _useCorridorRule;
     [SerializeField] private bool _showGameplayControls;
+    [Header("검 소음")]
+    [SerializeField] private bool _useSwordNoise;
+    [SerializeField, Min(1f)] private float _swordHearingDistance = 40f;
+    [SerializeField, Min(0.1f)] private float _swordAlertDuration = 15f;
+    private StageSwordNoise _swordNoise;
     private GameStateManager _state;
     private UIManager _ui;
     private CorridorRoundController _round;
@@ -96,6 +103,14 @@ public sealed class GameSceneInitializer : MonoBehaviour
             _round = gameObject.AddComponent<CorridorRoundController>();
             _round.Initialize(_state);
         }
+        if (_useSwordNoise)
+        {
+            var enemies = new List<EnemyController>();
+            foreach (GameObject root in gameObject.scene.GetRootGameObjects())
+                enemies.AddRange(root.GetComponentsInChildren<EnemyController>(true));
+            _swordNoise = gameObject.AddComponent<StageSwordNoise>();
+            _swordNoise.Initialize(_player, enemies.ToArray(), _swordHearingDistance, _swordAlertDuration);
+        }
         _state.BeginPlaying();
     }
 
@@ -123,6 +138,7 @@ public sealed class GameSceneInitializer : MonoBehaviour
         if (_legacyInput != null) _legacyInput.Shutdown();
         if (_katanaInput != null) _katanaInput.Shutdown();
         if (_round != null) _round.Shutdown();
+        if (_swordNoise != null) _swordNoise.Shutdown();
         if (_player != null) _player.FootstepEmitted -= HandlePlayerFootstep;
         if (Managers.IsInitialized) Managers.Sound.SetFootstepOnlyOwner(null);
         if (_state != null)
@@ -132,6 +148,7 @@ public sealed class GameSceneInitializer : MonoBehaviour
         if (_memory != null) _memory.gameObject.SetActive(false);
         if (_memory != null) Destroy(_memory.gameObject);
         if (_round != null) Destroy(_round);
+        if (_swordNoise != null) Destroy(_swordNoise);
         _state = null;
         _ui = null;
     }
