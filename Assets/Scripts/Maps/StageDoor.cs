@@ -1,7 +1,6 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
-using TMPro;
+using UnityEngine.InputSystem;
 
 using BlindBlade.Enemies;
 
@@ -11,9 +10,9 @@ public sealed class StageDoor : MonoBehaviour
     [Header("문 연결")]
     [SerializeField] private Transform _hinge;
     [SerializeField] private BoxCollider _passage;
-    [SerializeField] private TMP_Text _prompt;
     [SerializeField] private EnemyHealth[] _requiredEnemies = System.Array.Empty<EnemyHealth>();
     private PlayerController _player;
+    private OpenDoorPromptUI _promptUI;
 
     [Header("이동 설정")]
     [SerializeField] private string _nextScene;
@@ -39,7 +38,6 @@ public sealed class StageDoor : MonoBehaviour
     void Awake()
     {
         _closedRotation = _hinge.localRotation;
-        _prompt.gameObject.SetActive(false);
     }
 
     void Start()
@@ -56,7 +54,7 @@ public sealed class StageDoor : MonoBehaviour
     {
         if (_loading || _player.IsPaused || _player.CurrentState == PlayerActionState.Dead)
         {
-            _prompt.gameObject.SetActive(false);
+            UpdatePrompt(false);
             return;
         }
         if (_opened)
@@ -64,7 +62,7 @@ public sealed class StageDoor : MonoBehaviour
             float progress = Mathf.Clamp01((Time.time - _openedAt) / _openingDuration);
             _hinge.localRotation = Quaternion.Slerp(_closedRotation,
                 _closedRotation * Quaternion.Euler(0f, _openAngle, 0f), progress);
-            _prompt.gameObject.SetActive(false);
+            UpdatePrompt(false);
             if (progress >= 1f && !string.IsNullOrEmpty(_nextScene)
                 && _passage.bounds.Contains(_player.transform.position + Vector3.up * 0.5f))
             {
@@ -75,12 +73,36 @@ public sealed class StageDoor : MonoBehaviour
             return;
         }
         bool near = Vector3.Distance(_player.transform.position, transform.position) <= _interactionDistance;
-        _prompt.gameObject.SetActive(near);
+        UpdatePrompt(near);
         if (!near)
             return;
-        _prompt.text = IsUnlocked ? "[F] OPEN DOOR" : "DEFEAT ALL ENEMIES";
         if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
             TryOpen();
+    }
+
+    void OnDisable()
+    {
+        UpdatePrompt(false);
+    }
+
+    /// <summary>visible이면 UIManager에서 문 안내를 확보해 상태를 전달하고 아니면 자신의 안내를 숨긴다.</summary>
+    private void UpdatePrompt(bool visible)
+    {
+        if (!visible)
+        {
+            if (_promptUI != null) _promptUI.HideFor(this);
+            return;
+        }
+        if (_promptUI == null)
+        {
+            _promptUI = Game.Instance.UIManager.Get<OpenDoorPromptUI>();
+            if (_promptUI == null)
+            {
+                enabled = false;
+                return;
+            }
+        }
+        _promptUI.ShowFor(this, IsUnlocked);
     }
 
     /// <summary>살아 있는 필수 적이 없고 플레이어가 문 근처에 있으면 개방을 시작하고 true를 반환한다.</summary>
@@ -92,6 +114,7 @@ public sealed class StageDoor : MonoBehaviour
             return false;
         _opened = true;
         _openedAt = Time.time;
+        UpdatePrompt(false);
         return true;
     }
 }

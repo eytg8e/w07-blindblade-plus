@@ -3,11 +3,13 @@ using System.Collections.Generic;
 
 public static partial class ResourcePaths
 {
+    public const string OPEN_DOOR_PROMPT_UI_PATH = "UI/OpenDoorPromptUI";
     public const string GAME_OVER_UI_PATH = "UI/GameOverUI";
     public const string GAMEPLAY_CONTROLS_UI_PATH = "GameManagers/GameplayControlsUI";
 
     private static readonly Dictionary<Type, string> _uiPaths = new Dictionary<Type, string>
     {
+        { typeof(OpenDoorPromptUI), OPEN_DOOR_PROMPT_UI_PATH },
         { typeof(GameOverUI), GAME_OVER_UI_PATH },
         { typeof(GameplayControlsUI), GAMEPLAY_CONTROLS_UI_PATH }
     };
