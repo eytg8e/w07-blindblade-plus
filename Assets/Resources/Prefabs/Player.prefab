@@ -372,10 +372,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _player: {fileID: 6616511219798166873}
   _animationEventRelay: {fileID: 0}
-  _normalHitTime: 0.15
-  _normalActionDuration: 0.4
+  _normalHitTime: 0.22
+  _normalActionDuration: 0.48
   _iaidoHitTime: 0.32
   _iaidoSlashDuration: 0.6
+  _normalStrikeWindow: 0.16
   _strikeWindow: 0.2
 --- !u!114 &4370518358218400631
 MonoBehaviour:
@@ -404,6 +405,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _player: {fileID: 6616511219798166873}
   _normalSheatheDelay: 0.8
+  _comboBufferWindow: 0.2
+  _comboFollowThrough: 0.06
+  _comboResetDelay: 0.65
   _parryWindow: 0.18
   _blockInputRecovery: 0.18
   _sheatheDuration: 0.3
@@ -445,6 +449,8 @@ MonoBehaviour:
   _showWeapon: 1
   _blendTime: 0.025
   _iaidoImpactProgress: 0.88461536
+  _normal1ImpactProgress: 0.75
+  _normal2ImpactProgress: 0.4
   _drawnSheatheProgress: 0.2
   _minimumCancelSheatheDuration: 0.12
 --- !u!114 &7106073490442552728

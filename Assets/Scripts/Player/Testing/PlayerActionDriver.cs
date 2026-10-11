@@ -13,6 +13,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
     [SerializeField, Min(0f)] private float _iaidoHitTime = 0.42f;
     [SerializeField, Min(0f)] private float _iaidoSlashDuration = 0.72f;
     [Header("베기 판정 구간")]
+    [SerializeField, Min(0.01f)] private float _normalStrikeWindow = 0.16f;
     [SerializeField, Min(0.01f)] private float _strikeWindow = 0.22f;
 
     private PlayerActionState _activeState;
@@ -74,8 +75,9 @@ public sealed class PlayerActionDriver : MonoBehaviour
         float hitTime = iaidoTiming ? _iaidoHitTime : _normalHitTime;
         float actionDuration = iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
 
-        float strikeStart = Mathf.Max(0f, hitTime - _strikeWindow * 0.5f);
-        float strikeEnd = Mathf.Min(actionDuration, hitTime + _strikeWindow * 0.5f);
+        float strikeWindow = state == PlayerActionState.NormalAttack ? _normalStrikeWindow : _strikeWindow;
+        float strikeStart = Mathf.Max(0f, hitTime - strikeWindow * 0.5f);
+        float strikeEnd = Mathf.Min(actionDuration, hitTime + strikeWindow * 0.5f);
         if (state == PlayerActionState.NormalAttack && !_impactSent && _elapsed >= strikeStart)
         {
             bool finalSample = _elapsed >= strikeEnd;
@@ -119,9 +121,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
     /// <summary>kind의 실제 적중·종료 시간을 읽어 시각 모션에 제공한다. 드라이버의 판정 시간은 변경하지 않는다.</summary>
     public void GetPresentationTiming(PlayerAttackKind kind, out float impactTime, out float duration)
     {
-        KatanaCombatCoordinator katana = GetComponent<KatanaCombatCoordinator>();
-        bool iaido = kind == PlayerAttackKind.IaidoFinisher
-            || (katana != null && katana.isActiveAndEnabled);
+        bool iaido = kind == PlayerAttackKind.IaidoFinisher;
         impactTime = iaido ? _iaidoHitTime : _normalHitTime;
         duration = iaido ? _iaidoSlashDuration : _normalActionDuration;
     }
@@ -154,8 +154,9 @@ public sealed class PlayerActionDriver : MonoBehaviour
     public void GetStrikeWindow(PlayerAttackKind kind, out float start, out float end)
     {
         GetPresentationTiming(kind, out float impact, out float duration);
-        start = Mathf.Max(0f, impact - _strikeWindow * 0.5f);
-        end = Mathf.Min(duration, impact + _strikeWindow * 0.5f);
+        float window = kind == PlayerAttackKind.Normal ? _normalStrikeWindow : _strikeWindow;
+        start = Mathf.Max(0f, impact - window * 0.5f);
+        end = Mathf.Min(duration, impact + window * 0.5f);
     }
 
     private void OnValidate()

@@ -305,6 +305,15 @@ public sealed class PlayerController : MonoBehaviour
         return true;
     }
 
+    /// <summary>actionId의 일반 공격 판정이 끝났으면 남은 후딜을 마치고 새 일반 공격을 시작한다. 새 행동 ID를 발급하고 성공 여부를 반환한다.</summary>
+    public bool TryChainNormalAttack(int actionId)
+    {
+        if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId
+            || !_attackImpactResolved || _attackActionFinished) return false;
+        FinishAttackAction(0f, _currentAttackOutcome);
+        return RequestNormalAttack();
+    }
+
     /// <summary>actionId가 현재 일반 공격과 일치하면 공격 판정을 취소하고 일반 공격 Recovery를 적용합니다.</summary>
     public bool CancelNormalAttack(int actionId)
     {

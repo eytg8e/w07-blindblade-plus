@@ -19,6 +19,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     [SerializeField] private bool _showWeapon = true;
     [SerializeField, Min(0f)] private float _blendTime = 0.025f;
     [SerializeField, Range(0.01f, 0.99f)] private float _iaidoImpactProgress = 0.88461536f;
+    [SerializeField, Range(0.01f, 0.99f)] private float _normal1ImpactProgress = 0.75f;
+    [SerializeField, Range(0.01f, 0.99f)] private float _normal2ImpactProgress = 0.4f;
     [SerializeField, Range(0.01f, 0.99f)] private float _drawnSheatheProgress = 0.2f;
     [SerializeField, Min(0.01f)] private float _minimumCancelSheatheDuration = 0.12f;
 
@@ -181,7 +183,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         switch (e.Stage)
         {
             case KatanaStage.NormalStarted:
-                BeginStrike("IaidoDoubleSlash", e);
+                BeginStrike(e.Strike == 2 ? "Normal2" : "Normal1", e, PlayerAttackKind.Normal);
                 break;
             case KatanaStage.ParrySucceeded:
                 _flash = 1f;
@@ -244,17 +246,18 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         }
     }
 
-    /// <summary>발도 클립 name을 기존 Iaido 적중·종료 시간에 맞추고 진행도를 초기화한다.</summary>
-    private void BeginStrike(string name, KatanaEvent e)
+    /// <summary>name과 e의 타수·행동 ID 및 kind로 베기 모션을 선택한다. 공통 타격 시간과 해당 클립의 적중 진행도를 설정한다.</summary>
+    private void BeginStrike(string name, KatanaEvent e, PlayerAttackKind kind = PlayerAttackKind.IaidoFinisher)
     {
         Play(name, _blendTime);
         _attack = true;
         _parry = false;
         _actionId = e.ActionId;
-        _impactProgress = _iaidoImpactProgress;
+        _impactProgress = kind == PlayerAttackKind.Normal
+            ? (e.Strike == 2 ? _normal2ImpactProgress : _normal1ImpactProgress) : _iaidoImpactProgress;
         _entryProgress = 0f;
         if (_actionDriver != null)
-            _actionDriver.GetPresentationTiming(PlayerAttackKind.IaidoFinisher, out _impactTime, out _duration);
+            _actionDriver.GetPresentationTiming(kind, out _impactTime, out _duration);
         else
             _impactTime = _duration * _impactProgress;
         _animator.SetFloat(ActionProgressId, _entryProgress);
