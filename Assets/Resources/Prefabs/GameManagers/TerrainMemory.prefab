@@ -46,7 +46,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _observer: {fileID: 0}
   _minimum: {x: -24, y: -6}
-  _size: {x: 48, y: 76}
-  _resolution: 256
+  _size: {x: 200, y: 200}
+  _resolution: 512
   _radius: 5
   _memoryColor: {r: 0.039215688, g: 0.039215688, b: 0.039215688, a: 1}

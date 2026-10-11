@@ -133,7 +133,16 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 return LinearEyeDepth(rawDepth, _ZBufferParams);
             }
 
-            // 두 픽셀의 상대 깊이와 노멀 차이를 사용해 경계 강도를 반환한다.
+            // 화면 좌표와 장치 깊이로 표면의 월드 위치를 복원한다.
+            float3 SurfacePosition(float2 uv, float rawDepth)
+            {
+                #if !UNITY_REVERSED_Z
+                    rawDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, rawDepth);
+                #endif
+                return ComputeWorldSpacePosition(uv, rawDepth, UNITY_MATRIX_I_VP);
+            }
+
+            // 표면 평면에서 벗어난 거리와 노멀 차이로 실제 경계 강도를 반환한다.
             float3 EdgeBetween(float2 firstUv, float2 secondUv)
             {
                 float firstRawDepth = SampleSceneDepth(firstUv);
@@ -151,10 +160,16 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
 
                 float firstDepth = EyeDepth(firstRawDepth);
                 float secondDepth = EyeDepth(secondRawDepth);
-                float depthDifference = abs(firstDepth - secondDepth)
+                float3 firstNormal = SampleSceneNormals(firstUv);
+                float3 secondNormal = SampleSceneNormals(secondUv);
+                float3 surfaceDelta = SurfacePosition(secondUv, secondRawDepth)
+                    - SurfacePosition(firstUv, firstRawDepth);
+                // 같은 평면의 원근 깊이 변화는 제외하고 표면을 벗어난 간격만 검출한다.
+                float planeSeparation = max(abs(dot(surfaceDelta, firstNormal)),
+                    abs(dot(surfaceDelta, secondNormal)));
+                float depthDifference = planeSeparation
                     / max(min(firstDepth, secondDepth), 0.0001);
-                float normalDifference = length(
-                    SampleSceneNormals(firstUv) - SampleSceneNormals(secondUv));
+                float normalDifference = length(firstNormal - secondNormal);
 
                 float edgeStrength = max(
                     depthDifference * _DepthSensitivity,

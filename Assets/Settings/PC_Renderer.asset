@@ -68,7 +68,7 @@ MonoBehaviour:
   m_Active: 1
   _lineColor: {r: 1, g: 1, b: 1, a: 1}
   _lineWidth: 1
-  _depthSensitivity: 50
+  _depthSensitivity: 120
   _normalSensitivity: 4
   _transparentThreshold: 0.015
   _shader: {fileID: 4800000, guid: c7c52e823b854534adfb6cc98ed70499, type: 3}
