@@ -5,7 +5,7 @@ using UnityEngine;
 
 using UnityEngine.AI;
 
-public enum BossState { Idle, Roaming, Charging, ChainCharge, Duel, Stunned, Dead, Disappeared }
+public enum BossState { Idle, Roaming, Charging, ChainCharge, Duel, Stunned, Dead, Disappeared, Ranged }
 
 /// <summary>보스 행동의 단일 실행과 플레이어 피해·방어 결과 및 종료 수명을 관리한다.</summary>
 [DisallowMultipleComponent]
@@ -48,6 +48,14 @@ public sealed class BossController : MonoBehaviour
     [SerializeField, Min(0.1f)] private float _roamSpeed = 2f;
     private float _roamUntil;
     private NavMeshPath _path;
+
+    [Header("원거리 공격")]
+    [SerializeField] private EnemyProjectile _projectilePrefab;
+    [SerializeField, Min(0f)] private float _rangedDamage = 10f;
+    [SerializeField, Min(0.1f)] private float _rangedPreparation = 0.8f;
+    [SerializeField, Min(1)] private int _rangedShots = 3;
+    [SerializeField, Min(0.1f)] private float _rangedInterval = 0.8f;
+    public event Action RangedPreparing;
 
     [Header("돌진")]
     [SerializeField, Min(0.1f), Tooltip("기합 이후 돌진 준비 시간(초)")]
@@ -132,9 +140,9 @@ public sealed class BossController : MonoBehaviour
             _playerMotor = _player.GetComponent<PlayerMotor>();
             _combat = _player.GetComponent<KatanaCombatCoordinator>();
         }
-        if (_melee == null || _player == null || _playerMotor == null || _playerHealth == null || _combat == null || !_motor.IsReady)
+        if (_projectilePrefab == null || _melee == null || _player == null || _playerMotor == null || _playerHealth == null || _combat == null || !_motor.IsReady)
         {
-            Debug.LogError("보스의 근접 공격·플레이어·방어 계약·NavMesh 연결이 누락되었습니다.", this);
+            Debug.LogError("보스의 투사체·근접 공격·플레이어·방어 계약·NavMesh 연결이 누락되었습니다.", this);
             enabled = false;
             return;
         }
@@ -157,23 +165,18 @@ public sealed class BossController : MonoBehaviour
                 yield return WaitForPattern(BossState.Roaming);
                 yield return Roam();
             }
-            if (startingState == BossState.Roaming || startingState == BossState.Charging)
+            if (startingState == BossState.Roaming || startingState == BossState.Ranged)
             {
-                yield return WaitForPattern(BossState.Charging);
-                if (TryTeleportAround(out Vector3 position))
-                {
-                    ChangeState(BossState.Charging);
-                    yield return MoveQuickly(position);
-                    if (_repositionReached) yield return Charge();
-                }
+                yield return WaitForPattern(BossState.Ranged);
+                yield return Ranged();
             }
-            if (startingState != BossState.Duel)
+            yield return WaitForPattern(BossState.Charging);
+            if (TryTeleportAround(out Vector3 position))
             {
-                yield return WaitForPattern(BossState.ChainCharge);
-                yield return ChainCharge();
+                ChangeState(BossState.Charging);
+                yield return MoveQuickly(position);
+                if (_repositionReached) yield return Charge();
             }
-            yield return WaitForPattern(BossState.Duel);
-            yield return Duel();
             startingState = BossState.Roaming;
         }
         _routine = null;
@@ -210,6 +213,26 @@ public sealed class BossController : MonoBehaviour
             yield return null;
         }
         _motor.Stop();
+    }
+
+    /// <summary>설정 횟수만큼 발사 전 소리와 준비 시간을 두고 플레이어 방향으로 기존 투사체를 발사한다.</summary>
+    private IEnumerator Ranged()
+    {
+        ChangeState(BossState.Ranged);
+        _motor.Stop();
+        for (int i = 0; i < _rangedShots; i++)
+        {
+            RangedPreparing?.Invoke();
+            yield return new WaitForSeconds(_rangedPreparation);
+            Vector3 origin = transform.position + Vector3.up;
+            Vector3 direction = (_player.transform.position + Vector3.up - origin).normalized;
+            if (direction.sqrMagnitude < 0.0001f) yield break;
+            transform.rotation = Quaternion.LookRotation(direction);
+            EnemyProjectile projectile = Instantiate(_projectilePrefab, origin, Quaternion.LookRotation(direction));
+            projectile.Initialize(new DamageContext(_rangedDamage, gameObject, origin, direction, "BossRanged"),
+                direction, _player.transform);
+            if (i + 1 < _rangedShots) yield return new WaitForSeconds(_rangedInterval);
+        }
     }
 
     /// <summary>기합과 준비 시간 뒤 목표 방향을 고정해 장애물 경계까지 돌진하고 접촉 피해를 한 번 적용한다.</summary>
@@ -434,9 +457,9 @@ public sealed class BossController : MonoBehaviour
         switch (_state)
         {
             case BossState.Idle: _resumeState = _nextPattern; break;
-            case BossState.Roaming: _resumeState = BossState.Charging; break;
-            case BossState.Charging: _resumeState = BossState.ChainCharge; break;
-            case BossState.ChainCharge: _resumeState = BossState.Duel; break;
+            case BossState.Roaming: _resumeState = BossState.Ranged; break;
+            case BossState.Ranged: _resumeState = BossState.Charging; break;
+            case BossState.Charging: _resumeState = BossState.Roaming; break;
             default: _resumeState = BossState.Roaming; break;
         }
         if (_routine != null) StopCoroutine(_routine);
