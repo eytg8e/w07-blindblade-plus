@@ -381,6 +381,8 @@ MonoBehaviour:
   _normalActionDuration: 0.48
   _iaidoHitTime: 0.32
   _iaidoSlashDuration: 0.6
+  _targetedComboHitTime: 0.12
+  _targetedComboActionDuration: 0.32
   _normalStrikeWindow: 0.16
   _strikeWindow: 0.2
   _counterHitTime: 0.12

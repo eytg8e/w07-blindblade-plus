@@ -63,6 +63,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _playerRadius: 4
-  _soundRadius: 4
-  _soundLifetime: 1
+  _soundRadius: 12
+  _soundLifetime: 1.2
   _edgeFade: 0.75

@@ -7,13 +7,14 @@ public sealed class FootstepWave : SensoryEffect
 {
     [Header("파동 표시")]
     [SerializeField] private SpriteRenderer _ringRenderer;
+    [SerializeField, Tooltip("기본 파동 링 색상")]
+    private Color _ringColor = Color.white;
     [SerializeField, Min(0.01f), Tooltip(" 확산 및 표시 수명(초)")]
     private float _duration = 0.6f;
     [SerializeField, Min(0f), Tooltip("시작 반경(미터), 원본 링 지름은 1미터 기준")]
     private float _startRadius = 0.05f;
     [SerializeField, Min(0f), Tooltip("종료 반경(미터)")]
     private float _endRadius = 1.5f;
-    private Color _baseColor;
     private bool _isConfigured;
 
     void Awake()
@@ -24,7 +25,7 @@ public sealed class FootstepWave : SensoryEffect
             Debug.LogError("파동 프리팹에 링 SpriteRenderer를 연결해야 합니다.", this);
             return;
         }
-        _baseColor = _ringRenderer.color;
+        _ringRenderer.color = _ringColor;
         _ringRenderer.enabled = false;
     }
 
@@ -54,10 +55,11 @@ public sealed class FootstepWave : SensoryEffect
     /// </summary>
     protected override void ApplyFrame(float elapsed, float progress)
     {
+        float expansion = 1f - Mathf.Pow(1f - progress, 2f);
         _ringRenderer.transform.localScale = Vector3.one
-            * (Mathf.Lerp(_startRadius, _endRadius, progress) * 2f);
-        Color color = _baseColor;
-        color.a *= (1f - progress) * Visibility;
+            * (Mathf.Lerp(_startRadius, _endRadius, expansion) * 2f);
+        Color color = _ringColor;
+        color.a *= (1f - Mathf.SmoothStep(0f, 1f, progress)) * Visibility;
         _ringRenderer.color = color;
     }
 }

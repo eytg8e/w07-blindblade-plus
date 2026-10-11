@@ -12,6 +12,9 @@ public sealed class PlayerActionDriver : MonoBehaviour
     [SerializeField, Min(0f)] private float _normalActionDuration = 0.4f;
     [SerializeField, Min(0f)] private float _iaidoHitTime = 0.42f;
     [SerializeField, Min(0f)] private float _iaidoSlashDuration = 0.72f;
+    [Header("대상 돌진 연계 타이밍")]
+    [SerializeField, Min(0.01f)] private float _targetedComboHitTime = 0.12f;
+    [SerializeField, Min(0.01f)] private float _targetedComboActionDuration = 0.32f;
     [Header("베기 판정 구간")]
     [SerializeField, Min(0.01f)] private float _normalStrikeWindow = 0.16f;
     [SerializeField, Min(0.01f)] private float _strikeWindow = 0.22f;
@@ -80,10 +83,14 @@ public sealed class PlayerActionDriver : MonoBehaviour
             return;
 
         _elapsed += Time.deltaTime;
-        bool iaidoTiming = state == PlayerActionState.IaidoSlash
+        bool targetedComboAttack = state == PlayerActionState.IaidoSlash
+            && _player.TargetedComboStrike > 0;
+        bool iaidoTiming = state == PlayerActionState.IaidoSlash && !targetedComboAttack
             || state == PlayerActionState.NormalAttack && _activeNormalAttackUsesIaidoTiming;
-        float hitTime = _activeNormalAttackIsCounter ? _counterHitTime : iaidoTiming ? _iaidoHitTime : _normalHitTime;
-        float actionDuration = _activeNormalAttackIsCounter ? _counterActionDuration : iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
+        float hitTime = _activeNormalAttackIsCounter ? _counterHitTime
+            : targetedComboAttack ? _targetedComboHitTime : iaidoTiming ? _iaidoHitTime : _normalHitTime;
+        float actionDuration = _activeNormalAttackIsCounter ? _counterActionDuration
+            : targetedComboAttack ? _targetedComboActionDuration : iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
 
         float strikeWindow = _activeNormalAttackIsCounter ? _counterStrikeWindow
             : iaidoTiming ? _strikeWindow : _normalStrikeWindow;
@@ -138,9 +145,12 @@ public sealed class PlayerActionDriver : MonoBehaviour
             duration = _counterActionDuration;
             return;
         }
-        bool iaido = kind == PlayerAttackKind.IaidoFinisher || (kind == PlayerAttackKind.Normal && _combat != null && _combat.IsOpeningAttack);
-        impactTime = iaido ? _iaidoHitTime : _normalHitTime;
-        duration = iaido ? _iaidoSlashDuration : _normalActionDuration;
+        bool targetedComboAttack = kind == PlayerAttackKind.IaidoFinisher
+            && _player != null && _player.TargetedComboStrike > 0;
+        bool iaido = kind == PlayerAttackKind.IaidoFinisher && !targetedComboAttack
+            || kind == PlayerAttackKind.Normal && _combat != null && _combat.IsOpeningAttack;
+        impactTime = targetedComboAttack ? _targetedComboHitTime : iaido ? _iaidoHitTime : _normalHitTime;
+        duration = targetedComboAttack ? _targetedComboActionDuration : iaido ? _iaidoSlashDuration : _normalActionDuration;
     }
 
     /// <summary>다음 일반 공격을 발도 모션에 맞춘 적중·종료 시간으로 처리하도록 예약한다.</summary>
@@ -171,7 +181,9 @@ public sealed class PlayerActionDriver : MonoBehaviour
     public void GetStrikeWindow(PlayerAttackKind kind, out float start, out float end)
     {
         GetPresentationTiming(kind, out float impact, out float duration);
-        float window = kind == PlayerAttackKind.Normal
+        bool targetedComboAttack = kind == PlayerAttackKind.IaidoFinisher
+            && _player != null && _player.TargetedComboStrike > 0;
+        float window = kind == PlayerAttackKind.Normal || targetedComboAttack
             ? (_combat != null && _combat.IsCounterAttack ? _counterStrikeWindow
                 : _combat != null && _combat.IsOpeningAttack ? _strikeWindow : _normalStrikeWindow) : _strikeWindow;
         start = Mathf.Max(0f, impact - window * 0.5f);
@@ -182,6 +194,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
     {
         _normalHitTime = Mathf.Min(_normalHitTime, _normalActionDuration);
         _iaidoHitTime = Mathf.Min(_iaidoHitTime, _iaidoSlashDuration);
+        _targetedComboHitTime = Mathf.Min(_targetedComboHitTime, _targetedComboActionDuration);
         _counterHitTime = Mathf.Min(_counterHitTime, _counterActionDuration);
     }
 }

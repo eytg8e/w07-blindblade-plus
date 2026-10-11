@@ -59,9 +59,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _ringRenderer: {fileID: 402}
-  _duration: 0.6
+  _duration: 0.8
   _startRadius: 0.05
-  _endRadius: 1.5
+  _endRadius: 8
 --- !u!1 &400
 GameObject:
   m_ObjectHideFlags: 0
