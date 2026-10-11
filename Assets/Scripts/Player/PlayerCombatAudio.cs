@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using UnityEngine;
 
 
@@ -9,38 +11,37 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerCombatAudio : MonoBehaviour
 {
+    private const float ENEMY_AUDIO_SCAN_INTERVAL = 0.25f;
+
     [Header("전투 효과음")]
     [SerializeField] private SoundId _swingSound = SoundId.SwordSwing;
     [SerializeField] private SoundId _hitSound = SoundId.SwordClash;
-    [SerializeField] private SoundId _unsheathSound = SoundId.SwordUnsheath;
     [SerializeField, Min(0f)] private float _volume = 0.8f;
 
     [Header("방어·피격 신호")]
-    [SerializeField] private SoundId _parrySound = SoundId.ParryClash;
-    [SerializeField] private SoundId _damageSound = SoundId.PlayerDamaged;
-    [SerializeField, Min(0f)] private float _parryVolume = 1.1f;
-    [SerializeField, Range(0.25f, 4f)] private float _guardPitch = 0.85f;
-    [SerializeField, Range(0.25f, 4f)] private float _parryPitch = 1.25f;
     private PlayerHealth _health;
     private PlayerActionDriver _timing;
+    private PlayerMotor _motor;
     private int _pendingSwingAction = -1;
     private float _swingBeginTime;
 
     [Header("Combat Contact")]
     [SerializeField] private EnemyCombatService _contactService;
 
-    [Header("SwingType Labels")]
-    [SerializeField] private string _firstSwingLabel = "A";
-    [SerializeField] private string _secondSwingLabel = "B";
-    [SerializeField] private string _iaidoSwingLabel = "C";
     private PlayerController _player;
     private KatanaCombatCoordinator _katana;
-    private string _swingLabel;
     private int _lastSwingAction = -1;
     private int _lastHitAction = -1;
     private int _lastContactAction = -1;
-    private bool _introPlayed;
     private bool _isPrimary;
+
+    [Header("중앙 사운드 설정")]
+    private CombatSoundProfile _profile;
+    private readonly List<PendingCue> _pendingCues = new List<PendingCue>();
+    private float _cueClock;
+    private float _lastDodgeCooldown;
+    private float _nextEnemyAudioScan;
+    private int _lastDashAction = -1;
 
     void Awake()
     {
@@ -48,6 +49,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         _katana = GetComponent<KatanaCombatCoordinator>();
         _health = GetComponent<PlayerHealth>();
         _timing = GetComponent<PlayerActionDriver>();
+        _motor = GetComponent<PlayerMotor>();
+        _profile = Resources.Load<CombatSoundProfile>(CombatSoundProfile.RESOURCE_PATH);
         // 기존 씬의 적 피격음 override도 금속 접촉음으로 연결한다.
         if (_hitSound == SoundId.SwordHit) _hitSound = SoundId.SwordClash;
         _isPrimary = GetComponent<PlayerCombatAudio>() == this;
@@ -61,16 +64,26 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         _lastSwingAction = -1;
         _lastHitAction = -1;
         _lastContactAction = -1;
-        _introPlayed = false;
         _pendingSwingAction = -1;
+        _pendingCues.Clear();
+        _cueClock = 0f;
+        _lastDodgeCooldown = _motor.DodgeCooldownRemaining;
+        _lastDashAction = -1;
+        _nextEnemyAudioScan = 0f;
         _health.DamageReceived += HandleDamage;
         if (_contactService != null)
             _contactService.AttackContactResolved += HandleContact;
         if (_katana != null && _katana.isActiveAndEnabled)
         {
-            _katana.EventRaised += HandleKatana;
             _katana.DefenseSucceeded += HandleDefense;
         }
+    }
+
+    void Start()
+    {
+        RegisterEnemyAudio();
+        if (_profile != null && _profile.PlayAmbience)
+            Managers.Sound.PlayBgm(_profile.AmbienceSound, gameObject, _profile.LoopAmbience, _profile.AmbienceVolume);
     }
 
     void OnDisable()
@@ -79,11 +92,11 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         _player.ActionEvent -= HandleAction;
         _health.DamageReceived -= HandleDamage;
         _pendingSwingAction = -1;
+        _pendingCues.Clear();
         if (_contactService != null)
             _contactService.AttackContactResolved -= HandleContact;
         if (_katana != null)
         {
-            _katana.EventRaised -= HandleKatana;
             _katana.DefenseSucceeded -= HandleDefense;
         }
         if (Managers.IsInitialized)
@@ -92,10 +105,19 @@ public sealed class PlayerCombatAudio : MonoBehaviour
 
     void Update()
     {
-        if (!_introPlayed)
+        if (Time.unscaledTime >= _nextEnemyAudioScan)
         {
-            _introPlayed = true;
-            PlayUnsheath();
+            RegisterEnemyAudio();
+            _nextEnemyAudioScan = Time.unscaledTime + ENEMY_AUDIO_SCAN_INTERVAL;
+        }
+        if (!_player.IsPaused && Time.deltaTime > 0f)
+        {
+            float cooldown = _motor.DodgeCooldownRemaining;
+            if (cooldown > _lastDodgeCooldown + 0.001f)
+                QueueCue(CombatSoundCue.Dodge, Vector3.zero, true);
+            _lastDodgeCooldown = cooldown;
+            _cueClock += Time.deltaTime;
+            UpdatePendingCues();
         }
         if (_pendingSwingAction < 0 || _player.IsPaused || Time.deltaTime <= 0f) return;
         if (_pendingSwingAction != _player.CurrentActionId
@@ -110,23 +132,15 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     }
 
     /// <summary>
-    /// action의 공격 단계에서 SwingType을 선택하고 실제 베기 시작 시각에 스윙을 예약한다.
-    /// 발도 베기 시작에는 검을 뽑는 소리를 연결하며 명중음은 적 피해 사건에 맡긴다.
+    /// action의 일반·반격·충전 베기를 공통 베기 상황에 연결하고 실제 베기 시작에 재생을 예약한다.
+    /// 발도음과 타수 Label은 사용하지 않으며 명중음은 적 피해 사건에 맡긴다.
     /// </summary>
     private void HandleAction(PlayerActionEvent action)
     {
-        if (action.Stage == PlayerActionStage.AttackStarted && action.State == PlayerActionState.NormalAttack)
+        if (action.Stage == PlayerActionStage.DashStarted && _lastDashAction != action.ActionId)
         {
-            int strike = _katana != null && _katana.isActiveAndEnabled ? _katana.Strike
-                :  1;
-            _swingLabel = _katana != null && _katana.IsCounterAttack ? _secondSwingLabel
-                : strike == 1 ? _iaidoSwingLabel : strike == 2 ? _firstSwingLabel : _secondSwingLabel;
-        }
-        if (action.Stage == PlayerActionStage.SlashStarted)
-        {
-            _swingLabel = _iaidoSwingLabel;
-            if (_katana == null || !_katana.isActiveAndEnabled)
-                PlayUnsheath();
+            _lastDashAction = action.ActionId;
+            QueueCue(CombatSoundCue.Dodge, Vector3.zero, true);
         }
         if ((action.Stage == PlayerActionStage.AttackStarted && action.State == PlayerActionState.NormalAttack)
             || action.Stage == PlayerActionStage.SlashStarted)
@@ -134,25 +148,21 @@ public sealed class PlayerCombatAudio : MonoBehaviour
             _pendingSwingAction = action.ActionId;
             _timing.GetStrikeWindow(action.State == PlayerActionState.IaidoSlash ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal,
                 out _swingBeginTime, out _);
+            if (_lastSwingAction == action.ActionId
+                || QueueCue(CombatSoundCue.Slash, Vector3.zero, true, action.ActionId, _swingBeginTime, true))
+            {
+                _lastSwingAction = action.ActionId;
+                _pendingSwingAction = -1;
+            }
         }
         if (action.Stage == PlayerActionStage.ActionEnded && action.ActionId == _pendingSwingAction)
             _pendingSwingAction = -1;
         if (_contactService == null && action.Stage == PlayerActionStage.HitConfirmed && _lastHitAction != action.ActionId)
         {
             _lastHitAction = action.ActionId;
-            Managers.Sound.PlayAttached(_hitSound, gameObject, _volume);
+            if (!QueueCue(CombatSoundCue.Contact, Vector3.zero, true))
+                Managers.Sound.PlayAttached(_hitSound, gameObject, _volume);
         }
-    }
-
-    /// <summary>
-    /// action의 납도 여부와 공격 종류로 실제 검을 꺼내는 시점에 소리를 재생한다.
-    /// 일반 공격은 납도 상태에서 시작할 때만 처리하고 발도 베기는 항상 검을 꺼낸다.
-    /// </summary>
-    private void HandleKatana(KatanaEvent action)
-    {
-        if (((action.Stage == KatanaStage.NormalStarted || action.Stage == KatanaStage.ParrySucceeded) && !action.WasDrawn)
-            || action.Stage == KatanaStage.SlashStarted)
-            PlayUnsheath();
     }
 
     /// <summary>
@@ -167,18 +177,19 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         if (collider != null && !enemyDamaged)
         {
             _lastHitAction = request.ActionId;
-            Managers.Sound.Play(_hitSound, point, _volume, gameObject);
+            if (!QueueCue(CombatSoundCue.Contact, point, false))
+                Managers.Sound.Play(_hitSound, point, _volume, gameObject);
         }
     }
 
     /// <summary>
-    /// result의 방어 종류와 실제 접촉 위치로 가드·패링의 음량·음높이를 선택한다.
-    /// 전용 금속음을 재생하며 피해와 반격 기회는 변경하지 않는다.
+    /// result의 방어 종류와 접촉 위치로 가드 또는 패링 설정을 재생한다.
+    /// 각 상황의 중앙 음원·음량·pitch를 사용하며 피해와 반격 기회는 변경하지 않는다.
     /// </summary>
     private void HandleDefense(KatanaDefenseResult result)
     {
-        Managers.Sound.Play(result.IsParry ? _parrySound : _hitSound, result.Point,
-            result.IsParry ? _parryVolume : _volume, gameObject, pitch: result.IsParry ? _parryPitch : _guardPitch);
+        if (QueueCue(result.IsParry ? CombatSoundCue.Parry : CombatSoundCue.Guard, result.Point, false)) return;
+        Managers.Sound.Play(result.IsParry ? SoundId.ParryClash : _hitSound, result.Point, _volume, gameObject);
     }
 
     /// <summary>
@@ -187,30 +198,108 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     /// </summary>
     private void HandleDamage(DamageContext context)
     {
-        Managers.Sound.Play(_damageSound, context.Point, _volume, gameObject);
+        Managers.Sound.Play(SoundId.SwordHit, context.Point, _volume, gameObject);
     }
 
     /// <summary>
-    /// actionId의 베기 시작에 현재 선택된 A/B/C Label로 스윙을 재생한다.
-    /// 기존 전투 시각화의 일반 공격은 판정 시점의 실제 타수를 사용한다.
+    /// actionId의 베기 시작에 기존 Inspector의 공통 스윙음을 재생한다.
+    /// 타수 Label을 전달하지 않아 FMOD 이벤트가 음원 변형을 선택한다.
     /// 동일 행동의 반복 알림을 무시하고 재생 ID를 기록한다.
     /// </summary>
     private void PlaySwing(int actionId)
     {
         if (_lastSwingAction == actionId)
             return;
-        if ((_katana == null || !_katana.isActiveAndEnabled) && _player.CurrentState == PlayerActionState.NormalAttack)
-            _swingLabel = _secondSwingLabel;
         _lastSwingAction = actionId;
-        Managers.Sound.PlayAttachedWithLabel(_swingSound, gameObject, "SwingType", _swingLabel ?? _firstSwingLabel, _volume);
+        Managers.Sound.PlayAttached(_swingSound, gameObject, _volume);
     }
 
     /// <summary>
-    /// Inspector의 발도 사운드 ID와 음량으로 플레이어의 검 뽑기 소리를 한 번 재생한다.
-    /// FMOD 인스턴스는 매니저가 생성하고 자연 종료 시 해제한다.
+    /// 로드된 씬의 EnemyHealth에 사운드 연결 컴포넌트가 없으면 런타임으로 추가한다.
+    /// 비활성 풀 대상도 확인하며 원본 씬·프리팹과 협업자의 적 스크립트는 변경하지 않는다.
     /// </summary>
-    private void PlayUnsheath()
+    private void RegisterEnemyAudio()
     {
-        Managers.Sound.PlayAttached(_unsheathSound, gameObject, _volume);
+        foreach (EnemyHealth health in Object.FindObjectsByType<EnemyHealth>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (health.GetComponent<EnemyDamageAudio>() == null)
+                health.gameObject.AddComponent<EnemyDamageAudio>();
+    }
+
+    /// <summary>
+    /// cue의 모든 활성 음원을 position·attach·actionId와 기준 시간으로 예약한다.
+    /// presentationTime이면 베기 시작에서 앞뒤 조정하며 접촉·방어 사건은 양수 지연만 적용한다.
+    /// 프로필이 존재하면 누락·비활성 상황도 처리된 것으로 반환하여 기존 재생을 억제한다.
+    /// </summary>
+    private bool QueueCue(CombatSoundCue cue, Vector3 position, bool attach, int actionId = -1,
+        float baseTime = 0f, bool presentationTime = false)
+    {
+        if (_profile == null) return false;
+        foreach (CombatSoundEntry entry in _profile.Entries)
+        {
+            if (entry.Cue != cue) continue;
+            if (!entry.Enabled) continue;
+            float dueTime = presentationTime ? Mathf.Max(0f, baseTime + entry.TimeOffset)
+                : _cueClock + Mathf.Max(0f, entry.TimeOffset);
+            _pendingCues.Add(new PendingCue(entry, position, attach, actionId, dueTime, presentationTime, _player.CurrentState));
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 예약된 사운드의 행동 ID와 게임 시간을 검사하여 만료된 음원을 재생한다.
+    /// 취소·사망 예약을 제거하고 일시정지 중에는 호출하지 않아 지연 시간을 유지한다.
+    /// </summary>
+    private void UpdatePendingCues()
+    {
+        for (int i = 0; i < _pendingCues.Count;)
+        {
+            PendingCue pending = _pendingCues[i];
+            if ((_player.CurrentState == PlayerActionState.Dead && pending.Entry.Cue != CombatSoundCue.Damage)
+                || (pending.ActionId >= 0 && (pending.ActionId != _player.CurrentActionId
+                    || pending.ExpectedState != _player.CurrentState)))
+            {
+                _pendingCues.RemoveAt(i);
+                continue;
+            }
+            float elapsed = pending.PresentationTime ? _timing.GetPresentationElapsed(pending.ActionId) : _cueClock;
+            if (elapsed < pending.DueTime) { i++; continue; }
+            Managers.Sound.PlayCombatCue(pending.Entry, gameObject, pending.Position, pending.Attach);
+            _pendingCues.RemoveAt(i);
+        }
+    }
+
+    private readonly struct PendingCue
+    {
+        private readonly CombatSoundEntry _entry;
+        private readonly Vector3 _position;
+        private readonly bool _attach;
+        private readonly int _actionId;
+        private readonly float _dueTime;
+        private readonly bool _presentationTime;
+        private readonly PlayerActionState _expectedState;
+
+        internal CombatSoundEntry Entry => _entry;
+        internal Vector3 Position => _position;
+        internal bool Attach => _attach;
+        internal int ActionId => _actionId;
+        internal float DueTime => _dueTime;
+        internal bool PresentationTime => _presentationTime;
+        internal PlayerActionState ExpectedState => _expectedState;
+
+        /// <summary>
+        /// entry·position·attach·actionId·dueTime·presentationTime·expectedState를 하나의 예약으로 저장한다.
+        /// 재생 위치와 취소 조건을 보존하며 게임 시스템의 상태는 변경하지 않는다.
+        /// </summary>
+        internal PendingCue(CombatSoundEntry entry, Vector3 position, bool attach, int actionId, float dueTime, bool presentationTime,
+            PlayerActionState expectedState)
+        {
+            _entry = entry;
+            _position = position;
+            _attach = attach;
+            _actionId = actionId;
+            _dueTime = dueTime;
+            _presentationTime = presentationTime;
+            _expectedState = expectedState;
+        }
     }
 }

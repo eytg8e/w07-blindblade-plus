@@ -12,11 +12,18 @@ public class SoundManager
 {
     [Header("Configuration")]
     private readonly SoundLibrary _library;
+    private readonly CombatSoundProfile _combatProfile;
     private GameObject _footstepOnlyOwner;
 
     [Header("Effects")]
     private readonly List<ActiveEffect> _effects = new List<ActiveEffect>();
     private float _combatFocusUntil;
+    private readonly List<PendingCue> _pendingCues = new List<PendingCue>();
+    private bool _processingCues;
+#if UNITY_EDITOR
+    private readonly List<string> _recentPlayback = new List<string>();
+    public IReadOnlyList<string> RecentPlayback => _recentPlayback;
+#endif
 
     [Header("BGM")]
     private FMOD.Studio.EventInstance _bgm;
@@ -24,6 +31,8 @@ public class SoundManager
     private bool _bgmReleaseRequested;
     private GameObject _bgmOwner;
     private bool _hasBgmOwner;
+    private bool _loopBgm;
+    private float _bgmPlaybackVolume = 1f;
 
     [Header("Mixer")]
     private FMOD.Studio.Bus _bgmBus;
@@ -39,6 +48,7 @@ public class SoundManager
     internal SoundManager(SoundLibrary library)
     {
         _library = library;
+        _combatProfile = Resources.Load<CombatSoundProfile>(CombatSoundProfile.RESOURCE_PATH);
     }
 
     /// <summary>
@@ -89,21 +99,23 @@ public class SoundManager
             }
         }
         if (_bgm.isValid() && RuntimeManager.IsInitialized)
-            _bgm.setVolume(owner != null ? 0f : 1f);
+            _bgm.setVolume(owner != null ? 0f : _bgmPlaybackVolume);
     }
 
     /// <summary>
     /// soundId의 단발 효과음을 position에서 volume·pitch 배율로 재생한다.
-    /// owner로 수명을 연결하고 playDuringMovement로 이동 중 재생 예외를 지정하며 성공 시 true를 반환한다.
+    /// owner로 수명을 연결하고 playDuringMovement로 이동 예외를 지정한다. 공통 피격은 프로필 값으로 재생·예약하며 성공 시 true를 반환한다.
     /// </summary>
     public bool Play(SoundId soundId, Vector3 position = default, float volume = 1f, GameObject owner = null, bool playDuringMovement = false, float pitch = 1f)
     {
+        if (_combatProfile != null && (soundId == SoundId.SwordHit || soundId == SoundId.PlayerDamaged))
+            return PlayCue(CombatSoundCue.Damage, position, owner, false);
         return PlayEffect(soundId, position, owner, false, volume, playDuringMovement, pitch: pitch);
     }
 
     /// <summary>
     /// soundId의 단발 효과음을 source에 연결하여 volume·pitch 배율로 재생한다.
-    /// 발이 닿거나 공격하는 시점에 호출하며, 재생 중 source의 위치를 추적하고 성공하면 true를 반환한다.
+    /// source의 위치를 추적하며 공통 피격은 프로필 값으로 재생·예약한다. 성공 시 true를 반환한다.
     /// </summary>
     public bool PlayAttached(SoundId soundId, GameObject source, float volume = 1f, float pitch = 1f)
     {
@@ -112,6 +124,8 @@ public class SoundManager
             Debug.LogWarning("[SoundManager] PlayAttached requires a source GameObject.");
             return false;
         }
+        if (_combatProfile != null && (soundId == SoundId.SwordHit || soundId == SoundId.PlayerDamaged))
+            return PlayCue(CombatSoundCue.Damage, source.transform.position, source, true);
         return PlayEffect(soundId, source.transform.position, source, true, volume, pitch: pitch);
     }
 
@@ -130,10 +144,69 @@ public class SoundManager
     }
 
     /// <summary>
-    /// soundId의 2D BGM을 재생하고 다른 곡이면 이전 BGM을 즉시 정지한다.
-    /// 같은 BGM은 중복 생성하지 않고 owner에 소유권을 넘기며, 유효하면 true, 페이드 정지 중이면 false를 반환한다.
+    /// entry의 중앙 설정을 source 또는 position에 적용해 효과음을 재생한다.
+    /// 직접 이벤트·음량·pitch를 사용하고 변형 선택은 FMOD에 맡기며 재생 성공 여부를 반환한다.
     /// </summary>
-    public bool PlayBgm(SoundId soundId, GameObject owner = null)
+    public bool PlayCombatCue(CombatSoundEntry entry, GameObject source, Vector3 position, bool attach)
+    {
+        if (!entry.Enabled || (attach && source == null)) return false;
+        return PlayEffect(entry.SoundId, attach ? source.transform.position : position, source, attach, entry.Volume,
+            pitch: entry.Pitch,
+            eventOverride: entry.EventOverride.IsNull ? null : entry.EventOverride, cueName: entry.Cue.ToString());
+    }
+
+    /// <summary>
+    /// cue·position·owner·attach로 등록된 상황의 중앙 사운드 설정을 재생하거나 예약한다.
+    /// 호출부별 음량·pitch 대신 프로필 값을 사용하고 활성 항목의 재생 또는 예약 성공 여부를 반환한다.
+    /// </summary>
+    public bool PlayCue(CombatSoundCue cue, Vector3 position, GameObject owner = null, bool attach = false)
+    {
+        if (_combatProfile == null) return false;
+        bool accepted = false;
+        foreach (CombatSoundEntry entry in _combatProfile.Entries)
+        {
+            if (entry.Cue != cue || !entry.Enabled) continue;
+            if (entry.TimeOffset <= 0f) accepted |= PlayCombatCue(entry, owner, position, attach);
+            else
+            {
+                _pendingCues.Add(new PendingCue(entry, owner, position, attach, Time.time + entry.TimeOffset));
+                accepted = true;
+            }
+        }
+        return accepted;
+    }
+
+    /// <summary>
+    /// 게임 시간에 도달한 상황별 예약을 재생하고 비활성화된 소유자의 예약을 제거한다.
+    /// 예약을 먼저 제거하고 재진입을 차단하여 매니저 Update 호출에서도 중복 재생하지 않는다.
+    /// </summary>
+    private void UpdatePendingCues()
+    {
+        if (_processingCues) return;
+        _processingCues = true;
+        try
+        {
+            for (int i = 0; i < _pendingCues.Count;)
+            {
+                PendingCue pending = _pendingCues[i];
+                if (pending.HasOwner && (pending.Owner == null || !pending.Owner.activeInHierarchy))
+                {
+                    _pendingCues.RemoveAt(i);
+                    continue;
+                }
+                if (Time.time < pending.DueTime) { i++; continue; }
+                _pendingCues.RemoveAt(i);
+                PlayCombatCue(pending.Entry, pending.Owner, pending.Position, pending.Attach);
+            }
+        }
+        finally { _processingCues = false; }
+    }
+
+    /// <summary>
+    /// soundId의 2D BGM을 재생하고 다른 곡이면 이전 BGM을 즉시 정지한다.
+    /// 같은 BGM은 중복 생성하지 않고 owner·loop·volume을 갱신한다. 단발 이벤트는 loop 설정으로 종료 후 반복하며 성공 여부를 반환한다.
+    /// </summary>
+    public bool PlayBgm(SoundId soundId, GameObject owner = null, bool loop = false, float volume = 1f)
     {
         if (!ReferenceEquals(owner, null) && (owner == null || !owner.activeInHierarchy))
             return false;
@@ -145,6 +218,9 @@ public class SoundManager
                 return false;
             _bgmOwner = owner;
             _hasBgmOwner = owner != null;
+            _loopBgm = loop;
+            _bgmPlaybackVolume = Mathf.Clamp01(volume);
+            _bgm.setVolume(_footstepOnlyOwner != null ? 0f : _bgmPlaybackVolume);
             return true;
         }
         try
@@ -161,7 +237,9 @@ public class SoundManager
             _bgmReleaseRequested = false;
             _bgmOwner = owner;
             _hasBgmOwner = owner != null;
-            _bgm.setVolume(_footstepOnlyOwner != null ? 0f : 1f);
+            _loopBgm = loop;
+            _bgmPlaybackVolume = Mathf.Clamp01(volume);
+            _bgm.setVolume(_footstepOnlyOwner != null ? 0f : _bgmPlaybackVolume);
             FMOD.RESULT result = _bgm.start();
             if (result == FMOD.RESULT.OK)
                 return true;
@@ -181,6 +259,7 @@ public class SoundManager
     /// </summary>
     public void StopBgm(bool allowFadeOut = true)
     {
+        _loopBgm = false;
         if (_bgm.isValid() && RuntimeManager.IsInitialized)
         {
             _bgm.stop(allowFadeOut ? FMOD.Studio.STOP_MODE.ALLOWFADEOUT : FMOD.Studio.STOP_MODE.IMMEDIATE);
@@ -207,6 +286,7 @@ public class SoundManager
     {
         if (owner == null)
             return;
+        _pendingCues.RemoveAll(pending => pending.HasOwner && pending.Owner == owner);
         foreach (ActiveEffect effect in _effects)
         {
             if (effect.HasOwner && effect.Owner == owner)
@@ -218,11 +298,14 @@ public class SoundManager
 
     /// <summary>
     /// owner가 재생한 soundId 효과음만 allowFadeOut 방식으로 정지한다.
-    /// 전조·베기 취소에서 사용하며 다른 ID의 발소리·피격음과 BGM은 유지한다.
+    /// Library의 자연 종료 설정이면 단계 전환·취소에도 음원 끝을 유지하며 전체 정리 요청은 별도로 처리한다.
     /// </summary>
     public void StopFor(GameObject owner, SoundId soundId, bool allowFadeOut = false)
     {
         if (owner == null) return;
+        if (soundId == SoundId.SwordHit || soundId == SoundId.PlayerDamaged)
+            _pendingCues.RemoveAll(pending => pending.HasOwner && pending.Owner == owner);
+        if (_library.ShouldFinishNaturally(soundId)) return;
         foreach (ActiveEffect effect in _effects)
             if (effect.HasOwner && effect.Owner == owner && effect.Id == soundId)
                 StopEffect(effect.Instance, allowFadeOut);
@@ -234,6 +317,7 @@ public class SoundManager
     /// </summary>
     public void StopEffects()
     {
+        _pendingCues.Clear();
         if (RuntimeManager.IsInitialized)
         {
             foreach (ActiveEffect effect in _effects)
@@ -273,6 +357,7 @@ public class SoundManager
     /// </summary>
     internal void Update()
     {
+        UpdatePendingCues();
         for (int i = _effects.Count - 1; i >= 0; i--)
         {
             ActiveEffect effect = _effects[i];
@@ -290,18 +375,27 @@ public class SoundManager
         else if (!_bgm.isValid() || !RuntimeManager.IsInitialized)
             StopBgm(false);
         else if (_bgm.getPlaybackState(out var state) == FMOD.RESULT.OK && state == FMOD.Studio.PLAYBACK_STATE.STOPPED)
-            StopBgm(false);
+        {
+            if (!_loopBgm || _bgm.start() != FMOD.RESULT.OK) StopBgm(false);
+        }
     }
 
     /// <summary>
     /// soundId의 단발 효과음을 position 또는 source에서 volume·pitch 배율로 재생한다.
     /// attach로 위치 추적과 playDuringMovement로 이동 예외를 선택하고 parameterName과 label을 시작 전에 적용한다.
-    /// 이벤트 설정과 재생이 성공하면 true를 반환한다.
+    /// eventOverride와 cueName으로 중앙 설정의 음원 및 기록을 적용하며 재생 성공 여부를 반환한다.
     /// </summary>
-    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false, string parameterName = null, string label = null, float pitch = 1f)
+    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false, string parameterName = null, string label = null, float pitch = 1f,
+        EventReference? eventOverride = null, string cueName = null)
     {
-        if (!TryResolveEvent(soundId, SoundType.Effect, out EventReference eventReference))
-            return false;
+        _library.GetPlaybackSettings(soundId, out bool enabled, out float volumeMultiplier, out float pitchMultiplier, out bool useCallerLabel);
+        if (!enabled) return false;
+        volume *= volumeMultiplier;
+        pitch *= pitchMultiplier;
+        if (!useCallerLabel && cueName == null) parameterName = null;
+        EventReference eventReference;
+        if (eventOverride.HasValue) eventReference = eventOverride.Value;
+        else if (!TryResolveEvent(soundId, SoundType.Effect, out eventReference)) return false;
         _library.GetCueSettings(soundId, out bool combatCue, out bool spatialize2D);
         playDuringMovement |= combatCue;
         if (!CanPlayDuringMovement(soundId, source, playDuringMovement))
@@ -347,6 +441,10 @@ public class SoundManager
             var effect = new ActiveEffect(instance, source, soundId, playDuringMovement, position, attach,
                 volume, spatialize2D && !is3D, minimumDistance, maximumDistance);
             _effects.Add(effect);
+#if UNITY_EDITOR
+            _recentPlayback.Add($"{Time.time:F2}s | {cueName ?? soundId.ToString()} | {eventReference.Path} | {source?.name ?? "world"} | {label} | volume={volume:F2}");
+            if (_recentPlayback.Count > 16) _recentPlayback.RemoveAt(0);
+#endif
             foreach (ActiveEffect active in _effects) UpdateEffectMix(active);
             return true;
         }
@@ -358,7 +456,7 @@ public class SoundManager
     }
 
     /// <summary>
-    /// effect의 원래 음량에 전투 중 발소리 감쇠와 선택된 2D 공간 보정을 합성한다.
+    /// effect의 원래 음량에 Combat Cue 재생 직후의 발소리 감쇠와 선택된 2D 공간 보정을 합성한다.
     /// FMOD 0번 Listener의 위치·방향과 이동 소유자를 사용하며 채널 생성 전 패닝은 다음 Update에서 재시도한다.
     /// </summary>
     private void UpdateEffectMix(ActiveEffect effect)
@@ -454,6 +552,38 @@ public class SoundManager
         {
             Debug.LogWarning("[SoundManager] Bus not found in loaded banks: " + exception.Message);
             return false;
+        }
+    }
+
+    private readonly struct PendingCue
+    {
+        [Header("상황별 재생 예약")]
+        private readonly CombatSoundEntry _entry;
+        private readonly GameObject _owner;
+        private readonly bool _hasOwner;
+        private readonly Vector3 _position;
+        private readonly bool _attach;
+        private readonly float _dueTime;
+
+        internal CombatSoundEntry Entry => _entry;
+        internal GameObject Owner => _owner;
+        internal bool HasOwner => _hasOwner;
+        internal Vector3 Position => _position;
+        internal bool Attach => _attach;
+        internal float DueTime => _dueTime;
+
+        /// <summary>
+        /// entry·owner·position·attach·dueTime으로 상황별 음원의 예약과 소유 여부를 저장한다.
+        /// 게임의 피해 상태는 변경하지 않고 매니저가 재생할 입력만 보관한다.
+        /// </summary>
+        internal PendingCue(CombatSoundEntry entry, GameObject owner, Vector3 position, bool attach, float dueTime)
+        {
+            _entry = entry;
+            _owner = owner;
+            _hasOwner = owner != null;
+            _position = position;
+            _attach = attach;
+            _dueTime = dueTime;
         }
     }
 

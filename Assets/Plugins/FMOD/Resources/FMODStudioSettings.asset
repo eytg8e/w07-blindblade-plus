@@ -407,9 +407,7 @@ MonoBehaviour:
   - Master
   Banks:
   - BGM
-  - Combat
   - SFX
-  - Test
   BanksToLoad: []
   LiveUpdatePort: 9264
   EnableMemoryTracking: 0

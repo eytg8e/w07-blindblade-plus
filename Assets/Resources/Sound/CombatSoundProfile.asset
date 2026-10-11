@@ -1,0 +1,136 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d3725b298d015409caf354187b262f, type: 3}
+  m_Name: CombatSoundProfile
+  m_EditorClassIdentifier: 
+  _entries:
+  - _cue: 0
+    _enabled: 1
+    _soundId: 3
+    _eventOverride:
+      Guid:
+        Data1: 176830034
+        Data2: 1274157573
+        Data3: 1284546458
+        Data4: -1998290846
+      Path: event:/Sword/Sword_Swing/Swing_No_Impact
+    _volume: 0.6
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 9
+    _enabled: 1
+    _soundId: 17
+    _eventOverride:
+      Guid:
+        Data1: 1854708522
+        Data2: 1187881682
+        Data3: -242589823
+        Data4: 956313285
+      Path: event:/NormalHit/NormalHit
+    _volume: 0.8
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 10
+    _enabled: 1
+    _soundId: 10
+    _eventOverride:
+      Guid:
+        Data1: 1397534372
+        Data2: 1245446077
+        Data3: -1210213225
+        Data4: -1932248830
+      Path: event:/GuardSuccess/GuardSuccess
+    _volume: 0.8
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 12
+    _enabled: 1
+    _soundId: 4
+    _eventOverride:
+      Guid:
+        Data1: 1500451467
+        Data2: 1275304294
+        Data3: -1263986257
+        Data4: -1929883585
+      Path: event:/Sword/Sword_Hit/Enemy_Damaged
+    _volume: 0.8
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 11
+    _enabled: 1
+    _soundId: 11
+    _eventOverride:
+      Guid:
+        Data1: 638718233
+        Data2: 1126183674
+        Data3: -1704627042
+        Data4: -2144843143
+      Path: event:/ParrySuccess/ParrySuccess
+    _volume: 0.8
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 13
+    _enabled: 1
+    _soundId: 13
+    _eventOverride:
+      Guid:
+        Data1: -1719548379
+        Data2: 1135618626
+        Data3: -300832121
+        Data4: 1659245449
+      Path: event:/Sword/Sword_Hit/Enemy_Finished
+    _volume: 0.8
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 14
+    _enabled: 1
+    _soundId: 14
+    _eventOverride:
+      Guid:
+        Data1: 1369882125
+        Data2: 1236539273
+        Data3: -490288510
+        Data4: 866284262
+      Path: event:/Enemy/EnemyDie
+    _volume: 0.8
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 15
+    _enabled: 1
+    _soundId: 15
+    _eventOverride:
+      Guid:
+        Data1: 1354543472
+        Data2: 1110963836
+        Data3: -504178766
+        Data4: 28576152
+      Path: event:/Dodge/Dodge
+    _volume: 0.8
+    _pitch: 1
+    _timeOffset: 0
+  - _cue: 16
+    _enabled: 1
+    _soundId: 16
+    _eventOverride:
+      Guid:
+        Data1: -805074739
+        Data2: 1110757516
+        Data3: 1431091131
+        Data4: 1445526569
+      Path: event:/Enemy/EnemyPrepare
+    _volume: 1
+    _pitch: 1
+    _timeOffset: 0
+  _playAmbience: 1
+  _ambienceSound: 2
+  _ambienceVolume: 0.7
+  _loopAmbience: 1

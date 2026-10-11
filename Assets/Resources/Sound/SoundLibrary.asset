@@ -17,24 +17,34 @@ MonoBehaviour:
     _type: 1
     _event:
       Guid:
-        Data1: 1048976781
-        Data2: 1174801519
-        Data3: -716890462
-        Data4: 1211083272
-      Path: event:/Footsteps
+        Data1: -1154790919
+        Data2: 1273355752
+        Data3: 2136525975
+        Data4: -980650109
+      Path: event:/Footsteps/Footsteps_Tile
+    _enabled: 1
+    _volumeMultiplier: 0.65
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
     _combatCue: 0
     _spatialize2D: 0
+    _finishNaturally: 0
   - _id: 2
     _type: 0
     _event:
       Guid:
-        Data1: 213216736
-        Data2: 1167419970
-        Data3: -606255725
-        Data4: -1357935490
-      Path: event:/Test/TestAmbience
+        Data1: 893119049
+        Data2: 1275936746
+        Data3: -2134117201
+        Data4: -1304679765
+      Path: event:/Ambience/Ambience
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
     _combatCue: 0
     _spatialize2D: 0
+    _finishNaturally: 0
   - _id: 3
     _type: 1
     _event:
@@ -44,8 +54,13 @@ MonoBehaviour:
         Data3: 1284546458
         Data4: -1998290846
       Path: event:/Sword/Sword_Swing/Swing_No_Impact
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
     _combatCue: 0
     _spatialize2D: 0
+    _finishNaturally: 0
   - _id: 4
     _type: 1
     _event:
@@ -55,96 +70,157 @@ MonoBehaviour:
         Data3: -1263986257
         Data4: -1929883585
       Path: event:/Sword/Sword_Hit/Enemy_Damaged
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
     _combatCue: 1
     _spatialize2D: 0
-  - _id: 5
-    _type: 1
-    _event:
-      Guid:
-        Data1: 2107516262
-        Data2: 1157059682
-        Data3: 1778078601
-        Data4: -1443737530
-      Path: event:/WarCry
-    _combatCue: 0
-    _spatialize2D: 0
-  - _id: 6
-    _type: 1
-    _event:
-      Guid:
-        Data1: -1097931935
-        Data2: 1211882313
-        Data3: -942904443
-        Data4: 2061359677
-      Path: event:/Sword/Unsheath/Player_Sword_Release
-    _combatCue: 0
-    _spatialize2D: 0
+    _finishNaturally: 0
   - _id: 7
     _type: 1
     _event:
       Guid:
-        Data1: 596428109
-        Data2: 1292131727
-        Data3: 1131030957
-        Data4: -1012374735
-      Path: event:/EnemyFootsteps
+        Data1: -402080096
+        Data2: 1327994709
+        Data3: 1857727618
+        Data4: -1603979786
+      Path: event:/Footsteps/Footsteps_Wood
+    _enabled: 1
+    _volumeMultiplier: 1.4
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
     _combatCue: 0
     _spatialize2D: 0
-  - _id: 8
-    _type: 1
-    _event:
-      Guid:
-        Data1: -1097931935
-        Data2: 1211882313
-        Data3: -942904443
-        Data4: 2061359677
-      Path: event:/Sword/Unsheath/Player_Sword_Release
-    _combatCue: 1
-    _spatialize2D: 1
+    _finishNaturally: 0
   - _id: 9
     _type: 1
     _event:
       Guid:
-        Data1: 176830034
-        Data2: 1274157573
-        Data3: 1284546458
-        Data4: -1998290846
-      Path: event:/Sword/Sword_Swing/Swing_No_Impact
+        Data1: 609218268
+        Data2: 1174647988
+        Data3: 624561286
+        Data4: 493909528
+      Path: event:/Enemy/EnemyAttack
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
     _combatCue: 1
     _spatialize2D: 1
+    _finishNaturally: 1
   - _id: 10
     _type: 1
     _event:
       Guid:
-        Data1: -602247626
-        Data2: 1288995397
-        Data3: -1835342190
-        Data4: 1286039222
-      Path: event:/TemporarySwordHit
+        Data1: 1397534372
+        Data2: 1245446077
+        Data3: -1210213225
+        Data4: -1932248830
+      Path: event:/GuardSuccess/GuardSuccess
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
     _combatCue: 1
     _spatialize2D: 1
+    _finishNaturally: 0
   - _id: 11
     _type: 1
     _event:
       Guid:
-        Data1: -602247626
-        Data2: 1288995397
-        Data3: -1835342190
-        Data4: 1286039222
-      Path: event:/TemporarySwordHit
+        Data1: 638718233
+        Data2: 1126183674
+        Data3: -1704627042
+        Data4: -2144843143
+      Path: event:/ParrySuccess/ParrySuccess
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
     _combatCue: 1
     _spatialize2D: 1
-  - _id: 12
+    _finishNaturally: 0
+  - _id: 13
     _type: 1
     _event:
       Guid:
-        Data1: 1500451467
-        Data2: 1275304294
-        Data3: -1263986257
-        Data4: -1929883585
-      Path: event:/Sword/Sword_Hit/Enemy_Damaged
+        Data1: -1719548379
+        Data2: 1135618626
+        Data3: -300832121
+        Data4: 1659245449
+      Path: event:/Sword/Sword_Hit/Enemy_Finished
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
+    _combatCue: 1
+    _spatialize2D: 1
+    _finishNaturally: 0
+  - _id: 14
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1369882125
+        Data2: 1236539273
+        Data3: -490288510
+        Data4: 866284262
+      Path: event:/Enemy/EnemyDie
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
     _combatCue: 1
     _spatialize2D: 0
+    _finishNaturally: 0
+  - _id: 15
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1354543472
+        Data2: 1110963836
+        Data3: -504178766
+        Data4: 28576152
+      Path: event:/Dodge/Dodge
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 0
+  - _id: 16
+    _type: 1
+    _event:
+      Guid:
+        Data1: -805074739
+        Data2: 1110757516
+        Data3: 1431091131
+        Data4: 1445526569
+      Path: event:/Enemy/EnemyPrepare
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 0
+  - _id: 17
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1854708522
+        Data2: 1187881682
+        Data3: -242589823
+        Data4: 956313285
+      Path: event:/NormalHit/NormalHit
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 0
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
   _combatFocusDuration: 0.35

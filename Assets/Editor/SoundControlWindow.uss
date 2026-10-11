@@ -1,0 +1,22 @@
+.sound-control {
+    padding: 8px;
+}
+.toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.settings {
+    flex-grow: 1;
+}
+.cue {
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom-width: 1px;
+    border-bottom-color: #555555;
+}
+.status, .records {
+    white-space: normal;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
