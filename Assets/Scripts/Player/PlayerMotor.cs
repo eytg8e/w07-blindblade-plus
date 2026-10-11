@@ -51,7 +51,6 @@ public sealed class PlayerMotor : MonoBehaviour
 
     [Header("Look")]
     [SerializeField, Min(0f)] private float _lookSensitivity = 0.12f;
-    [SerializeField, Range(1f, 89f)] private float _pitchLimit = 75f;
 
     [Header("Footsteps")]
     [SerializeField, Min(0.01f), Tooltip("보행 중 발소리 사이의 시간. 이동을 멈추는 구간은 만들지 않습니다.")] private float _stepInterval = 0.36f;
@@ -78,7 +77,6 @@ public sealed class PlayerMotor : MonoBehaviour
     private Vector3 _planarVelocity;
     private float _verticalVelocity;
     private float _yaw;
-    private float _pitch;
     private float _stepDistanceAccumulated;
     private float _stepElapsed;
     private bool _stepInProgress;
@@ -102,16 +100,13 @@ public sealed class PlayerMotor : MonoBehaviour
 
     [Header("전투 카메라 반동")]
     [SerializeField, Min(0f)] private float _recoilReturnSpeed = 18f;
-    private Vector3 _recoilEuler;
     private Vector3 _recoilOffset;
-    public Vector3 ViewForward => Quaternion.Euler(0f, _yaw, 0f) * Quaternion.Euler(_pitch, 0f, 0f) * Vector3.forward;
+    public Vector3 ViewForward => Quaternion.Euler(0f, _yaw, 0f) * Vector3.forward;
     public Vector3 ViewOrigin => _cameraPivot.parent.TransformPoint(GetCameraBasePosition());
 
-    /// <summary>direction과 strength로 시각 반동을 누적한다. 논리적인 시점·조준 방향과 캐릭터 위치는 유지한다.</summary>
+    /// <summary>strength로 카메라 위치 반동만 누적하고 회전과 논리적인 조준 방향은 유지한다.</summary>
     public void AddCombatRecoil(Vector3 direction, float strength)
     {
-        float side = Vector3.Dot(transform.right, direction) < 0f ? -1f : 1f;
-        _recoilEuler = Vector3.ClampMagnitude(_recoilEuler + new Vector3(strength, 0f, side * strength * 1.5f), 5f);
         _recoilOffset = Vector3.ClampMagnitude(_recoilOffset + Vector3.back * (0.025f * strength), 0.08f);
     }
 
@@ -127,10 +122,9 @@ public sealed class PlayerMotor : MonoBehaviour
     {
         if (_cameraPivot == null) return;
         float decay = Mathf.Exp(-_recoilReturnSpeed * Time.deltaTime);
-        _recoilEuler *= decay;
         _recoilOffset *= decay;
         _cameraPivot.localPosition = GetCameraBasePosition() + _recoilOffset;
-        _cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f) * Quaternion.Euler(_recoilEuler);
+        _cameraPivot.localRotation = Quaternion.identity;
     }
 
     public event Action<PlayerFootstepEvent> FootstepEmitted;
@@ -166,7 +160,7 @@ public sealed class PlayerMotor : MonoBehaviour
             _crouchedCharacterHeight, _characterController.radius * 2f, _standingCharacterHeight);
         if (_cameraPivot != null)
         {
-            _pitch = NormalizeAngle(_cameraPivot.localEulerAngles.x);
+            _cameraPivot.localRotation = Quaternion.identity;
             _standingCameraLocalPosition = _cameraPivot.localPosition;
             _crouchedCameraHeight = Mathf.Clamp(
                 _crouchedCameraHeight, 0f, Mathf.Max(0f, _standingCameraLocalPosition.y));
@@ -568,17 +562,16 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
         DashEnded?.Invoke(result);
     }
 
-    /// <summary>누적 시점 변화량으로 플레이어 yaw와 카메라 pitch를 갱신합니다.</summary>
+    /// <summary>누적 입력의 수평 변화량으로 플레이어 방향을 갱신하고 카메라의 상하 회전을 제거한다.</summary>
     private void ApplyLook()
     {
         if (_pendingLookDelta.sqrMagnitude <= 0f)
             return;
 
         _yaw += _pendingLookDelta.x * _lookSensitivity;
-        _pitch = Mathf.Clamp(_pitch - _pendingLookDelta.y * _lookSensitivity, -_pitchLimit, _pitchLimit);
         transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
         if (_cameraPivot != null)
-            _cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
+            _cameraPivot.localRotation = Quaternion.identity;
         _pendingLookDelta = Vector2.zero;
     }
 
@@ -702,14 +695,6 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
         _stepDistanceAccumulated = 0f;
     }
 
-    /// <summary>Unity 각도 값을 -180도에서 180도 범위로 정규화합니다.</summary>
-    private static float NormalizeAngle(float angle)
-    {
-        if (angle > 180f)
-            angle -= 360f;
-        return angle;
-    }
-
     private void OnDisable()
     {
         _isDashing = false;
@@ -732,4 +717,3 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
     }
 #endif
 }
-
