@@ -15,7 +15,6 @@ public sealed class GameSceneInitializer : MonoBehaviour
     [SerializeField] private Vector2 _memoryMinimum = new Vector2(-24f, -6f);
     [SerializeField] private Vector2 _memorySize = new Vector2(48f, 76f);
     [SerializeField] private bool _useCorridorRule;
-    [SerializeField] private bool _showGameplayControls;
     [Header("검 소음")]
     [SerializeField] private bool _useSwordNoise;
     [SerializeField, Min(1f)] private float _swordHearingDistance = 40f;
@@ -74,7 +73,6 @@ public sealed class GameSceneInitializer : MonoBehaviour
         _katanaInput = _player.GetComponent<KatanaInputCommandAdapter>();
         if (_legacyInput != null && _legacyInput.isActiveAndEnabled) _legacyInput.Initialize();
         if (_katanaInput != null && _katanaInput.isActiveAndEnabled) _katanaInput.Initialize();
-        if (_showGameplayControls) _ui.Show<GameplayControlsUI>();
         InitializeSensory();
         if (_useTerrainMemory)
         {

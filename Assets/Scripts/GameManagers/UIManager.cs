@@ -23,24 +23,13 @@ public sealed class UIManager : MonoBehaviour
             return;
         }
         _canvas.enabled = true;
-        if (UnityEngine.EventSystems.EventSystem.current == null)
-        {
-            GameObject eventSystem = new GameObject("UI EventSystem");
-            eventSystem.transform.SetParent(transform, false);
-            eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            eventSystem.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>().AssignDefaultActions();
-        }
     }
 
     /// <summary>T 화면을 최초 조회 시 리소스에서 생성·초기화하고 이후에는 캐싱한 화면을 반환한다.</summary>
     public T Get<T>() where T : GameUI
     {
         if (_views.TryGetValue(typeof(T), out GameUI view) && view != null) return (T)view;
-        if (!ResourcePaths.TryGetUIPath(typeof(T), out string path))
-        {
-            Debug.LogError($"UI 리소스 경로가 등록되지 않았습니다: {typeof(T).Name}", this);
-            return null;
-        }
+        var path = ResourcePaths.UI_PATH + typeof(T).Name;
         GameObject instance = Managers.Resource.Instantiate(path, _canvas.transform, usePool: false);
         if (instance == null) return null;
         T screen = instance.GetComponent<T>();
