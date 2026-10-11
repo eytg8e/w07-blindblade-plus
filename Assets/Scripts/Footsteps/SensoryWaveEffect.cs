@@ -9,8 +9,8 @@ public sealed class FootstepWave : SensoryEffect
     [SerializeField] private SpriteRenderer _ringRenderer;
     [SerializeField, Tooltip("기본 파동 링 색상")]
     private Color _ringColor = Color.white;
-    [SerializeField, Min(0.01f), Tooltip(" 확산 및 표시 수명(초)")]
-    private float _duration = 0.6f;
+    [SerializeField, Min(0.01f), Tooltip("확산 및 표시 수명(초)")]
+    private float _duration = 1.4f;
     [SerializeField, Min(0f), Tooltip("시작 반경(미터), 원본 링 지름은 1미터 기준")]
     private float _startRadius = 0.05f;
     [SerializeField, Min(0f), Tooltip("종료 반경(미터)")]
@@ -55,7 +55,7 @@ public sealed class FootstepWave : SensoryEffect
     /// </summary>
     protected override void ApplyFrame(float elapsed, float progress)
     {
-        float expansion = 1f - Mathf.Pow(1f - progress, 2f);
+        float expansion = Mathf.SmoothStep(0f, 1f, progress);
         _ringRenderer.transform.localScale = Vector3.one
             * (Mathf.Lerp(_startRadius, _endRadius, expansion) * 2f);
         Color color = _ringColor;
