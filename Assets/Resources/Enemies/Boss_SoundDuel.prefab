@@ -71,6 +71,7 @@ GameObject:
   - component: {fileID: 4283722663164136279}
   - component: {fileID: 7885862450644974965}
   - component: {fileID: 805973891534154810}
+  - component: {fileID: 900100100}
   m_Layer: 0
   m_Name: Boss_SoundDuel
   m_TagString: Untagged
@@ -165,7 +166,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b256b4bb12560a41a0634808047e235, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 200
+  _maxHealth: 100
   _dieOnAnyHit: 0
   _hitCollider: {fileID: 6529499087085923373}
   _cancelAttackOnHit: 0
@@ -280,6 +281,7 @@ MonoBehaviour:
   _melee: {fileID: 4283722663164136279}
   _patternWaitMin: 1
   _patternWaitMax: 2
+  _projectilePrefab: {fileID: 2285517556864344112, guid: 6c377b39585c5364eb80b5f8c8fcde63, type: 3}
   _roamDuration: 7
   _roamRadius: 7
   _roamDestinationInterval: 2.5
@@ -426,3 +428,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _ignorePerception: 0
+--- !u!114 &900100100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1251805882621175175}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bf433078aee4c0780b6c08863813ba4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _size: {x: 420, y: 16}
+  _topOffset: 36

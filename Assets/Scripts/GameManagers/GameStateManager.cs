@@ -50,6 +50,7 @@ public sealed class GameStateManager : MonoBehaviour
         _frozen = true;
         ChangeState(GameplayState.GameOver);
         _player.SetDead();
+        _previousTimeScale = Time.timeScale;
         Managers.Sound.SetFootstepOnlyOwner(null);
         Managers.Sound.StopEffects();
         Time.timeScale = 0f;

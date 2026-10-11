@@ -17,6 +17,10 @@ public sealed class FootstepWave : SensoryEffect
     private float _endRadius = 1.5f;
     private bool _isConfigured;
 
+    public float Duration => _duration;
+    public float StartRadius => _startRadius;
+    public float EndRadius => _endRadius;
+
     void Awake()
     {
         _isConfigured = _ringRenderer != null;
@@ -37,7 +41,8 @@ public sealed class FootstepWave : SensoryEffect
     }
 
     /// <summary>
-    /// 공통 가시성과 인스펙터의 기본 수명·반경으로 파동을 독립 재생한다.
+    /// 가시성과 인스펙터의 수명·반경으로 파동을 재생한다.
+    /// visibility를 사용하며, 풀에서 재사용할 때 링 알파와 시작 크기를 초기화한다.
     /// </summary>
     public void Play(float visibility = 1f)
     {
@@ -46,6 +51,10 @@ public sealed class FootstepWave : SensoryEffect
             Managers.Resource.Destroy(gameObject);
             return;
         }
+        Color startColor = _ringColor;
+        startColor.a *= Mathf.Clamp01(visibility);
+        _ringRenderer.color = startColor;
+        _ringRenderer.transform.localScale = Vector3.one * (_startRadius * 2f);
         _ringRenderer.enabled = true;
         BeginPlayback(_duration, visibility);
     }

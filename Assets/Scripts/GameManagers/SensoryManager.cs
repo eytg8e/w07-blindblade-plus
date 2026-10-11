@@ -30,6 +30,18 @@ public sealed class SensoryManager : MonoBehaviour
     public bool IsReady => _initialized && _observer != null && isActiveAndEnabled;
     public Transform Observer => _observer;
     public int ActiveEffectCount => _activeEffects.Count;
+    public float CrouchPulseInterval
+    {
+        get
+        {
+            SensoryPerceptionMask perceptionMask = GetComponent<SensoryPerceptionMask>();
+            float perceptionDuration = perceptionMask != null ? perceptionMask.SoundLifetime : 0f;
+            float waveDuration = _wavePrefab != null ? _wavePrefab.Duration : 0f;
+            return Mathf.Max(perceptionDuration, waveDuration);
+        }
+    }
+    public float WaveStartRadius => _wavePrefab != null ? _wavePrefab.StartRadius : 0f;
+    public float WaveEndRadius => _wavePrefab != null ? _wavePrefab.EndRadius : 0f;
     public event Action<SensoryEvent> PerceptionRequested;
 
     private readonly struct ActiveEffect
@@ -152,7 +164,7 @@ public sealed class SensoryManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 공통 거리 판정을 통과한 일반 사건만 인지 알림으로 전달하고 효과를 재생한다.
+    /// 공통 거리 및 표시 조건을 통과해 효과를 재생하고, 생성 성공한 웨이브만 인지 알림으로 전달한다.
     /// 발자국 요청은 좌우 선택과 표시 정책을 적용하며 주변 시야 영역은 확장하지 않는다.
     /// </summary>
     private bool EmitEffects(SensoryEvent sensoryEvent, bool showFootstep, bool isLeft = false, bool showWhileMoving = false)
@@ -169,8 +181,6 @@ public sealed class SensoryManager : MonoBehaviour
         float visibility = CalculateVisibility(Vector3.Distance(sensoryEvent.Position, _observer.position));
         if (visibility <= 0f)
             return false;
-        if (!showFootstep)
-            PerceptionRequested?.Invoke(sensoryEvent);
         if (!_effectsVisible || (showFootstep && _footstepsSuppressed && !showWhileMoving))
             return false;
         Quaternion rotation = Quaternion.LookRotation(sensoryEvent.Direction, sensoryEvent.SurfaceNormal);
@@ -197,6 +207,8 @@ public sealed class SensoryManager : MonoBehaviour
                 spawned |= Track(effect, sensoryEvent.Position);
             }
         }
+        if (spawned && !showFootstep)
+            PerceptionRequested?.Invoke(sensoryEvent);
         return spawned;
     }
 

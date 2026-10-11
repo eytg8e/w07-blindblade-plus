@@ -67,6 +67,7 @@ public sealed class BossPresentation : MonoBehaviour
     {
         _boss.StateChanged += HandleState;
         _boss.ChargePreparing += HandleChargePreparing;
+        _boss.RangedPreparing += HandleRangedPreparing;
         _boss.Teleported += ResetSteps;
         _melee.TelegraphStarted += HandleStrikePreparing;
         ResetSteps();
@@ -82,6 +83,7 @@ public sealed class BossPresentation : MonoBehaviour
         _overlayRoutine = null;
         _boss.StateChanged -= HandleState;
         _boss.ChargePreparing -= HandleChargePreparing;
+        _boss.RangedPreparing -= HandleRangedPreparing;
         _boss.Teleported -= ResetSteps;
         _melee.TelegraphStarted -= HandleStrikePreparing;
         if (Managers.IsInitialized)
@@ -141,6 +143,13 @@ public sealed class BossPresentation : MonoBehaviour
             Managers.Sound.Play(_duelCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _duelCryPitch);
         else if (state == BossState.Stunned)
             Managers.Sound.Play(_stunCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _stunCryPitch);
+    }
+
+    /// <summary>원거리 발사 준비마다 기존 공격 전조음을 보스 위치에서 재생한다.</summary>
+    private void HandleRangedPreparing()
+    {
+        Managers.Sound.Play(SoundId.EnemyDetected, transform.position, owner: gameObject, playDuringMovement: true);
+        if (_perceptionMask != null) _perceptionMask.RevealFootstep(transform.position);
     }
 
     /// <summary>돌진 준비 시 현재 보스 위치에서 기합1을 재생한다.</summary>

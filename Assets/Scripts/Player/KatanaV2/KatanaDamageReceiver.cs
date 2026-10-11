@@ -32,7 +32,7 @@ public sealed class KatanaDamageReceiver : PlayerHealth
     {
         if (!isActiveAndEnabled || context.Amount <= 0f || _combat.Player.IsPaused
             || Time.timeScale <= 0f || _combat.Player.CurrentState == PlayerActionState.Dead) return;
-        if (_combat.TryDefendIncoming(context, IsFrontMelee(context) || IsFrontBossCharge(context))) return;
+        if (_combat.TryDefendIncoming(context, IsFrontMelee(context) || IsFrontBossCharge(context) || IsFrontBossRanged(context))) return;
         base.TakeDamage(context);
     }
 
@@ -60,6 +60,16 @@ public sealed class KatanaDamageReceiver : PlayerHealth
         if (context.PatternId != "BossCharge" || context.Instigator == null) return false;
         BossController boss = context.Instigator.GetComponent<BossController>();
         if (boss == null || (boss.State != BossState.Charging && boss.State != BossState.ChainCharge)) return false;
+        Vector3 incoming = Vector3.ProjectOnPlane(-context.Direction, Vector3.up);
+        return incoming.sqrMagnitude > 0.0001f
+            && Vector3.Angle(_motor.ViewForward, incoming) <= _frontArc * 0.5f;
+    }
+
+    /// <summary>보스 원거리 투사체의 진입 방향이 전방 방어 각도 안인지 반환한다. 발사 후 보스 상태와 무관하게 검사한다.</summary>
+    private bool IsFrontBossRanged(DamageContext context)
+    {
+        if (context.PatternId != "BossRanged" || context.Instigator == null
+            || context.Instigator.GetComponent<BossController>() == null) return false;
         Vector3 incoming = Vector3.ProjectOnPlane(-context.Direction, Vector3.up);
         return incoming.sqrMagnitude > 0.0001f
             && Vector3.Angle(_motor.ViewForward, incoming) <= _frontArc * 0.5f;
