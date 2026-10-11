@@ -19,17 +19,17 @@ public sealed class BossPresentation : MonoBehaviour
     [SerializeField] private SoundId _footstepSound = SoundId.EnemyFootstep;
 
     [Header("돌진 기합1")]
-    [SerializeField] private SoundId _chargeCry = SoundId.WarCry;
+    [SerializeField] private SoundId _chargeCry = SoundId.BossChargeCry;
     [SerializeField, Range(0.1f, 3f)] private float _chargeCryPitch = 0.85f;
 
     [Header("정면승부 기합2와 공격 직전음")]
     [SerializeField] private BossMeleeAttack _melee;
-    [SerializeField] private SoundId _duelCry = SoundId.WarCry;
+    [SerializeField] private SoundId _duelCry = SoundId.BossDuelCry;
     [SerializeField, Range(0.1f, 3f)] private float _duelCryPitch = 1.25f;
     [SerializeField] private SoundId _strikeCue = SoundId.EnemySwordSwing;
 
     [Header("스턴 비명1")]
-    [SerializeField] private SoundId _stunCry = SoundId.WarCry;
+    [SerializeField] private SoundId _stunCry = SoundId.BossStunCry;
     [SerializeField, Range(0.1f, 3f)] private float _stunCryPitch = 0.55f;
 
     void Awake()

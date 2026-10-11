@@ -38,7 +38,7 @@ public sealed class BossController : MonoBehaviour
     [SerializeField, Min(0.1f)] private float _roamDestinationInterval = 2.5f;
     [SerializeField, Min(0.1f)] private float _roamSpeed = 2f;
     private float _roamUntil;
-    private readonly NavMeshPath _path = new NavMeshPath();
+    private NavMeshPath _path;
 
     [Header("돌진")]
     [SerializeField, Min(0.1f), Tooltip("기합 이후 돌진 준비 시간(초)")]
@@ -76,6 +76,7 @@ public sealed class BossController : MonoBehaviour
         _motor = GetComponent<EnemyMotor>();
         _sensor = GetComponent<EnemySensor>();
         _agent = GetComponent<NavMeshAgent>();
+        _path = new NavMeshPath();
     }
 
     void Start()
@@ -213,6 +214,7 @@ public sealed class BossController : MonoBehaviour
     /// <summary>desired 주변의 같은 에이전트 유형·영역에 속한 지면을 찾아 position으로 반환한다.</summary>
     private bool TrySamplePosition(Vector3 desired, out Vector3 position)
     {
+        desired.y = _agent.nextPosition.y;
         NavMeshQueryFilter filter = new NavMeshQueryFilter { agentTypeID = _agent.agentTypeID, areaMask = _agent.areaMask };
         bool found = NavMesh.SamplePosition(desired, out NavMeshHit hit, 0.5f, filter);
         position = hit.position;
