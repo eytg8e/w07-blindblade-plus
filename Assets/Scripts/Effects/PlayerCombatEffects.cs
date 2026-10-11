@@ -20,6 +20,10 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     [SerializeField, Min(0f)] private float _hitRecoilStrength = 0.25f;
     private PlayerMotor _motor;
 
+    [Header("방어 섬광 표시")]
+    [SerializeField, Min(0.1f)] private float _defenseEffectDistance = 0.6f;
+    [SerializeField, Min(0f)] private float _defenseEffectScreenOffset = 0.12f;
+
     private EffectManager _effects;
     private int _actionId;
     private int _lastContactAction = -1;
@@ -46,7 +50,6 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         _effects = Game.Instance.EffectManager;
         if (!_effects.IsReady)
             _effects.Initialize();
-        _effects.SetOutlineVfxEnabled(false);
     }
 
     void OnDisable()
@@ -128,13 +131,23 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     }
 
     /// <summary>
-    /// result의 검 접촉점에 GuardClash를 요청한다.
-    /// 일반 가드와 정확한 패링을 표현하며 혈흔이나 피해는 추가하지 않는다.
+    /// result의 방어 종류로 가드·패링 섬광을 선택한다.
+    /// 접촉 방향을 화면 중앙 근처에 표시하고 최소 거리를 확보하여 섬광이 잘리지 않게 한다.
     /// </summary>
     private void HandleDefense(KatanaDefenseResult result)
     {
-        if (_effects != null && _effects.IsReady)
-            _effects.Play(EffectId.GuardClash, result.Point);
+        if (_effects == null || !_effects.IsReady) return;
+        Vector3 forward = _motor.ViewForward;
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        if (right.sqrMagnitude < 0.001f) right = _player.transform.right;
+        Vector3 up = Vector3.Cross(forward, right).normalized;
+        Vector3 offset = result.Point - _motor.ViewOrigin;
+        float depth = Mathf.Max(_defenseEffectDistance, Vector3.Dot(offset, forward));
+        Vector3 point = _motor.ViewOrigin + forward * depth
+            + right * Mathf.Clamp(Vector3.Dot(offset, right), -_defenseEffectScreenOffset, _defenseEffectScreenOffset)
+            + up * Mathf.Clamp(Vector3.Dot(offset, up), -_defenseEffectScreenOffset, _defenseEffectScreenOffset);
+        _effects.Play(result.IsParry ? EffectId.ParryClash : EffectId.GuardClash, point,
+            Quaternion.LookRotation(-forward, up));
     }
 
     /// <summary>

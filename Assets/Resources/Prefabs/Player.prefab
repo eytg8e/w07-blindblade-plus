@@ -378,6 +378,9 @@ MonoBehaviour:
   _iaidoSlashDuration: 0.6
   _normalStrikeWindow: 0.16
   _strikeWindow: 0.2
+  _counterHitTime: 0.12
+  _counterActionDuration: 0.34
+  _counterStrikeWindow: 0.12
 --- !u!114 &4370518358218400631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -410,6 +413,7 @@ MonoBehaviour:
   _comboResetDelay: 0.65
   _parryWindow: 0.18
   _blockInputRecovery: 0.18
+  _counterWindow: 0.5
   _sheatheDuration: 0.3
 --- !u!114 &2388544270244161858
 MonoBehaviour:
@@ -467,6 +471,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _showOverlay: 1
   _logEvents: 1
+  _showCombatFeedback: 1
+  _feedbackDuration: 0.8
 --- !u!114 &3744323796873655163
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -519,6 +525,8 @@ MonoBehaviour:
   _physicalContacts: {fileID: 3796482945788141926}
   _katana: {fileID: 5663976393034796336}
   _hitRecoilStrength: 0.25
+  _defenseEffectDistance: 0.6
+  _defenseEffectScreenOffset: 0.12
 --- !u!114 &1080894898460965423
 MonoBehaviour:
   m_ObjectHideFlags: 0

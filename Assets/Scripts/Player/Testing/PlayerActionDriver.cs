@@ -16,6 +16,13 @@ public sealed class PlayerActionDriver : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _normalStrikeWindow = 0.16f;
     [SerializeField, Min(0.01f)] private float _strikeWindow = 0.22f;
 
+    [Header("패링 반격 타이밍")]
+    [SerializeField, Min(0.01f)] private float _counterHitTime = 0.12f;
+    [SerializeField, Min(0.01f)] private float _counterActionDuration = 0.34f;
+    [SerializeField, Min(0.01f)] private float _counterStrikeWindow = 0.12f;
+    private KatanaCombatCoordinator _combat;
+    private bool _activeNormalAttackIsCounter;
+
     private PlayerActionState _activeState;
     private int _activeActionId;
     private float _elapsed;
@@ -33,6 +40,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
             _player = GetComponent<PlayerController>();
         if (_animationEventRelay == null)
             _animationEventRelay = GetComponent<PlayerAnimationEventRelay>();
+        _combat = GetComponent<KatanaCombatCoordinator>();
     }
 
     private void Update()
@@ -62,6 +70,8 @@ public sealed class PlayerActionDriver : MonoBehaviour
             _endSent = false;
             _activeNormalAttackUsesIaidoTiming = state == PlayerActionState.NormalAttack
                 && _useIaidoTimingForNextNormalAttack;
+            _activeNormalAttackIsCounter = state == PlayerActionState.NormalAttack
+                && _combat != null && _combat.IsCounterAttack;
             if (state == PlayerActionState.NormalAttack)
                 _useIaidoTimingForNextNormalAttack = false;
         }
@@ -72,10 +82,11 @@ public sealed class PlayerActionDriver : MonoBehaviour
         _elapsed += Time.deltaTime;
         bool iaidoTiming = state == PlayerActionState.IaidoSlash
             || state == PlayerActionState.NormalAttack && _activeNormalAttackUsesIaidoTiming;
-        float hitTime = iaidoTiming ? _iaidoHitTime : _normalHitTime;
-        float actionDuration = iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
+        float hitTime = _activeNormalAttackIsCounter ? _counterHitTime : iaidoTiming ? _iaidoHitTime : _normalHitTime;
+        float actionDuration = _activeNormalAttackIsCounter ? _counterActionDuration : iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
 
-        float strikeWindow = state == PlayerActionState.NormalAttack ? _normalStrikeWindow : _strikeWindow;
+        float strikeWindow = _activeNormalAttackIsCounter ? _counterStrikeWindow
+            : state == PlayerActionState.NormalAttack ? _normalStrikeWindow : _strikeWindow;
         float strikeStart = Mathf.Max(0f, hitTime - strikeWindow * 0.5f);
         float strikeEnd = Mathf.Min(actionDuration, hitTime + strikeWindow * 0.5f);
         if (state == PlayerActionState.NormalAttack && !_impactSent && _elapsed >= strikeStart)
@@ -121,6 +132,12 @@ public sealed class PlayerActionDriver : MonoBehaviour
     /// <summary>kind의 실제 적중·종료 시간을 읽어 시각 모션에 제공한다. 드라이버의 판정 시간은 변경하지 않는다.</summary>
     public void GetPresentationTiming(PlayerAttackKind kind, out float impactTime, out float duration)
     {
+        if (kind == PlayerAttackKind.Normal && _combat != null && _combat.IsCounterAttack)
+        {
+            impactTime = _counterHitTime;
+            duration = _counterActionDuration;
+            return;
+        }
         bool iaido = kind == PlayerAttackKind.IaidoFinisher;
         impactTime = iaido ? _iaidoHitTime : _normalHitTime;
         duration = iaido ? _iaidoSlashDuration : _normalActionDuration;
@@ -154,7 +171,8 @@ public sealed class PlayerActionDriver : MonoBehaviour
     public void GetStrikeWindow(PlayerAttackKind kind, out float start, out float end)
     {
         GetPresentationTiming(kind, out float impact, out float duration);
-        float window = kind == PlayerAttackKind.Normal ? _normalStrikeWindow : _strikeWindow;
+        float window = kind == PlayerAttackKind.Normal
+            ? (_combat != null && _combat.IsCounterAttack ? _counterStrikeWindow : _normalStrikeWindow) : _strikeWindow;
         start = Mathf.Max(0f, impact - window * 0.5f);
         end = Mathf.Min(duration, impact + window * 0.5f);
     }
@@ -163,5 +181,6 @@ public sealed class PlayerActionDriver : MonoBehaviour
     {
         _normalHitTime = Mathf.Min(_normalHitTime, _normalActionDuration);
         _iaidoHitTime = Mathf.Min(_iaidoHitTime, _iaidoSlashDuration);
+        _counterHitTime = Mathf.Min(_counterHitTime, _counterActionDuration);
     }
 }

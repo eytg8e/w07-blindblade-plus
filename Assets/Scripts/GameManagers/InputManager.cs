@@ -57,7 +57,8 @@ public sealed class InputManager : MonoBehaviour
         player.AddLookInput(_actions.Player.Look.ReadValue<Vector2>());
         if (_guard.IsPressed() && !player.IsGuarding) _combat.BeginDefense();
         if (_guard.WasReleasedThisFrame()) _combat.EndDefense();
-        if (_actions.Player.Attack.WasPressedThisFrame() && !player.IsGuarding) _combat.RequestAttack();
+        if (_actions.Player.Attack.WasPressedThisFrame() && (!player.IsGuarding || _combat.CanCounterAttack))
+            _combat.RequestAttack();
     }
 
     void OnApplicationFocus(bool focused)
