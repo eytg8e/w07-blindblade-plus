@@ -244,6 +244,7 @@ GameObject:
   - component: {fileID: 900100200}
   - component: {fileID: 900100300}
   - component: {fileID: 900100400}
+  - component: {fileID: 5463530082543962319}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -321,7 +322,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _lookSensitivity: 0.12
-  _pitchLimit: 75
   _stepInterval: 0.36
   _normalFootstepNoise: 0.6
   _quietFootstepNoise: 0.2
@@ -424,6 +424,7 @@ MonoBehaviour:
   _comboBufferWindow: 0.2
   _comboFollowThrough: 0.12
   _comboResetDelay: 0.65
+  _targetedAttackMinimumDuration: 0.45
   _parryWindow: 0.18
   _blockInputRecovery: 0.18
   _counterWindow: 0.5
@@ -511,6 +512,7 @@ MonoBehaviour:
   _slashVfx: {fileID: 8623487348853501226}
   _secondSlashVfx: {fileID: 8032878143575903317}
   _thirdSlashVfx: {fileID: 3649354136773276188}
+  _useOutlineShader: 0
 --- !u!114 &9012958133378258241
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -526,6 +528,8 @@ MonoBehaviour:
   _swingSound: 3
   _hitSound: 10
   _volume: 0.8
+  _damageVolumeMultiplier: 1
+  _damagePitch: 1
   _contactService: {fileID: 1080894898460965423}
 --- !u!114 &8491623887222581670
 MonoBehaviour:
@@ -561,15 +565,34 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _playerRoot: {fileID: 9061784569180931348}
   _normalDamage: 10
+  _iaidoInstantKill: 1
   _hitRadius: 0.1
   _attackMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  _unlimitedRange: 0
   _bladeBase: {fileID: 8419536739964497533}
   _bladeTip: {fileID: 87512033506737446}
   _useViewModelReach: 1
   _showAttackGizmos: 1
   _gizmoDuration: 2
+--- !u!114 &5463530082543962319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147414133172360306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc0226d99689efb4e862707c2a69742b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _viewCamera: {fileID: 421133909551674746}
+  _range: 3
+  _raycastMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1001 &2095931565275930154
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -10,7 +10,7 @@ public sealed class KatanaDamageReceiver : PlayerHealth
     [SerializeField] private KatanaCombatCoordinator _combat;
     [SerializeField] private Transform _view;
     [SerializeField, Range(1f, 180f)] private float _frontArc = 120f;
-    private PlayerMotor _motor;
+    [System.NonSerialized] private PlayerMotor _motor;
 
     protected override void Awake()
     {
