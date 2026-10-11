@@ -145,7 +145,8 @@ public sealed class BossPresentation : MonoBehaviour
     {
         _previousPosition = transform.position;
         _stepDistanceAccumulated = 0f;
-        if (Game.IsInitialized && _boss.State != BossState.Idle && _boss.State != BossState.Dead)
+        if (Game.IsInitialized && _boss.State != BossState.Idle && _boss.State != BossState.Dead
+            && _boss.State != BossState.Disappeared)
             EmitFootprint(transform.forward);
     }
 

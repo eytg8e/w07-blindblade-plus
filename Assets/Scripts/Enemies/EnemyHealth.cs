@@ -24,6 +24,7 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
     private EnemyMotor _motor;
     private float _nextHitInterruptTime;
     private float _currentHealth;
+    private bool _invulnerable;
 
     public float CurrentHealth => _currentHealth;
     public float MaxHealth => _maxHealth;
@@ -57,7 +58,7 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
     /// </summary>
     public void TakeDamage(DamageContext context)
     {
-        if (!IsAlive || !(context.Amount > 0f))
+        if (!IsAlive || _invulnerable || !(context.Amount > 0f))
             return;
 
         _currentHealth = _dieOnAnyHit ? 0f : Mathf.Max(0f, _currentHealth - context.Amount);
@@ -69,6 +70,12 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
             Died?.Invoke(this);
             gameObject.SetActive(false);
         }
+    }
+
+    /// <summary>invulnerable 값으로 일시적인 피해 수신 차단을 설정한다. 체력과 생존 상태는 유지한다.</summary>
+    public void SetInvulnerable(bool invulnerable)
+    {
+        _invulnerable = invulnerable;
     }
 
     /// <summary>context의 공격 방향으로 동일한 경직·밀림을 적용한다. 연속 중단을 제한하고 패링 회복 시간은 보존한다.</summary>

@@ -5,7 +5,7 @@ using UnityEngine;
 
 using UnityEngine.AI;
 
-public enum BossState { Idle, Roaming, Charging, ChainCharge, Duel, Stunned, Dead }
+public enum BossState { Idle, Roaming, Charging, ChainCharge, Duel, Stunned, Dead, Disappeared }
 
 /// <summary>보스 행동의 단일 실행과 플레이어 피해·방어 결과 및 종료 수명을 관리한다.</summary>
 [DisallowMultipleComponent]
@@ -29,8 +29,16 @@ public sealed class BossController : MonoBehaviour
     private bool _playerHit;
     private BossState _state;
     private bool _started;
-    [SerializeField, Min(0f), Tooltip("피격으로 행동을 취소한 뒤 멈추는 시간(초)")]
+    [SerializeField, Min(0f), Tooltip("피격으로 행동을 취소한 뒤 사라지는 시간(초)")]
     private float _hitRecoveryDuration = 0.5f;
+    [SerializeField, Tooltip("피격 후 잠시 숨을 전투 공간 밖의 월드 위치")]
+    private Vector3 _disappearPosition = new Vector3(0f, -100f, 0f);
+    private Collider[] _bodyColliders;
+    private bool[] _colliderEnabled;
+    private Vector3 _returnPosition;
+    private bool _hidden;
+    private bool _hiddenUpdatePosition;
+    private BossState _resumeState;
 
     [Header("배회")]
     [SerializeField, Min(0.1f), Tooltip("마지막 피격 이후 돌진까지의 시간(초)")]
@@ -85,6 +93,8 @@ public sealed class BossController : MonoBehaviour
         _sensor = GetComponent<EnemySensor>();
         _agent = GetComponent<NavMeshAgent>();
         _path = new NavMeshPath();
+        _bodyColliders = GetComponentsInChildren<Collider>(true);
+        _colliderEnabled = new bool[_bodyColliders.Length];
     }
 
     void Start()
@@ -134,19 +144,20 @@ public sealed class BossController : MonoBehaviour
     }
 
     /// <summary>생존 중 단일 행동 흐름을 유지하고 전투 종료 시 코루틴 참조를 정리한다.</summary>
-    private IEnumerator RunBattle()
+    private IEnumerator RunBattle(BossState startingState = BossState.Roaming)
     {
         yield return null;
         while (_health.IsAlive && _playerHealth.IsAlive)
         {
-            yield return Roam();
-            if (TryTeleportAround())
+            if (startingState == BossState.Roaming) yield return Roam();
+            if ((startingState == BossState.Roaming || startingState == BossState.Charging) && TryTeleportAround())
             {
                 ChangeState(BossState.Charging);
                 yield return Charge();
             }
-            yield return ChainCharge();
+            if (startingState != BossState.Duel) yield return ChainCharge();
             yield return Duel();
+            startingState = BossState.Roaming;
         }
         _routine = null;
     }
@@ -345,10 +356,12 @@ public sealed class BossController : MonoBehaviour
         Teleported?.Invoke();
     }
 
-    /// <summary>context의 실제 피격 시 현재 행동을 취소하고 잠시 멈춘 뒤 배회부터 다시 시작한다.</summary>
+    /// <summary>context의 실제 피격 시 현재 행동을 취소하고 공격할 수 없는 위치로 잠시 이동한다.</summary>
     private void HandleBossDamaged(DamageContext context)
     {
         if (!_health.IsAlive) return;
+        _resumeState = _state == BossState.Charging || _state == BossState.ChainCharge || _state == BossState.Duel
+            ? _state : BossState.Roaming;
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
         RestoreNavigation();
@@ -357,16 +370,41 @@ public sealed class BossController : MonoBehaviour
         _strike = 0;
         _strikeResolved = false;
         _parriedStrikes = 0;
-        ChangeState(BossState.Idle);
+        ChangeState(BossState.Disappeared);
+        _returnPosition = transform.position;
+        _hiddenUpdatePosition = _agent.updatePosition;
+        _agent.updatePosition = false;
+        _hidden = true;
+        _health.SetInvulnerable(true);
+        for (int i = 0; i < _bodyColliders.Length; i++)
+        {
+            _colliderEnabled[i] = _bodyColliders[i].enabled;
+            _bodyColliders[i].enabled = false;
+        }
+        transform.position = _disappearPosition;
         _routine = StartCoroutine(RecoverFromHit());
     }
 
-    /// <summary>피격 정지 시간 동안 행동하지 않고 생존 중이면 배회부터 전투 흐름을 재개한다.</summary>
+    /// <summary>피격 후 숨는 시간이 지나면 위치·피해 수신을 복구하고 중단했던 패턴부터 재개한다.</summary>
     private IEnumerator RecoverFromHit()
     {
         yield return new WaitForSeconds(_hitRecoveryDuration);
-        if (_health.IsAlive && _playerHealth.IsAlive) yield return RunBattle();
+        RestoreAfterDisappearance();
+        if (_health.IsAlive && _playerHealth.IsAlive) yield return RunBattle(_resumeState);
         _routine = null;
+    }
+
+    /// <summary>숨기 전 위치·에이전트·충돌체와 피해 수신을 복구한다. 종료 시에도 숨김 상태를 남기지 않는다.</summary>
+    private void RestoreAfterDisappearance()
+    {
+        if (!_hidden) return;
+        _hidden = false;
+        transform.position = _returnPosition;
+        _agent.updatePosition = _hiddenUpdatePosition;
+        if (_agent.isActiveAndEnabled) _agent.Warp(_returnPosition);
+        for (int i = 0; i < _bodyColliders.Length; i++) _bodyColliders[i].enabled = _colliderEnabled[i];
+        _health.SetInvulnerable(false);
+        Teleported?.Invoke();
     }
 
     /// <summary>context가 현재 보스 3연격의 피해이면 남은 공격을 중단하도록 적중을 기록한다.</summary>
@@ -410,6 +448,7 @@ public sealed class BossController : MonoBehaviour
     {
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
+        RestoreAfterDisappearance();
         RestoreNavigation();
         if (_melee != null) _melee.CancelAttack();
         _motor.Stop();
