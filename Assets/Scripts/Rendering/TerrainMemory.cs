@@ -10,8 +10,8 @@ public sealed class TerrainMemory : MonoBehaviour
     [Header("방문 지형 기억")]
     [SerializeField] private Transform _observer;
     [SerializeField] private Vector2 _minimum = new Vector2(-24f, -6f);
-    [SerializeField] private Vector2 _size = new Vector2(48f, 76f);
-    [SerializeField, Range(64, 512)] private int _resolution = 256;
+    [SerializeField] private Vector2 _size = new Vector2(200f, 200f);
+    [SerializeField, Range(64, 512)] private int _resolution = 512;
     [SerializeField, Min(0.5f), Tooltip("방문으로 기억하는 수평 반경(미터)")]
     private float _radius = 5f;
     [SerializeField, Tooltip("기억으로만 보이는 지형 색상. 알파는 밝기 배율입니다.")]
@@ -79,10 +79,13 @@ public sealed class TerrainMemory : MonoBehaviour
         if (_memory == null) return;
         Shader.SetGlobalColor("_OutlineMemoryColor", _memoryColor);
         bool changed = false;
-        if (_observer != null && (_observer.position - _lastPosition).sqrMagnitude >= 0.04f)
+        if (_observer != null)
         {
-            _lastPosition = _observer.position;
-            changed |= Remember(_lastPosition, _radius);
+            if ((_observer.position - _lastPosition).sqrMagnitude >= 0.04f)
+            {
+                _lastPosition = _observer.position;
+                changed |= Remember(_lastPosition, _radius);
+            }
         }
         changed |= UpdateExpandingWaves();
         if (changed)
