@@ -19,6 +19,7 @@ public sealed class InputManager : MonoBehaviour
     private InputAction _crouchHold;
     private InputAction _crouchToggle;
     private InputAction _guard;
+    private InputAction _dodge;
     private bool _crouchToggled;
 
     public bool IsInitialized => _state != null;
@@ -33,6 +34,7 @@ public sealed class InputManager : MonoBehaviour
         _crouchHold.AddBinding("<Keyboard>/rightCtrl");
         _crouchToggle = new InputAction("CrouchToggle", InputActionType.Button, "<Keyboard>/c");
         _guard = new InputAction("Guard", InputActionType.Button, "<Mouse>/rightButton");
+        _dodge = new InputAction("Dodge", InputActionType.Button, "<Keyboard>/space");
     }
 
     void Update()
@@ -57,6 +59,7 @@ public sealed class InputManager : MonoBehaviour
         player.AddLookInput(_actions.Player.Look.ReadValue<Vector2>());
         if (_guard.IsPressed() && !player.IsGuarding) _combat.BeginDefense();
         if (_guard.WasReleasedThisFrame()) _combat.EndDefense();
+        if (_dodge.WasPressedThisFrame()) player.RequestDodge();
         if (_actions.Player.Attack.WasPressedThisFrame() && (!player.IsGuarding || _combat.CanCounterAttack))
             _combat.RequestAttack();
     }
@@ -80,6 +83,7 @@ public sealed class InputManager : MonoBehaviour
         _crouchHold.Dispose();
         _crouchToggle.Dispose();
         _guard.Dispose();
+        _dodge.Dispose();
     }
 
     /// <summary>state와 Game.Player의 장치를 연결한다. 초기 입력은 차단하고 Playing 전환을 기다린다.</summary>
@@ -94,6 +98,7 @@ public sealed class InputManager : MonoBehaviour
         _crouchHold.Enable();
         _crouchToggle.Enable();
         _guard.Enable();
+        _dodge.Enable();
     }
 
     /// <summary>state가 Playing이면 입력을 허용하고 그 외에는 명령 전달과 유지 입력을 차단한다.</summary>
@@ -146,6 +151,7 @@ public sealed class InputManager : MonoBehaviour
         if (_crouchHold != null) _crouchHold.Disable();
         if (_crouchToggle != null) _crouchToggle.Disable();
         if (_guard != null) _guard.Disable();
+        if (_dodge != null) _dodge.Disable();
         SetCursor(false);
     }
 }

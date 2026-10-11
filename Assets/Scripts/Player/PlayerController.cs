@@ -209,6 +209,14 @@ public sealed class PlayerController : MonoBehaviour
         _motor?.SetMoveInput(_moveInput);
     }
 
+    /// <summary>자유·가드·일반 공격 중 현재 이동 입력으로 짧은 회피를 요청한다. 충전·회복·발도·사망·일시정지에서는 false를 반환한다.</summary>
+    public bool RequestDodge()
+    {
+        if (Time.timeScale <= 0f || (_state != PlayerActionState.Free && _state != PlayerActionState.Guarding
+            && _state != PlayerActionState.NormalAttack)) return false;
+        return _motor.TryBeginDodge(_requestedMoveInput);
+    }
+
     /// <summary>입력 어댑터가 계산한 웅크리기 상태를 이동 장치에 전달합니다. 일시정지나 사망 상태에서는 요청을 무시합니다.</summary>
     public void SetCrouchInput(bool isCrouching)
     {
