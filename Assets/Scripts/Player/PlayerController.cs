@@ -504,7 +504,7 @@ public sealed class PlayerController : MonoBehaviour
     {
         if (_state != PlayerActionState.Free
             || strike < 1
-            || strike > 3
+            || strike > 2
             || !TrySelectIaidoTarget(out PlayerCombatTarget combatTarget, out Vector3 perceivedPosition))
             return false;
 

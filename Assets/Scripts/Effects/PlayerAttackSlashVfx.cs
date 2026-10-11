@@ -13,7 +13,7 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
     private ParticleSystem _slashVfx;
     [SerializeField, InspectorName("2타 VFX")]
     private ParticleSystem _secondSlashVfx;
-    [SerializeField, InspectorName("3타 VFX")]
+    [SerializeField, HideInInspector]
     private ParticleSystem _thirdSlashVfx;
     private PlayerActionDriver _timing;
     private KatanaCombatCoordinator _combat;
@@ -92,7 +92,7 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
         if (_combat == null || _combat.IsCounterAttack
             || kind == PlayerAttackKind.IaidoFinisher && _player.TargetedComboStrike == 0)
             return _slashVfx;
-        return _combat.Strike == 2 ? _secondSlashVfx : _combat.Strike == 3 ? _thirdSlashVfx : _slashVfx;
+        return _combat.Strike == 2 ? _secondSlashVfx : _slashVfx;
     }
 
     /// <summary>

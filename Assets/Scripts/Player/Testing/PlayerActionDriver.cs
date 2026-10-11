@@ -24,6 +24,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _counterActionDuration = 0.34f;
     [SerializeField, Min(0.01f)] private float _counterStrikeWindow = 0.12f;
     private KatanaCombatCoordinator _combat;
+    private KatanaWeaponVisual _weaponVisual;
     private bool _activeNormalAttackIsCounter;
 
     private PlayerActionState _activeState;
@@ -44,6 +45,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
         if (_animationEventRelay == null)
             _animationEventRelay = GetComponent<PlayerAnimationEventRelay>();
         _combat = GetComponent<KatanaCombatCoordinator>();
+        _weaponVisual = GetComponent<KatanaWeaponVisual>();
     }
 
     private void Update()
@@ -72,7 +74,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
             _impactSent = false;
             _endSent = false;
             _activeNormalAttackUsesIaidoTiming = state == PlayerActionState.NormalAttack
-                && (_useIaidoTimingForNextNormalAttack || (_combat != null && _combat.IsOpeningAttack));
+                && (_useIaidoTimingForNextNormalAttack || (_combat != null && _combat.IsOpeningAttack) || UsesOpeningTimingForSecondAttack());
             _activeNormalAttackIsCounter = state == PlayerActionState.NormalAttack
                 && _combat != null && _combat.IsCounterAttack;
             if (state == PlayerActionState.NormalAttack)
@@ -148,7 +150,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
         bool targetedComboAttack = kind == PlayerAttackKind.IaidoFinisher
             && _player != null && _player.TargetedComboStrike > 0;
         bool iaido = kind == PlayerAttackKind.IaidoFinisher && !targetedComboAttack
-            || kind == PlayerAttackKind.Normal && _combat != null && _combat.IsOpeningAttack;
+            || kind == PlayerAttackKind.Normal && _combat != null && (_combat.IsOpeningAttack || UsesOpeningTimingForSecondAttack());
         impactTime = targetedComboAttack ? _targetedComboHitTime : iaido ? _iaidoHitTime : _normalHitTime;
         duration = targetedComboAttack ? _targetedComboActionDuration : iaido ? _iaidoSlashDuration : _normalActionDuration;
     }
@@ -163,6 +165,13 @@ public sealed class PlayerActionDriver : MonoBehaviour
     public float GetPresentationElapsed(int actionId)
     {
         return actionId == _activeActionId ? _elapsed : 0f;
+    }
+
+    /// <summary>현재 일반 2타가 교체 클립이며 1타 타이밍 사용 설정이 켜졌는지 검사해 동일 타이밍 적용 여부를 반환한다.</summary>
+    private bool UsesOpeningTimingForSecondAttack()
+    {
+        return _combat != null && _combat.Strike == 2 && !_combat.IsCounterAttack
+            && _weaponVisual != null && _weaponVisual.UsesOpeningTimingForSecondAttack;
     }
 
     void LateUpdate()
@@ -185,7 +194,8 @@ public sealed class PlayerActionDriver : MonoBehaviour
             && _player != null && _player.TargetedComboStrike > 0;
         float window = kind == PlayerAttackKind.Normal || targetedComboAttack
             ? (_combat != null && _combat.IsCounterAttack ? _counterStrikeWindow
-                : _combat != null && _combat.IsOpeningAttack ? _strikeWindow : _normalStrikeWindow) : _strikeWindow;
+                : _combat != null && (_combat.IsOpeningAttack || kind == PlayerAttackKind.Normal && UsesOpeningTimingForSecondAttack())
+                    ? _strikeWindow : _normalStrikeWindow) : _strikeWindow;
         start = Mathf.Max(0f, impact - window * 0.5f);
         end = Mathf.Min(duration, impact + window * 0.5f);
     }
