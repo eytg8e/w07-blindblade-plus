@@ -9,8 +9,16 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
 {
     [Header("공격 검기 연결")]
     [SerializeField] private PlayerController _player;
-    [SerializeField] private ParticleSystem _slashVfx;
+    [SerializeField, InspectorName("1타 VFX"), Tooltip("Player 프리팹 자식에 배치한 VFX의 루트 ParticleSystem을 연결합니다.")]
+    private ParticleSystem _slashVfx;
+    [SerializeField, InspectorName("2타 VFX")]
+    private ParticleSystem _secondSlashVfx;
+    [SerializeField, InspectorName("3타 VFX")]
+    private ParticleSystem _thirdSlashVfx;
     private PlayerActionDriver _timing;
+    private KatanaCombatCoordinator _combat;
+    private ParticleSystem _pendingSlashVfx;
+    private ParticleSystem _currentSlashVfx;
     private int _pendingAction;
     private PlayerAttackKind _pendingKind;
     private bool _pending;
@@ -18,6 +26,7 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
     void Awake()
     {
         _timing = GetComponent<PlayerActionDriver>();
+        _combat = GetComponent<KatanaCombatCoordinator>();
         StopSlash();
     }
 
@@ -44,14 +53,15 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
                 if (_timing.GetPresentationElapsed(_pendingAction) >= start)
                 {
                     _pending = false;
-                    _slashVfx.gameObject.SetActive(true);
-                    _slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                    _slashVfx.Play(true);
+                    _currentSlashVfx = _pendingSlashVfx;
+                    _currentSlashVfx.gameObject.SetActive(true);
+                    _currentSlashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    _currentSlashVfx.Play(true);
                 }
             }
         }
-        if (_slashVfx.gameObject.activeSelf && !_slashVfx.IsAlive(true))
-            _slashVfx.gameObject.SetActive(false);
+        if (_currentSlashVfx != null && _currentSlashVfx.gameObject.activeSelf && !_currentSlashVfx.IsAlive(true))
+            _currentSlashVfx.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -66,20 +76,46 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
             StopSlash();
             _pendingAction = action.ActionId;
             _pendingKind = action.Stage == PlayerActionStage.SlashStarted ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal;
-            _pending = true;
+            _pendingSlashVfx = GetSlashForAttack(_pendingKind);
+            _pending = _pendingSlashVfx != null;
         }
         else if (action.Stage == PlayerActionStage.StateChanged && action.State == PlayerActionState.Dead)
             StopSlash();
     }
 
     /// <summary>
-    /// 연결된 _slashVfx와 자식 파티클의 방출 및 잔상을 즉시 정리한다.
-    /// 검기 GameObject를 비활성 상태로 변경한다.
+    /// kind와 현재 연계 타수로 연결된 자식 VFX를 반환한다.
+    /// 충전 발도·패링 단발 반격은 기존 1타 VFX를 사용하며 빈 슬롯은 해당 공격의 검기를 생략한다.
+    /// </summary>
+    private ParticleSystem GetSlashForAttack(PlayerAttackKind kind)
+    {
+        if (kind == PlayerAttackKind.IaidoFinisher || _combat == null || _combat.IsCounterAttack)
+            return _slashVfx;
+        return _combat.Strike == 2 ? _secondSlashVfx : _combat.Strike == 3 ? _thirdSlashVfx : _slashVfx;
+    }
+
+    /// <summary>
+    /// 세 타의 연결된 파티클 방출·잔상과 현재 예약 상태를 정리한다.
+    /// 외부 입력 없이 각 VFX 자식을 비활성화하며 사용자가 설정한 Transform은 유지한다.
     /// </summary>
     private void StopSlash()
     {
         _pending = false;
-        _slashVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        _slashVfx.gameObject.SetActive(false);
+        _pendingSlashVfx = null;
+        _currentSlashVfx = null;
+        StopParticle(_slashVfx);
+        StopParticle(_secondSlashVfx);
+        StopParticle(_thirdSlashVfx);
+    }
+
+    /// <summary>
+    /// slash의 자식 파티클까지 정지하고 VFX GameObject를 비활성화한다.
+    /// 비어 있는 Inspector 슬롯은 처리하지 않는다.
+    /// </summary>
+    private void StopParticle(ParticleSystem slash)
+    {
+        if (slash == null) return;
+        slash.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        slash.gameObject.SetActive(false);
     }
 }

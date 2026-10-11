@@ -19,7 +19,7 @@ public readonly struct KatanaEvent
     public bool WasDrawn { get; }
     public string Detail { get; }
 
-    /// <summary>단계, 행동 ID, 이전 발도 여부와 설명을 표현용 이벤트에 저장한다. Strike는 일반 베기의 1·2타를 구분한다.</summary>
+    /// <summary>단계, 행동 ID, 이전 발도 여부와 설명을 표현용 이벤트에 저장한다. Strike는 일반 베기의 1·2·3타를 구분한다.</summary>
     public KatanaEvent(KatanaStage stage, int strike, int actionId, bool wasDrawn, string detail)
     {
         Stage = stage;
@@ -43,7 +43,7 @@ public readonly struct KatanaParryResult
     }
 }
 
-/// <summary>플레이어의 2타 연계, 유지 가드·정확한 패링, 납도 흐름과 방어 피드백을 연결한다.</summary>
+/// <summary>플레이어의 발도 시작 3타 연계, 유지 가드·정확한 패링, 납도 흐름과 방어 피드백을 연결한다.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
 [DefaultExecutionOrder(-50)]
@@ -51,6 +51,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
 {
     private const float FALLBACK_IAIDO_HIT_TIME = 0.42f;
     private const float FALLBACK_IAIDO_DURATION = 0.72f;
+    private const int MAX_COMBO_STRIKES = 3;
 
     [Header("References")]
     [SerializeField] private PlayerController _player;
@@ -58,10 +59,10 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     [Header("Attack / sheathe")]
     [SerializeField, Min(0f)] private float _normalSheatheDelay = 0.8f;
 
-    [Header("일반 공격 2타 연계")]
+    [Header("발도 시작 3타 연계")]
     [SerializeField, Min(0f)] private float _comboBufferWindow = 0.2f;
-    [SerializeField, Min(0f), InspectorName("2타 연계 지연 (초)")]
-    [Tooltip("첫 베기의 타격 구간 종료부터 2타 시작까지의 지연입니다. 값이 커지면 연계가 느려집니다. 첫 동작이 끝났다면 회복 종료도 기다립니다.")]
+    [SerializeField, Min(0f), InspectorName("다음 타 연계 지연 (초)")]
+    [Tooltip("각 베기의 타격 구간 종료부터 다음 타 시작까지의 지연입니다. 값이 커지면 연계가 느려집니다. 동작이 끝났다면 회복 종료도 기다립니다.")]
     private float _comboFollowThrough = 0.12f;
     [SerializeField, Min(0f)] private float _comboResetDelay = 0.65f;
     private bool _queuedAttack;
@@ -70,6 +71,8 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     private float _nextComboAllowedAt;
     private float _comboExpiresAt;
     private bool _chainTransition;
+    private bool _queuedOpeningAttack;
+    private bool _sheatheAfterRecovery;
 
     [Header("방어")]
     [SerializeField, Min(0.01f)] private float _parryWindow = 0.18f;
@@ -111,7 +114,8 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     public PlayerController Player => _player;
     public KatanaWeaponState WeaponState => _weaponState;
     public int Strike => _strike;
-    public bool HasBufferedAttack => _queuedAttack;
+    public bool HasBufferedAttack => _queuedAttack || _queuedOpeningAttack;
+    public bool IsOpeningAttack => !_counterAttack && _strike == 1 && _player.CurrentState == PlayerActionState.NormalAttack;
     public bool IsCounterAttack => _counterAttack && _player.CurrentState == PlayerActionState.NormalAttack;
     public float CounterRemaining => Mathf.Max(0f, _counterUntil - Time.time);
     public bool CanCounterAttack => isActiveAndEnabled && !_player.IsPaused && Time.timeScale > 0f
@@ -163,7 +167,9 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         if (_queuedAttack && _queuedActionId == _player.CurrentActionId && _clock >= _queuedReadyAt
             && (_player.CurrentState == PlayerActionState.NormalAttack || CanStartAction))
             TryStartQueuedAttack();
-        if (_player.CurrentState == PlayerActionState.Free && _clock >= _comboExpiresAt) _strike = 0;
+        if (_player.CurrentState == PlayerActionState.Free && _comboExpiresAt > 0f
+            && _clock >= _comboExpiresAt && !_queuedAttack)
+            BeginSheathe();
         if (_parryOpen && !IsParryWindowOpen)
             CloseAttackParryWindow();
 
@@ -183,6 +189,11 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             _weaponState = KatanaWeaponState.Sheathed;
             Publish(KatanaStage.SheatheEnded);
         }
+        if (_queuedOpeningAttack && CanStartAction)
+        {
+            _queuedOpeningAttack = false;
+            RequestAttack();
+        }
 
         if (!_waiting || _player.CurrentState != PlayerActionState.Free || _parryMotion || _queuedAttack || CounterRemaining > 0f)
             return;
@@ -196,13 +207,19 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     /// <summary>delta를 기존 시점 명령으로 전달한다. 사망과 일시정지 제한을 유지한다.</summary>
     public void AddLookInput(Vector2 delta) => _player.AddLookInput(delta);
 
-    /// <summary>자유 상태에서는 1·2타를 시작하고 첫 베기의 연계 입력 구간에서는 다음 클릭 하나를 예약한다. 수락 여부를 반환한다.</summary>
+    /// <summary>발도·Normal1·Normal2의 3타를 시작하거나 다음 클릭 하나를 예약한다. 새 연계는 납도를 거쳐 발도로 시작하며 입력 수락 여부를 반환한다.</summary>
     public bool RequestAttack()
     {
         if (!isActiveAndEnabled || _player.IsPaused || Time.timeScale <= 0f)
             return Reject("Attack: input unavailable");
         if (CanCounterAttack) return RequestCounterAttack();
-        if (_player.CurrentState == PlayerActionState.NormalAttack && _strike == 1 && !_counterAttack)
+        if (_queuedOpeningAttack) return Reject("Attack: opening already buffered");
+        if (_player.CurrentState == PlayerActionState.Free && _weaponState == KatanaWeaponState.Sheathing)
+        {
+            _queuedOpeningAttack = true;
+            return true;
+        }
+        if (_player.CurrentState == PlayerActionState.NormalAttack && _strike > 0 && _strike < MAX_COMBO_STRIKES && !_counterAttack)
         {
             if (_queuedAttack || GetAttackElapsed() < GetBufferStart())
                 return Reject("Attack: chain input unavailable");
@@ -213,8 +230,14 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             return true;
         }
         if (_queuedAttack || !CanStartAction) return Reject("Attack: current action blocks input");
-        int strike = _strike == 1 && _clock < _comboExpiresAt ? 2 : 1;
-        if (strike == 2 && _clock < _nextComboAllowedAt)
+        int strike = _strike > 0 && _strike < MAX_COMBO_STRIKES && _clock < _comboExpiresAt ? _strike + 1 : 1;
+        if (strike == 1 && _weaponState == KatanaWeaponState.Drawn)
+        {
+            BeginSheathe();
+            _queuedOpeningAttack = true;
+            return true;
+        }
+        if (strike > 1 && _clock < _nextComboAllowedAt)
         {
             _queuedAttack = true;
             _queuedActionId = _player.CurrentActionId;
@@ -265,7 +288,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         return Mathf.Max(0f, Mathf.Min(GetChainStart(), duration) - _comboBufferWindow);
     }
 
-    /// <summary>예약된 첫 공격 ID의 판정이 끝났으면 2타로 연결한다. 첫 동작 종료 후에는 자유 상태에서 시작하며 실패 시 예약을 유지한다.</summary>
+    /// <summary>예약된 공격 ID의 판정이 끝났으면 다음 타로 연결한다. 동작 종료 후에는 자유 상태에서 시작하며 실패 시 예약과 타수를 유지한다.</summary>
     private void TryStartQueuedAttack()
     {
         _attackWasDrawn = true;
@@ -274,7 +297,6 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         bool accepted;
         if (_player.CurrentState == PlayerActionState.Free)
         {
-            _strike = 2;
             accepted = _player.RequestNormalAttack();
         }
         else accepted = _player.TryChainNormalAttack(_queuedActionId);
@@ -287,14 +309,15 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     private void HandleDamage(DamageContext context)
     {
         _queuedAttack = false;
+        _queuedOpeningAttack = false;
         _comboExpiresAt = 0f;
         _counterUntil = 0f;
     }
 
-    /// <summary>기존 일반공격 호출자를 2타 연계 입력 흐름으로 연결한다. 수락 여부를 반환한다.</summary>
+    /// <summary>기존 일반공격 호출자를 발도 시작 3타 연계 입력 흐름으로 연결한다. 수락 여부를 반환한다.</summary>
     public bool RequestNormalAttack() => RequestAttack();
 
-    /// <summary>기존 입력 호출자를 2타 베기 흐름으로 연결한다. 방어 패링 창은 열지 않으며 수락 여부를 반환한다.</summary>
+    /// <summary>기존 입력 호출자를 발도 시작 3타 베기 흐름으로 연결한다. 방어 패링 창은 열지 않으며 수락 여부를 반환한다.</summary>
     public bool RequestNormalAttackWithParry() => RequestAttack();
 
     /// <summary>행동이 허용될 때 기존 충전을 시작한다. 기존 충전 시간과 이동 제한을 유지하며 수락 여부를 반환한다.</summary>
@@ -327,6 +350,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     public void CancelParryAttempt()
     {
         _queuedAttack = false;
+        _queuedOpeningAttack = false;
         _comboExpiresAt = 0f;
         _counterUntil = 0f;
         if (_parryOpen)
@@ -372,9 +396,14 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         Publish(KatanaStage.ParryWindowClosed, "Timed parry window ended; held guard remains");
     }
 
-    /// <summary>공격 회복이 끝난 뒤 단일 행동의 납도 대기를 시작하고 디버그 이벤트를 발행한다.</summary>
+    /// <summary>공격 회복 후 3타 완료이면 즉시 납도를 시작한다. 그 외에는 기존 납도 대기를 시작하고 표현 이벤트를 발행한다.</summary>
     private void BeginWaiting()
     {
+        if (_sheatheAfterRecovery)
+        {
+            BeginSheathe();
+            return;
+        }
         _waiting = true;
         _waitStarted = _clock;
         Publish(KatanaStage.DrawnWaiting);
@@ -396,9 +425,11 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         _counterUntil = 0f;
         _counterAttack = false;
         _queuedAttack = false;
+        _queuedOpeningAttack = false;
         _comboExpiresAt = 0f;
         _waiting = false;
         _waitAfterRecovery = false;
+        _sheatheAfterRecovery = false;
     }
 
     /// <summary>공격 중 쳐내기 창을 한 번 닫고 입력 취소 또는 판정 실패를 이벤트로 전달한다.</summary>
@@ -418,12 +449,13 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         return false;
     }
 
-    /// <summary>e의 일반 공격·방어·회복 이벤트로 2타 연계와 납도 상태를 변경한다. 중단 상태에서는 예약을 취소한다.</summary>
+    /// <summary>e의 일반 공격·방어·회복 이벤트로 3타 연계와 납도 상태를 변경한다. 중단 상태에서는 예약을 취소한다.</summary>
     private void HandlePlayerAction(PlayerActionEvent e)
     {
         if (e.State == PlayerActionState.Paused)
         {
             _queuedAttack = false;
+            _queuedOpeningAttack = false;
             _comboExpiresAt = 0f;
             _counterUntil = 0f;
             return;
@@ -447,16 +479,18 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                     ResetChain();
                     _strike = 1;
                 }
-                if (_chainTransition) _strike = 2;
-                if (_strike == 1) _nextComboAllowedAt = _clock + GetChainStart();
+                if (_chainTransition) _strike++;
+                if (!_counterAttack && _strike < MAX_COMBO_STRIKES) _nextComboAllowedAt = _clock + GetChainStart();
                 _attackStartedAt = _clock;
                 _weaponState = KatanaWeaponState.Drawn;
-                Publish(KatanaStage.NormalStarted, _counterAttack ? "패링 반격" : _strike == 2 ? "Normal chain 2" : "Normal chain 1", _attackWasDrawn);
+                Publish(KatanaStage.NormalStarted, _counterAttack ? "패링 반격" : "Normal chain " + _strike, _attackWasDrawn);
                 _parryOpen = false;
                 break;
             case PlayerActionStage.GuardStarted:
                 _queuedAttack = false;
+                _queuedOpeningAttack = false;
                 _comboExpiresAt = 0f;
+                _sheatheAfterRecovery = false;
                 _counterUntil = 0f;
                 _weaponState = KatanaWeaponState.Drawn;
                 _waiting = false;
@@ -500,9 +534,10 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                 {
                     if (!_chainTransition)
                     {
-                        if (e.Outcome == PlayerAttackOutcome.None || _strike != 1) _queuedAttack = false;
-                        _comboExpiresAt = _strike == 1 && e.Outcome != PlayerAttackOutcome.None
+                        if (e.Outcome == PlayerAttackOutcome.None || _strike >= MAX_COMBO_STRIKES || _counterAttack) _queuedAttack = false;
+                        _comboExpiresAt = _strike < MAX_COMBO_STRIKES && !_counterAttack && e.Outcome != PlayerAttackOutcome.None
                             ? _clock + _comboResetDelay : 0f;
+                        _sheatheAfterRecovery = _strike == MAX_COMBO_STRIKES && !_counterAttack;
                         _waitAfterRecovery = true;
                     }
                 }

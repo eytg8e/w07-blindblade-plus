@@ -69,7 +69,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
             _impactSent = false;
             _endSent = false;
             _activeNormalAttackUsesIaidoTiming = state == PlayerActionState.NormalAttack
-                && _useIaidoTimingForNextNormalAttack;
+                && (_useIaidoTimingForNextNormalAttack || (_combat != null && _combat.IsOpeningAttack));
             _activeNormalAttackIsCounter = state == PlayerActionState.NormalAttack
                 && _combat != null && _combat.IsCounterAttack;
             if (state == PlayerActionState.NormalAttack)
@@ -86,7 +86,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
         float actionDuration = _activeNormalAttackIsCounter ? _counterActionDuration : iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
 
         float strikeWindow = _activeNormalAttackIsCounter ? _counterStrikeWindow
-            : state == PlayerActionState.NormalAttack ? _normalStrikeWindow : _strikeWindow;
+            : iaidoTiming ? _strikeWindow : _normalStrikeWindow;
         float strikeStart = Mathf.Max(0f, hitTime - strikeWindow * 0.5f);
         float strikeEnd = Mathf.Min(actionDuration, hitTime + strikeWindow * 0.5f);
         if (state == PlayerActionState.NormalAttack && !_impactSent && _elapsed >= strikeStart)
@@ -138,7 +138,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
             duration = _counterActionDuration;
             return;
         }
-        bool iaido = kind == PlayerAttackKind.IaidoFinisher;
+        bool iaido = kind == PlayerAttackKind.IaidoFinisher || (kind == PlayerAttackKind.Normal && _combat != null && _combat.IsOpeningAttack);
         impactTime = iaido ? _iaidoHitTime : _normalHitTime;
         duration = iaido ? _iaidoSlashDuration : _normalActionDuration;
     }
@@ -172,7 +172,8 @@ public sealed class PlayerActionDriver : MonoBehaviour
     {
         GetPresentationTiming(kind, out float impact, out float duration);
         float window = kind == PlayerAttackKind.Normal
-            ? (_combat != null && _combat.IsCounterAttack ? _counterStrikeWindow : _normalStrikeWindow) : _strikeWindow;
+            ? (_combat != null && _combat.IsCounterAttack ? _counterStrikeWindow
+                : _combat != null && _combat.IsOpeningAttack ? _strikeWindow : _normalStrikeWindow) : _strikeWindow;
         start = Mathf.Max(0f, impact - window * 0.5f);
         end = Mathf.Min(duration, impact + window * 0.5f);
     }

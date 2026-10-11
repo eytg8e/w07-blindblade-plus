@@ -119,7 +119,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         {
             int strike = _katana != null && _katana.isActiveAndEnabled ? _katana.Strike
                 :  1;
-            _swingLabel = strike > 1 ? _secondSwingLabel : _firstSwingLabel;
+            _swingLabel = _katana != null && _katana.IsCounterAttack ? _secondSwingLabel
+                : strike == 1 ? _iaidoSwingLabel : strike == 2 ? _firstSwingLabel : _secondSwingLabel;
         }
         if (action.Stage == PlayerActionStage.SlashStarted)
         {
