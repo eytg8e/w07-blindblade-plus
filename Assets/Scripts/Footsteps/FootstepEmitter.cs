@@ -2,7 +2,6 @@ using System;
 
 using UnityEngine;
 
-using BlindBlade.Enemies;
 
 [DisallowMultipleComponent]
 public sealed class FootstepEmitter : MonoBehaviour

@@ -1,7 +1,5 @@
 using UnityEngine;
 
-using BlindBlade.Combat;
-using BlindBlade.Enemies;
 
 /// <summary>복도의 첫 적중 전 피격을 판정하고 게임 상태 매니저에 패배를 요청한다.</summary>
 public sealed class CorridorRoundController : MonoBehaviour

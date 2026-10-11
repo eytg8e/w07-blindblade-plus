@@ -13,7 +13,7 @@ public sealed class PlayerInputCommandAdapter : MonoBehaviour
     [Header("Cursor")]
     [SerializeField] private bool _lockCursorOnMouseClick = true;
 
-    private BlindBlade.Gameplay.InputManager _inputManager;
+    private InputManager _inputManager;
     private PlayerMotor _motor;
     private InputSystem_Actions _actions;
     private InputAction _guardAction;

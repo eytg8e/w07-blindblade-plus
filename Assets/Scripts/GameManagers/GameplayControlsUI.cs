@@ -11,7 +11,7 @@ public sealed class GameplayControlsUI : GameUI
     [SerializeField] private Button _gameOverButton;
     [SerializeField] private Button _restartButton;
     private GameStateManager _state;
-    private BlindBlade.Gameplay.InputManager _input;
+    private InputManager _input;
 
     /// <summary>Game의 상태·입력 매니저를 캐싱하고 버튼 요청을 연결한다.</summary>
     public override void Initialize()

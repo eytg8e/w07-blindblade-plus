@@ -1,6 +1,5 @@
 using UnityEngine;
 
-using ReusableManagers;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Poolable))]

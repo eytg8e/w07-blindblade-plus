@@ -1,7 +1,5 @@
 using UnityEngine;
 
-using BlindBlade.Enemies;
-using BlindBlade.Player.Katana;
 
 /// <summary>
 /// 기존 플레이어 행동·접촉 이벤트를 구독해 검 접촉 감지·타격·혈흔을 요청한다.
@@ -13,7 +11,7 @@ public sealed class PlayerCombatEffects : MonoBehaviour
 {
     [Header("플레이어 연결")]
     [SerializeField] private PlayerController _player;
-    [SerializeField] private PlayerTestActionDriver _timing;
+    [SerializeField] private PlayerActionDriver _timing;
     [SerializeField] private EnemyCombatService _contacts;
     [SerializeField] private SwordEffectEmitter _physicalContacts;
     [SerializeField] private KatanaCombatCoordinator _katana;

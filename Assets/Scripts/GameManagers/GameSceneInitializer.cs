@@ -2,7 +2,6 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-using BlindBlade.Enemies;
 
 /// <summary>씬 공통 구성을 생성하고 참조 연결 및 초기화 순서를 제어한다.</summary>
 [DefaultExecutionOrder(100)]
@@ -28,7 +27,7 @@ public sealed class GameSceneInitializer : MonoBehaviour
     private TerrainMemory _memory;
     private PlayerController _player;
     private PlayerInputCommandAdapter _legacyInput;
-    private BlindBlade.Player.Katana.KatanaInputCommandAdapter _katanaInput;
+    private KatanaInputCommandAdapter _katanaInput;
     private bool _started;
 
     void Start()
@@ -72,7 +71,7 @@ public sealed class GameSceneInitializer : MonoBehaviour
         combat.ConfigurePlayer(_player.transform);
         _player.ConfigureCombatService(combat);
         _legacyInput = _player.GetComponent<PlayerInputCommandAdapter>();
-        _katanaInput = _player.GetComponent<BlindBlade.Player.Katana.KatanaInputCommandAdapter>();
+        _katanaInput = _player.GetComponent<KatanaInputCommandAdapter>();
         if (_legacyInput != null && _legacyInput.isActiveAndEnabled) _legacyInput.Initialize();
         if (_katanaInput != null && _katanaInput.isActiveAndEnabled) _katanaInput.Initialize();
         if (_showGameplayControls) _ui.Show<GameplayControlsUI>();

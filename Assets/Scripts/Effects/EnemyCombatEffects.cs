@@ -1,6 +1,5 @@
 using UnityEngine;
 
-using BlindBlade.Enemies;
 
 /// <summary>
 /// 실제 적 공격의 실행 이벤트를 구독하여 EnemySlash를 요청한다.

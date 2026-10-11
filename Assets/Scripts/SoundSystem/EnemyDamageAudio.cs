@@ -1,7 +1,5 @@
 using UnityEngine;
 
-using BlindBlade.Combat;
-using BlindBlade.Enemies;
 
 /// <summary>
 /// 실제 적 피해 이벤트의 접촉 위치에 검 피격음을 한 번 재생한다.
