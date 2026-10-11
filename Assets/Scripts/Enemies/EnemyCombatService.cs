@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using UnityEngine;
 
@@ -13,6 +14,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     [SerializeField] private LayerMask _attackMask = ~0;
     private bool _hasResolution;
     private PlayerAttackResolution _lastResolution;
+    private readonly List<PlayerPerceivedTarget> _targetCandidates = new List<PlayerPerceivedTarget>();
 
     [Header("플레이어 칼날 궤적")]
     [SerializeField] private Transform _bladeBase;
@@ -90,9 +92,30 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         return false;
     }
 
+    /// <summary>현재 씬의 활성 생존 적을 즉시 사용할 돌진 대상 목록으로 반환한다. 기존 감지 제공자가 없을 때 화면 중앙 선택에 사용한다.</summary>
+    public IReadOnlyList<PlayerPerceivedTarget> GetCurrentTargets()
+    {
+        _targetCandidates.Clear();
+        EnemyHealth[] enemies = FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None);
+        foreach (EnemyHealth enemy in enemies)
+        {
+            if (!enemy.IsAlive || enemy.gameObject.scene != gameObject.scene)
+                continue;
+
+            _targetCandidates.Add(new PlayerPerceivedTarget(
+                enemy.TargetId,
+                enemy.transform.position,
+                Time.time,
+                float.PositiveInfinity));
+        }
+
+        return _targetCandidates;
+    }
+
     /// <summary>
     /// request의 원점·방향·사거리로 가장 가까운 적 또는 장애물을 검사하여 피해·사망 결과를 반환한다.
-    /// 일반 공격과 발도에 설정 피해를 동일하게 적용하며 같은 ActionId는 중복 적용하지 않는다.
+    /// IaidoFinisher는 대상의 남은 체력을 모두 피해로 적용하며 일반 공격은 설정 피해를 적용한다.
+    /// 같은 ActionId는 중복 적용하지 않는다.
     /// 새 판정의 접촉체·위치·적 피해 여부는 AttackContactResolved로 구독자에게 알린다.
     /// </summary>
     public PlayerAttackResolution ResolvePlayerAttack(PlayerAttackRequest request)
@@ -111,7 +134,9 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
                 (string.IsNullOrEmpty(request.PreferredTargetId) || request.PreferredTargetId == health.TargetId))
             {
                 string id = health.TargetId;
-                float damage = _normalDamage;
+                float damage = request.Kind == PlayerAttackKind.IaidoFinisher
+                    ? health.CurrentHealth
+                    : _normalDamage;
                 health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
                 result = new PlayerAttackResolution(request.ActionId, true, id, health.CurrentHealth <= 0f);
             }
@@ -300,7 +325,13 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         EnemyHealth health = contact != null ? contact.GetComponentInParent<EnemyHealth>() : null;
         bool hit = health != null && health.IsAlive && health.gameObject.scene == gameObject.scene;
         string id = hit ? health.TargetId : null;
-        if (hit) health.TakeDamage(new DamageContext(_normalDamage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
+        if (hit)
+        {
+            float damage = request.Kind == PlayerAttackKind.IaidoFinisher
+                ? health.CurrentHealth
+                : _normalDamage;
+            health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
+        }
         PlayerAttackResolution result = new PlayerAttackResolution(request.ActionId, hit, id,
             hit && health.CurrentHealth <= 0f, complete);
 #if UNITY_EDITOR

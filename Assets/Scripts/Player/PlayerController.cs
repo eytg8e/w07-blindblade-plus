@@ -67,15 +67,24 @@ public sealed class PlayerController : MonoBehaviour
     private int _currentActionId;
     private string _preferredTargetId;
     private Vector3 _lockedAttackDirection;
+    private bool _targetedDashAttack;
+    private bool _attackDeathConfirmed;
+    private bool _hasQueuedTargetedAttack;
+    private int _targetedComboStrike;
+    private PlayerCombatTarget _queuedTargetedCombatTarget;
+    private Vector3 _queuedTargetedPosition;
     private PlayerAttackOutcome _currentAttackOutcome;
     private PlayerSenseContext _lastSenseContext;
     private bool _hasSenseContext;
+    private bool _crouchInputActive;
 
     public event Action<PlayerActionEvent> ActionEvent;
     public event Action<PlayerFootstepEvent> FootstepEmitted;
     public event Action<PlayerSenseContext> SenseContextChanged;
 
     public PlayerActionState CurrentState => _state;
+    public bool HasQueuedTargetedAttack => _hasQueuedTargetedAttack;
+    public int TargetedComboStrike => _targetedComboStrike;
     public bool IsGuarding => _state == PlayerActionState.Guarding;
     public bool IsCharging => _state == PlayerActionState.Charging;
     public bool IsChargingReady => _state == PlayerActionState.Charging && _chargeReady;
@@ -222,7 +231,26 @@ public sealed class PlayerController : MonoBehaviour
     {
         if (_state == PlayerActionState.Paused || _state == PlayerActionState.Dead)
             return;
+
+        bool enteredCrouch = isCrouching && !_crouchInputActive;
+        _crouchInputActive = isCrouching;
         _motor?.SetCrouchInput(isCrouching);
+        if (enteredCrouch)
+            EmitCrouchPulse();
+    }
+
+    /// <summary>웅크리기 시작 위치에서 감각 파동을 생성해 주변 적 윤곽선을 잠깐 드러낸다.</summary>
+    private void EmitCrouchPulse()
+    {
+        if (!Game.IsInitialized)
+            return;
+
+        SensoryManager sensoryManager = Game.Instance.SensoryManager;
+        if (sensoryManager == null || !sensoryManager.IsReady)
+            return;
+
+        Vector3 direction = _viewCamera != null ? _viewCamera.transform.forward : transform.forward;
+        sensoryManager.Emit(new SensoryEvent(transform.position, Vector3.up, direction));
     }
 
     /// <summary>마우스 또는 패드 시점 변화량을 이동 장치에 누적 전달합니다. 일시정지나 사망 상태에서는 입력을 무시합니다.</summary>
@@ -390,6 +418,7 @@ public sealed class PlayerController : MonoBehaviour
             /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
 
+        _targetedComboStrike = 0;
         StartAttack(PlayerActionState.IaidoDash);
         _chargeElapsed = 0f;
         _chargeReady = false;
@@ -424,6 +453,44 @@ public sealed class PlayerController : MonoBehaviour
         return true;
     }
 
+    /// <summary>strike 순번으로 감지된 유효 대상을 선택해 즉사 판정 돌진 공격을 시작한다. 대상이 없거나 대시를 시작할 수 없으면 false를 반환한다.</summary>
+    public bool RequestTargetedIaidoAttack(int strike = 1)
+    {
+        if (_state != PlayerActionState.Free
+            || strike < 1
+            || strike > 3
+            || !TrySelectIaidoTarget(out PlayerCombatTarget combatTarget, out Vector3 perceivedPosition))
+            return false;
+
+        _targetedComboStrike = strike;
+        return BeginTargetedDashAttack(combatTarget, perceivedPosition);
+    }
+
+    /// <summary>target과 perceivedPosition으로 대시 공격 행동을 시작하고 대시 시작 여부를 반환한다.</summary>
+    private bool BeginTargetedDashAttack(PlayerCombatTarget target, Vector3 perceivedPosition)
+    {
+        StartAttack(PlayerActionState.IaidoDash);
+        _targetedDashAttack = true;
+        _preferredTargetId = target.TargetId;
+        _lockedAttackDirection = Vector3.ProjectOnPlane(perceivedPosition - transform.position, Vector3.up).normalized;
+        Publish(PlayerActionStage.DashStarted);
+
+        bool began = _motor != null && _motor.BeginIaidoDash(
+            _preferredTargetId,
+            perceivedPosition,
+            target.HitCollider,
+            target.CollisionRadius,
+            _motor.IaidoMaxDistance,
+            _targetStandOff);
+
+        if (began)
+            return true;
+
+        _targetedDashAttack = false;
+        SetState(PlayerActionState.Free, PlayerActionStage.RequestRejected);
+        return false;
+    }
+
     /// <summary>발도 베기의 적중 프레임에서 고정 대상 또는 전방 공격 판정을 적 시스템에 요청합니다. actionId가 다르면 무시합니다.</summary>
     public void NotifyIaidoSlashImpact(int actionId)
     {
@@ -447,10 +514,19 @@ public sealed class PlayerController : MonoBehaviour
         if (!_attackImpactResolved)
             ApplyAttackResolution(new PlayerAttackResolution(_currentActionId, false, null, false));
 
-        float recovery = _currentAttackOutcome == PlayerAttackOutcome.Hit
-            ? _iaidoHitRecovery
-            : _iaidoMissRecovery;
+        bool hasNextTarget = _targetedDashAttack
+            && _currentAttackOutcome == PlayerAttackOutcome.Hit
+            && _attackDeathConfirmed
+            && TrySelectIaidoTarget(out _queuedTargetedCombatTarget, out _queuedTargetedPosition);
+        _hasQueuedTargetedAttack = hasNextTarget;
+        if (hasNextTarget)
+            _targetedComboStrike = _targetedComboStrike >= 3 ? 1 : _targetedComboStrike + 1;
+        else if (_currentAttackOutcome != PlayerAttackOutcome.Hit || !_attackDeathConfirmed)
+            _targetedComboStrike = 0;
+        float recovery = hasNextTarget ? 0f : _currentAttackOutcome == PlayerAttackOutcome.Hit ? _iaidoHitRecovery : _iaidoMissRecovery;
         FinishAttackAction(recovery, _currentAttackOutcome);
+        if (hasNextTarget)
+            StartQueuedTargetedAttack();
     }
 
     /// <summary>일시정지 상태를 전환하고 복귀할 행동 상태를 보존합니다. paused가 false이면 보존한 상태를 복원합니다.</summary>
@@ -493,8 +569,11 @@ public sealed class PlayerController : MonoBehaviour
         _currentActionId = ++_nextActionId;
         _attackImpactResolved = false;
         _attackActionFinished = false;
+        _attackDeathConfirmed = false;
+        _hasQueuedTargetedAttack = false;
         _currentAttackOutcome = PlayerAttackOutcome.None;
         _preferredTargetId = null;
+        _targetedDashAttack = false;
         SetState(attackState, PlayerActionStage.StateChanged);
     }
 
@@ -534,6 +613,7 @@ public sealed class PlayerController : MonoBehaviour
         _currentAttackOutcome = resolution.HitConfirmed
             ? PlayerAttackOutcome.Hit
             : PlayerAttackOutcome.Miss;
+        _attackDeathConfirmed = resolution.DeathConfirmed;
 
         if (resolution.HitConfirmed)
         {
@@ -599,8 +679,19 @@ public sealed class PlayerController : MonoBehaviour
     {
         _attackImpactResolved = false;
         _attackActionFinished = false;
+        _attackDeathConfirmed = false;
         _currentAttackOutcome = PlayerAttackOutcome.None;
         _preferredTargetId = null;
+        _targetedDashAttack = false;
+    }
+
+    /// <summary>저장한 다음 대상 정보를 사용해 연속 돌진 공격을 시작하고 예약 대상을 소비한다.</summary>
+    private void StartQueuedTargetedAttack()
+    {
+        PlayerCombatTarget target = _queuedTargetedCombatTarget;
+        Vector3 position = _queuedTargetedPosition;
+        _hasQueuedTargetedAttack = false;
+        BeginTargetedDashAttack(target, position);
     }
 
     /// <summary>대시 종료 이유에 따라 벽 충돌 회복을 적용하거나 베기 상태로 전환합니다.</summary>
@@ -611,6 +702,20 @@ public sealed class PlayerController : MonoBehaviour
 
         if (result.Reason == PlayerDashEndReason.WallBlocked)
         {
+            if (_targetedDashAttack
+                && _combatService != null
+                && _combatService.TryGetTarget(_preferredTargetId, out PlayerCombatTarget target)
+                && target.IsAlive
+                && target.HitCollider != null
+                && Vector3.Distance(transform.position, target.HitCollider.ClosestPoint(transform.position)) <= _iaidoAttackRange)
+            {
+                SetState(PlayerActionState.IaidoSlash, PlayerActionStage.DashArrived, PlayerAttackOutcome.None, _preferredTargetId, result.Position);
+                Publish(PlayerActionStage.SlashStarted, PlayerAttackOutcome.None, _preferredTargetId, result.Position);
+                NotifyIaidoSlashImpact(_currentActionId);
+                return;
+            }
+
+            _targetedComboStrike = 0;
             Publish(PlayerActionStage.DashBlocked, PlayerAttackOutcome.WallBlocked, _preferredTargetId, result.Position);
             _attackActionFinished = true;
             _recoveryRemaining = 0f;
@@ -621,6 +726,8 @@ public sealed class PlayerController : MonoBehaviour
 
         SetState(PlayerActionState.IaidoSlash, PlayerActionStage.DashArrived, PlayerAttackOutcome.None, _preferredTargetId, result.Position);
         Publish(PlayerActionStage.SlashStarted, PlayerAttackOutcome.None, _preferredTargetId, result.Position);
+        if (_targetedDashAttack)
+            NotifyIaidoSlashImpact(_currentActionId);
     }
 
     /// <summary>유효한 감지 대상 중 중앙 1/3, 전방, 최대 거리 조건과 안정적인 우선순위로 목표를 선택합니다. 선택 결과와 위치를 출력합니다.</summary>
@@ -628,10 +735,12 @@ public sealed class PlayerController : MonoBehaviour
     {
         selected = default;
         perceivedPosition = Vector3.zero;
-        if (_perceptionProvider == null || _combatService == null)
+        if (_combatService == null)
             return false;
 
-        IReadOnlyList<PlayerPerceivedTarget> targets = _perceptionProvider.GetCurrentTargets();
+        IReadOnlyList<PlayerPerceivedTarget> targets = _perceptionProvider != null
+            ? _perceptionProvider.GetCurrentTargets()
+            : (_combatService as EnemyCombatService)?.GetCurrentTargets();
         if (targets == null || targets.Count == 0)
             return false;
 
@@ -652,7 +761,7 @@ public sealed class PlayerController : MonoBehaviour
                 continue;
 
             Vector3 screen = camera.WorldToViewportPoint(perceived.WorldPosition);
-            if (screen.z <= 0f || screen.x < 1f / 3f || screen.x > 2f / 3f)
+            if (screen.z <= 0f)
                 continue;
 
             Vector3 toTarget = perceived.WorldPosition - transform.position;
@@ -667,10 +776,10 @@ public sealed class PlayerController : MonoBehaviour
 
             float centerOffset = Mathf.Abs(screen.x - 0.5f);
             bool isBetter = !found
-                || centerOffset < bestCenterOffset - 0.0001f
-                || (Mathf.Abs(centerOffset - bestCenterOffset) <= 0.0001f && distance < bestDistance - 0.0001f)
-                || (Mathf.Abs(centerOffset - bestCenterOffset) <= 0.0001f
-                    && Mathf.Abs(distance - bestDistance) <= 0.0001f
+                || distance < bestDistance - 0.0001f
+                || (Mathf.Abs(distance - bestDistance) <= 0.0001f && centerOffset < bestCenterOffset - 0.0001f)
+                || (Mathf.Abs(distance - bestDistance) <= 0.0001f
+                    && Mathf.Abs(centerOffset - bestCenterOffset) <= 0.0001f
                     && string.CompareOrdinal(perceived.TargetId, bestId) < 0);
 
             if (!isBetter)
