@@ -29,6 +29,30 @@ public sealed class BossController : MonoBehaviour
     private BossState _state;
     private bool _started;
 
+    [Header("배회")]
+    [SerializeField, Min(0.1f), Tooltip("마지막 피격 이후 돌진까지의 시간(초)")]
+    private float _roamDuration = 7f;
+    [SerializeField, Min(1f), Tooltip("플레이어 주변 배회 반경(미터)")]
+    private float _roamRadius = 7f;
+    [SerializeField, Min(0.1f)] private float _roamDestinationInterval = 2.5f;
+    [SerializeField, Min(0.1f)] private float _roamSpeed = 2f;
+    private float _roamUntil;
+    private readonly NavMeshPath _path = new NavMeshPath();
+
+    [Header("돌진")]
+    [SerializeField, Min(0.1f), Tooltip("기합 이후 돌진 준비 시간(초)")]
+    private float _chargePreparation = 0.9f;
+    [SerializeField, Min(0.1f)] private float _chargeSpeed = 14f;
+    [SerializeField, Min(0.1f)] private float _chargeDistance = 12f;
+    [SerializeField, Min(0.05f)] private float _chargeDuration = 1f;
+    [SerializeField, Min(0f)] private float _chargeDamage = 15f;
+    [SerializeField, Min(0.1f)] private float _chargeHitRadius = 0.65f;
+    [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
+    private readonly RaycastHit[] _obstacleHits = new RaycastHit[16];
+    private readonly Collider[] _chargeContacts = new Collider[16];
+
+    public event Action ChargePreparing;
+
     public BossState State => _state;
     public event Action<BossState> StateChanged;
 
@@ -88,14 +112,100 @@ public sealed class BossController : MonoBehaviour
     /// <summary>생존 중 단일 행동 흐름을 유지하고 전투 종료 시 코루틴 참조를 정리한다.</summary>
     private IEnumerator RunBattle()
     {
+        yield return null;
         while (_health.IsAlive && _playerHealth.IsAlive)
-            yield return null;
+        {
+            yield return Roam();
+            ChangeState(BossState.Charging);
+            yield return Charge();
+        }
         _routine = null;
+    }
+
+    /// <summary>마지막 피격 기준 제한 시간 동안 플레이어 주변의 유효한 경로를 골라 배회한다.</summary>
+    private IEnumerator Roam()
+    {
+        ChangeState(BossState.Roaming);
+        _roamUntil = Time.time + _roamDuration;
+        _agent.speed = _roamSpeed;
+        float nextDestination = 0f;
+        while (Time.time < _roamUntil)
+        {
+            if (Time.time >= nextDestination)
+            {
+                Vector2 offset = UnityEngine.Random.insideUnitCircle.normalized * _roamRadius;
+                if (TrySamplePosition(_player.transform.position + new Vector3(offset.x, 0f, offset.y), out Vector3 position)
+                    && _agent.CalculatePath(position, _path) && _path.status == NavMeshPathStatus.PathComplete)
+                    _motor.MoveTo(position, 0.1f);
+                nextDestination = Time.time + _roamDestinationInterval;
+            }
+            yield return null;
+        }
+        _motor.Stop();
+    }
+
+    /// <summary>기합과 준비 시간 뒤 목표 방향을 고정해 장애물 경계까지 돌진하고 접촉 피해를 한 번 적용한다.</summary>
+    private IEnumerator Charge()
+    {
+        _motor.Stop();
+        ChargePreparing?.Invoke();
+        yield return new WaitForSeconds(_chargePreparation);
+        Vector3 direction = Vector3.ProjectOnPlane(_player.transform.position - transform.position, Vector3.up).normalized;
+        if (direction.sqrMagnitude < 0.001f) yield break;
+        transform.rotation = Quaternion.LookRotation(direction);
+        float remaining = _chargeDistance;
+        float until = Time.time + _chargeDuration;
+        bool hitPlayer = false;
+        while (Time.time < until && remaining > 0.01f)
+        {
+            Vector3 previous = transform.position;
+            float distance = Mathf.Min(_chargeSpeed * Time.deltaTime, remaining);
+            Vector3 center = previous + Vector3.up;
+            int count = Physics.SphereCastNonAlloc(center, _agent.radius, direction, _obstacleHits,
+                distance, _obstacleMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                Transform obstacle = _obstacleHits[i].transform;
+                if (obstacle.IsChildOf(transform) || obstacle.IsChildOf(_player.transform)) continue;
+                distance = Mathf.Min(distance, Mathf.Max(0f, _obstacleHits[i].distance - 0.05f));
+            }
+            Vector3 destination = previous + direction * distance;
+            if (_agent.Raycast(destination, out NavMeshHit boundary))
+                destination = Vector3.MoveTowards(boundary.position, previous, 0.05f);
+            _agent.Move(destination - previous);
+            remaining -= Vector3.Distance(previous, transform.position);
+            if (!hitPlayer)
+            {
+                count = Physics.OverlapCapsuleNonAlloc(center, transform.position + Vector3.up,
+                    _chargeHitRadius, _chargeContacts, ~0, QueryTriggerInteraction.Ignore);
+                for (int i = 0; i < count; i++)
+                {
+                    if (!_chargeContacts[i].transform.IsChildOf(_player.transform)) continue;
+                    hitPlayer = true;
+                    _playerHealth.TakeDamage(new DamageContext(_chargeDamage, gameObject,
+                        _chargeContacts[i].ClosestPoint(center), direction, "BossCharge"));
+                    break;
+                }
+            }
+            if (distance < 0.01f || (transform.position - previous).sqrMagnitude < 0.000001f) break;
+            yield return null;
+        }
+        _motor.Stop();
+    }
+
+    /// <summary>desired 주변의 같은 에이전트 유형·영역에 속한 지면을 찾아 position으로 반환한다.</summary>
+    private bool TrySamplePosition(Vector3 desired, out Vector3 position)
+    {
+        NavMeshQueryFilter filter = new NavMeshQueryFilter { agentTypeID = _agent.agentTypeID, areaMask = _agent.areaMask };
+        bool found = NavMesh.SamplePosition(desired, out NavMeshHit hit, 0.5f, filter);
+        position = hit.position;
+        return found;
     }
 
     /// <summary>context의 보스 피격을 받는다. 기본 피해 적용에 추가 스턴을 부여하지 않는다.</summary>
     private void HandleBossDamaged(DamageContext context)
     {
+        if (_state == BossState.Roaming) _roamUntil = Time.time + _roamDuration;
     }
 
     /// <summary>context가 현재 보스 3연격의 피해이면 남은 공격을 중단하도록 적중을 기록한다.</summary>
