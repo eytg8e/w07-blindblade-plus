@@ -10,112 +10,7 @@
     <configurations />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d4e56f78-704a-419d-8dc1-4a83f2dd9a13" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/IntroScene.unity" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/IntroScene.unity.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/KatanaCombatPreview.unity" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/KatanaCombatPreview.unity.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/MainMap.unity" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/MainMap.unity.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/PlayerDebugSandbox.unity" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/PlayerDebugSandbox.unity.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/Stairwell.unity" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/Stairwell.unity.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/StraightCorridor.unity" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/StraightCorridor.unity.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/TCorridor.unity" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scenes/TCorridor.unity.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Combat/DamageContext.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Combat/DamageContext.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Combat/DamageReceiver.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Combat/DamageReceiver.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Combat/IDamageable.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Combat/IDamageable.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Effects/EnemyCombatEffects.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Effects/EnemyCombatEffects.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Effects/PlayerCombatEffects.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Effects/PlayerCombatEffects.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Effects/SwordEffectEmitter.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Effects/SwordEffectEmitter.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyAttackBehaviour.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyAttackBehaviour.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyAttackContext.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyAttackContext.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyAttackSelector.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyAttackSelector.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyChargeAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyChargeAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyChargeHitbox.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyChargeHitbox.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyMeleeAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyMeleeAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyRangedAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyRangedAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyRhythmChargeAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyRhythmChargeAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Editor/EnemyPlacementTools.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Editor/EnemyPlacementTools.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyCombatService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyCombatService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyFootsteps.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyFootsteps.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyHealth.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyHealth.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyMotor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyMotor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyPatrol.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyPatrol.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyProjectile.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyProjectile.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemySensor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemySensor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemySoundSettings.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemySoundSettings.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Footsteps/FootstepEmitter.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Footsteps/FootstepEmitter.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Footsteps/SensoryFootstepEffect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Footsteps/SensoryFootstepEffect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Footsteps/SensoryWaveEffect.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Footsteps/SensoryWaveEffect.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/GameManagers/EffectManager.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/GameManagers/EffectManager.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/GameManagers/Game.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/GameManagers/Game.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/GameManagers/GameSceneInitializer.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/GameManagers/GameSceneInitializer.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/GameManagers/GameplayControlsUI.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/GameManagers/GameplayControlsUI.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/GameManagers/InputManager.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/GameManagers/InputManager.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Managers/Managers.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Managers/Managers.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Managers/PoolManager.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Managers/PoolManager.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Managers/Poolable.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Managers/Poolable.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Managers/ResourceManager.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Managers/ResourceManager.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Maps/CorridorRoundController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Maps/CorridorRoundController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Maps/StageDoor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Maps/StageDoor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Maps/StageSwordNoise.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Maps/StageSwordNoise.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaCombatCoordinator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaCombatCoordinator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaDamageReceiver.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaDamageReceiver.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaDebugOverlay.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaDebugOverlay.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaInputCommandAdapter.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaInputCommandAdapter.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaWeaponVisual.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaWeaponVisual.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/PlayerCombatAudio.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/PlayerCombatAudio.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/PlayerHealth.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/PlayerHealth.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/PlayerInputCommandAdapter.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/PlayerInputCommandAdapter.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerDebugOverlay.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerDebugOverlay.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerGuardDebugInput.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerGuardDebugInput.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerSandboxScenarioControls.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerSandboxScenarioControls.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerShirasayaGeometry.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerShirasayaGeometry.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestActionDriver.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerActionDriver.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestActionDriver.cs.meta" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerActionDriver.cs.meta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestTarget.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestTarget.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestWall.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestWall.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestWorldAdapter.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerTestWorldAdapter.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerWeaponDebugVisual.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/Testing/PlayerWeaponDebugVisual.cs.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Rendering/OutlineVFX.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Rendering/OutlineVFX.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Rendering/OutlineVFXRouting.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Rendering/OutlineVFXRouting.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Rendering/ScreenSpaceOutlineFeature.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Rendering/ScreenSpaceOutlineFeature.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/SoundSystem/EnemyDamageAudio.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/SoundSystem/EnemyDamageAudio.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ProjectSettings/EditorBuildSettings.asset" beforeDir="false" afterPath="$PROJECT_DIR$/ProjectSettings/EditorBuildSettings.asset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/FMOD_사운드_검증.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/FMOD_사운드_검증.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/FMOD_사운드_매니저.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/FMOD_사운드_매니저.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/감각_표현.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/감각_표현.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/게임_씬_공통_구성.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/게임_씬_공통_구성.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/매니저_싱글턴.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/매니저_싱글턴.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/메인맵.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/메인맵.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/스테이지_이동.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/스테이지_이동.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/이펙트_시스템.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/이펙트_시스템.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/인트로_메뉴.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/인트로_메뉴.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/적_공격_패턴.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/적_공격_패턴.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/적_전투_체력.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/적_전투_체력.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/직선_복도_씬.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/직선_복도_씬.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/카타나_전투_V2.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/카타나_전투_V2.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/플레이어_걸음_보행.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/플레이어_걸음_보행.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/플레이어_검_애니메이션.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/플레이어_시스템.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/플레이어_시스템.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/플레이어_시스템_인수인계.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/플레이어_시스템_인수인계.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/플레이어_피격_체력.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/플레이어_피격_체력.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/화면_공간_윤곽선.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/화면_공간_윤곽선.md" afterDir="false" />
-    </list>
+    <list default="true" id="d4e56f78-704a-419d-8dc1-4a83f2dd9a13" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -131,6 +26,18 @@
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/435b7303fa1046c7aefb885a0b7d525b1e0000/50/f5a4c0f0/GameObject.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Plugins.meta" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Plugins/FMOD.meta" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_DashLineCounter.prefab" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Assets/Scenes/Map/MainMap.unity" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Assets/Scenes/Map/Stairwell_1.unity" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Assets/Sprites/FootstepTest/Ring.png.meta" root0="FORCE_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Scenes/Map/MainMap.unity" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Scenes/Map/Stairwell_1.unity" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Scripts/Enemies/Editor/EnemyPlacementTools.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Scripts/GameManagers/GameSceneInitializer.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Scripts/GameManagers/InputManager.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Scripts/Managers/SoundManager.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Scripts/Player/PlayerController.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/JUNGLE/Documents/GitHub/week06-blindblade/Assets/Sprites/FootstepTest/Ring.png.meta" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="McpProjectServerCommands">
     <commands />
@@ -139,23 +46,23 @@
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="false" />
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.1207420411156057" />
-      <entry key="MS500" value="1.6551967019291816" />
-      <entry key="S2" value="1.8996900669382808" />
-      <entry key="S5" value="1.9585994384929766" />
-      <entry key="S10" value="1.9790809151918838" />
-      <entry key="S30" value="1.9929777755197713" />
-      <entry key="S60" value="1.9964827020675127" />
-      <entry key="M2" value="1.9982398018850542" />
-      <entry key="M5" value="1.999295548608902" />
-      <entry key="M10" value="1.999647712251122" />
-      <entry key="M15" value="1.9997651277089599" />
-      <entry key="M30" value="1.9998825569580458" />
-      <entry key="H1" value="1.999941276754813" />
-      <entry key="H2" value="1.9999706379463413" />
-      <entry key="H4" value="1.9999853188654029" />
-      <entry key="D1" value="1.999997553129266" />
-      <entry key="W1" value="1.9999996504466715" />
+      <entry key="MS100" value="1.0310447252006913" />
+      <entry key="MS500" value="1.9171356618552058" />
+      <entry key="S2" value="4.488583918161913" />
+      <entry key="S5" value="6.203783794671146" />
+      <entry key="S10" value="7.017454771567577" />
+      <entry key="S30" value="7.651457925454482" />
+      <entry key="S60" value="7.822944326770848" />
+      <entry key="M2" value="7.910763679231434" />
+      <entry key="M5" value="7.964133831363382" />
+      <entry key="M10" value="7.982038174161632" />
+      <entry key="M15" value="7.988019052411293" />
+      <entry key="M30" value="7.99400632518053" />
+      <entry key="H1" value="7.997002361862956" />
+      <entry key="H2" value="7.99850098069074" />
+      <entry key="H4" value="7.9992504402778195" />
+      <entry key="D1" value="7.999875066425185" />
+      <entry key="W1" value="7.999982152176134" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -177,24 +84,27 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.12074204111560566" />
-      <entry key="MS500" value="0.6551967090861711" />
-      <entry key="S2" value="0.9088878379750099" />
-      <entry key="S5" value="1.1118750430374824" />
-      <entry key="S10" value="1.3705851993887566" />
-      <entry key="S30" value="1.7245302881287228" />
-      <entry key="S60" value="1.8517911333418406" />
-      <entry key="M2" value="1.9230686678242224" />
-      <entry key="M5" value="1.968520421204401" />
-      <entry key="M10" value="1.9841399024667168" />
-      <entry key="M15" value="1.989399680644436" />
-      <entry key="M30" value="1.9946863330543552" />
-      <entry key="H1" value="1.9973397809126594" />
-      <entry key="H2" value="1.998669042950498" />
-      <entry key="H4" value="1.9993343094608589" />
-      <entry key="D1" value="1.9998890221186523" />
-      <entry key="W1" value="1.9999841452953733" />
+      <entry key="MS100" value="0.9615759435670463" />
+      <entry key="MS500" value="1.858144602391683" />
+      <entry key="S2" value="4.065528324203102" />
+      <entry key="S5" value="5.5915973696852115" />
+      <entry key="S10" value="6.485670458851086" />
+      <entry key="S30" value="7.3837717812628965" />
+      <entry key="S60" value="7.673715640270831" />
+      <entry key="M2" value="7.831908531141568" />
+      <entry key="M5" value="7.931518915365152" />
+      <entry key="M10" value="7.965547112724694" />
+      <entry key="M15" value="7.976983847985949" />
+      <entry key="M30" value="7.988468049814709" />
+      <entry key="H1" value="7.9942280386803946" />
+      <entry key="H2" value="7.99711252056696" />
+      <entry key="H4" value="7.9985558853127205" />
+      <entry key="D1" value="7.999759262115948" />
+      <entry key="W1" value="7.999965607597412" />
     </decayedShown>
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5,
@@ -314,8 +224,21 @@
     <option name="unityProjectFolder" value="true" />
   </component>
   <component name="UnityUnitTestConfiguration" currentTestLauncher="Both" />
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+    <MESSAGE value="fix : error fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix : error fix" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

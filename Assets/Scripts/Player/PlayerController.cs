@@ -11,6 +11,10 @@ using UnityEngine;
 [DefaultExecutionOrder(-30)]
 public sealed class PlayerController : MonoBehaviour
 {
+    private const float CROUCH_PULSE_RESTART_DELAY = 0.08f;
+    private const float CROUCH_PULSE_RETRY_INTERVAL = 0.2f;
+    private const float CROUCH_PULSE_SURFACE_OFFSET = 0.02f;
+
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
@@ -69,21 +73,18 @@ public sealed class PlayerController : MonoBehaviour
     private Vector3 _lockedAttackDirection;
     private bool _targetedDashAttack;
     private bool _attackDeathConfirmed;
-    private bool _hasQueuedTargetedAttack;
     private int _targetedComboStrike;
-    private PlayerCombatTarget _queuedTargetedCombatTarget;
-    private Vector3 _queuedTargetedPosition;
     private PlayerAttackOutcome _currentAttackOutcome;
     private PlayerSenseContext _lastSenseContext;
     private bool _hasSenseContext;
     private bool _crouchInputActive;
+    private float _nextCrouchPulseTime;
 
     public event Action<PlayerActionEvent> ActionEvent;
     public event Action<PlayerFootstepEvent> FootstepEmitted;
     public event Action<PlayerSenseContext> SenseContextChanged;
 
     public PlayerActionState CurrentState => _state;
-    public bool HasQueuedTargetedAttack => _hasQueuedTargetedAttack;
     public int TargetedComboStrike => _targetedComboStrike;
     public bool IsGuarding => _state == PlayerActionState.Guarding;
     public bool IsCharging => _state == PlayerActionState.Charging;
@@ -137,6 +138,8 @@ public sealed class PlayerController : MonoBehaviour
     {
         if (_state == PlayerActionState.Paused || _state == PlayerActionState.Dead)
             return;
+
+        UpdateCrouchPulse();
 
         float deltaTime = Time.deltaTime;
         if (_state == PlayerActionState.Recovery)
@@ -226,7 +229,7 @@ public sealed class PlayerController : MonoBehaviour
         return _motor.TryBeginDodge(_requestedMoveInput);
     }
 
-    /// <summary>입력 어댑터가 계산한 웅크리기 상태를 이동 장치에 전달합니다. 일시정지나 사망 상태에서는 요청을 무시합니다.</summary>
+    /// <summary>웅크리기 상태를 이동 장치에 전달하고 진입 시 감각 파동을 발행합니다. 일시정지나 사망 상태에서는 요청을 무시합니다.</summary>
     public void SetCrouchInput(bool isCrouching)
     {
         if (_state == PlayerActionState.Paused || _state == PlayerActionState.Dead)
@@ -235,22 +238,60 @@ public sealed class PlayerController : MonoBehaviour
         bool enteredCrouch = isCrouching && !_crouchInputActive;
         _crouchInputActive = isCrouching;
         _motor?.SetCrouchInput(isCrouching);
+        if (!isCrouching)
+        {
+            _nextCrouchPulseTime = 0f;
+            return;
+        }
+
         if (enteredCrouch)
-            EmitCrouchPulse();
+            _nextCrouchPulseTime = Time.time + EmitCrouchPulse();
     }
 
-    /// <summary>웅크리기 시작 위치에서 감각 파동을 생성해 주변 적 윤곽선을 잠깐 드러낸다.</summary>
-    private void EmitCrouchPulse()
+    /// <summary>웅크리기 입력과 다음 발행 시각을 사용해 이전 파동 종료 후 감각 파동을 반복 발행한다.</summary>
+    private void UpdateCrouchPulse()
+    {
+        if (_crouchInputActive && Time.time >= _nextCrouchPulseTime)
+            _nextCrouchPulseTime = Time.time + EmitCrouchPulse();
+    }
+
+    /// <summary>
+    /// 충돌 캡슐 아래의 지면 위치와 시선 방향으로 웅크리기 파동을 생성한다.
+    /// 플레이어 자체와 트리거를 제외하고 표면 위에 배치하며, 성공 여부에 따른 다음 발행 간격을 반환한다.
+    /// </summary>
+    private float EmitCrouchPulse()
     {
         if (!Game.IsInitialized)
-            return;
+            return CROUCH_PULSE_RETRY_INTERVAL;
 
         SensoryManager sensoryManager = Game.Instance.SensoryManager;
-        if (sensoryManager == null || !sensoryManager.IsReady)
-            return;
+        if (sensoryManager == null)
+            return CROUCH_PULSE_RETRY_INTERVAL;
+
+        float interval = Mathf.Max(0.01f, sensoryManager.CrouchPulseInterval + CROUCH_PULSE_RESTART_DELAY);
+        if (!sensoryManager.IsReady)
+            return CROUCH_PULSE_RETRY_INTERVAL;
 
         Vector3 direction = _viewCamera != null ? _viewCamera.transform.forward : transform.forward;
-        sensoryManager.Emit(new SensoryEvent(transform.position, Vector3.up, direction));
+        CharacterController controller = GetComponent<CharacterController>();
+        Bounds bounds = controller.bounds;
+        Vector3 position = transform.position;
+        Vector3 normal = Vector3.up;
+        float closestDistance = float.PositiveInfinity;
+        RaycastHit[] hits = Physics.RaycastAll(bounds.center, Vector3.down,
+            bounds.extents.y + 0.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.transform.IsChildOf(transform) || hit.normal.y <= 0f
+                || hit.distance >= closestDistance)
+                continue;
+
+            closestDistance = hit.distance;
+            normal = hit.normal;
+            position = hit.point + normal * CROUCH_PULSE_SURFACE_OFFSET;
+        }
+        bool spawned = sensoryManager.Emit(new SensoryEvent(position, normal, direction));
+        return spawned ? interval : CROUCH_PULSE_RETRY_INTERVAL;
     }
 
     /// <summary>마우스 또는 패드 시점 변화량을 이동 장치에 누적 전달합니다. 일시정지나 사망 상태에서는 입력을 무시합니다.</summary>
@@ -514,19 +555,10 @@ public sealed class PlayerController : MonoBehaviour
         if (!_attackImpactResolved)
             ApplyAttackResolution(new PlayerAttackResolution(_currentActionId, false, null, false));
 
-        bool hasNextTarget = _targetedDashAttack
-            && _currentAttackOutcome == PlayerAttackOutcome.Hit
-            && _attackDeathConfirmed
-            && TrySelectIaidoTarget(out _queuedTargetedCombatTarget, out _queuedTargetedPosition);
-        _hasQueuedTargetedAttack = hasNextTarget;
-        if (hasNextTarget)
-            _targetedComboStrike = _targetedComboStrike >= 3 ? 1 : _targetedComboStrike + 1;
-        else if (_currentAttackOutcome != PlayerAttackOutcome.Hit || !_attackDeathConfirmed)
+        if (_currentAttackOutcome != PlayerAttackOutcome.Hit || !_attackDeathConfirmed)
             _targetedComboStrike = 0;
-        float recovery = hasNextTarget ? 0f : _currentAttackOutcome == PlayerAttackOutcome.Hit ? _iaidoHitRecovery : _iaidoMissRecovery;
+        float recovery = _currentAttackOutcome == PlayerAttackOutcome.Hit ? _iaidoHitRecovery : _iaidoMissRecovery;
         FinishAttackAction(recovery, _currentAttackOutcome);
-        if (hasNextTarget)
-            StartQueuedTargetedAttack();
     }
 
     /// <summary>일시정지 상태를 전환하고 복귀할 행동 상태를 보존합니다. paused가 false이면 보존한 상태를 복원합니다.</summary>
@@ -570,7 +602,6 @@ public sealed class PlayerController : MonoBehaviour
         _attackImpactResolved = false;
         _attackActionFinished = false;
         _attackDeathConfirmed = false;
-        _hasQueuedTargetedAttack = false;
         _currentAttackOutcome = PlayerAttackOutcome.None;
         _preferredTargetId = null;
         _targetedDashAttack = false;
@@ -681,15 +712,6 @@ public sealed class PlayerController : MonoBehaviour
         _currentAttackOutcome = PlayerAttackOutcome.None;
         _preferredTargetId = null;
         _targetedDashAttack = false;
-    }
-
-    /// <summary>저장한 다음 대상 정보를 사용해 연속 돌진 공격을 시작하고 예약 대상을 소비한다.</summary>
-    private void StartQueuedTargetedAttack()
-    {
-        PlayerCombatTarget target = _queuedTargetedCombatTarget;
-        Vector3 position = _queuedTargetedPosition;
-        _hasQueuedTargetedAttack = false;
-        BeginTargetedDashAttack(target, position);
     }
 
     /// <summary>대시 종료 이유에 따라 벽 충돌 회복을 적용하거나 베기 상태로 전환합니다.</summary>

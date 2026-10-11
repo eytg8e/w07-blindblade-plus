@@ -65,6 +65,9 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     [Tooltip("각 베기의 타격 구간 종료부터 다음 타 시작까지의 지연입니다. 값이 커지면 연계가 느려집니다. 동작이 끝났다면 회복 종료도 기다립니다.")]
     private float _comboFollowThrough = 0.12f;
     [SerializeField, Min(0f)] private float _comboResetDelay = 0.65f;
+    [SerializeField, Min(0.01f), InspectorName("돌진 베기 최소 유지 시간 (초)")]
+    [Tooltip("돌진 도착 후 베기 시작부터 다음 클릭 공격까지의 최소 시간입니다. 베기 모션과 회복 종료도 기다립니다.")]
+    private float _targetedAttackMinimumDuration = 0.45f;
     private bool _queuedAttack;
     private bool _queuedTargetedAttack;
     private int _queuedActionId;
@@ -226,11 +229,12 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                 || _player.CurrentState == PlayerActionState.Recovery);
         if (targetedAttackActive)
         {
-            if (_queuedAttack) return Reject("Attack: targeted strike already buffered");
+            if (_queuedAttack || _strike >= MAX_COMBO_STRIKES)
+                return Reject("Attack: targeted chain input unavailable");
             _queuedAttack = true;
             _queuedTargetedAttack = true;
             _queuedActionId = _player.CurrentActionId;
-            _queuedReadyAt = _clock;
+            _queuedReadyAt = _nextComboAllowedAt;
             return true;
         }
         if (_player.CurrentState == PlayerActionState.NormalAttack && _strike > 0 && _strike < MAX_COMBO_STRIKES && !_counterAttack)
@@ -245,6 +249,14 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         }
         if (_queuedAttack || !CanStartAction) return Reject("Attack: current action blocks input");
         int strike = _strike > 0 && _strike < MAX_COMBO_STRIKES && _clock < _comboExpiresAt ? _strike + 1 : 1;
+        if (strike > 1 && _clock < _nextComboAllowedAt)
+        {
+            _queuedAttack = true;
+            _queuedTargetedAttack = true;
+            _queuedActionId = _player.CurrentActionId;
+            _queuedReadyAt = _nextComboAllowedAt;
+            return true;
+        }
         if (_player.RequestTargetedIaidoAttack(strike))
             return true;
         if (strike == 1 && _weaponState == KatanaWeaponState.Drawn)
@@ -554,11 +566,18 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                 else
                     ResetChain();
                 _weaponState = KatanaWeaponState.Sheathed;
+                _waiting = false;
+                _waitAfterRecovery = false;
+                _comboExpiresAt = 0f;
                 Publish(KatanaStage.DashStarted);
                 break;
             case PlayerActionStage.SlashStarted:
                 if (_player.TargetedComboStrike > 0)
+                {
                     _strike = _player.TargetedComboStrike;
+                    _nextComboAllowedAt = _clock + _targetedAttackMinimumDuration;
+                    if (_queuedTargetedAttack) _queuedReadyAt = _nextComboAllowedAt;
+                }
                 _weaponState = KatanaWeaponState.Drawn;
                 Publish(KatanaStage.SlashStarted);
                 break;
@@ -580,11 +599,17 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                     bool continueTargetedCombo = e.Outcome == PlayerAttackOutcome.Hit
                         && _player.TargetedComboStrike > 0
                         && _strike < MAX_COMBO_STRIKES;
-                    _comboExpiresAt = continueTargetedCombo ? _clock + _comboResetDelay : 0f;
-                    if (!continueTargetedCombo && _weaponState == KatanaWeaponState.Drawn && !_player.HasQueuedTargetedAttack)
-                        BeginSheathe();
+                    _comboExpiresAt = continueTargetedCombo
+                        ? Mathf.Max(_clock, _nextComboAllowedAt) + _comboResetDelay : 0f;
+                    if (!continueTargetedCombo)
+                    {
+                        _queuedAttack = false;
+                        _queuedTargetedAttack = false;
+                    }
+                    _sheatheAfterRecovery = !continueTargetedCombo;
+                    _waitAfterRecovery = true;
                 }
-                else if (_weaponState == KatanaWeaponState.Drawn && !_player.HasQueuedTargetedAttack)
+                else if (_weaponState == KatanaWeaponState.Drawn)
                     BeginSheathe();
                 else if (e.Outcome == PlayerAttackOutcome.WallBlocked)
                     Publish(KatanaStage.ChargeReleased, "Wall blocked");

@@ -11,8 +11,10 @@ using UnityEngine;
         private static readonly int _observerRegionId = Shader.PropertyToID("_OutlineObserverRegion");
         private static readonly int _soundRegionsId = Shader.PropertyToID("_OutlineSoundRegions");
         private static readonly int _soundCountId = Shader.PropertyToID("_OutlineSoundCount");
-        private static readonly int _soundRadiusId = Shader.PropertyToID("_OutlineSoundRadius");
+        private static readonly int _soundStartRadiusId = Shader.PropertyToID("_OutlineSoundStartRadius");
+        private static readonly int _soundEndRadiusId = Shader.PropertyToID("_OutlineSoundEndRadius");
         private static readonly int _soundLifetimeId = Shader.PropertyToID("_OutlineSoundLifetime");
+        private static readonly int _soundFadeDurationId = Shader.PropertyToID("_OutlineSoundFadeDuration");
         private static readonly int _edgeFadeId = Shader.PropertyToID("_OutlineEdgeFade");
         private static readonly int _perceptionTimeId = Shader.PropertyToID("_OutlinePerceptionTime");
 
@@ -25,9 +27,13 @@ using UnityEngine;
         private float _soundRadius = 4f;
         [SerializeField, Min(0.01f), Tooltip("소리 주변 윤곽선이 선형으로 사라지는 수명(초).")]
         private float _soundLifetime = 1f;
+        [SerializeField, Min(0.01f), Tooltip("파동 확산이 끝난 뒤 시야가 서서히 사라지는 시간(초).")]
+        private float _soundFadeDuration = 0.6f;
         private readonly Vector4[] _soundRegions = new Vector4[MAX_SOUND_REGIONS];
         private int _soundCount;
         private bool _footstepOnly;
+
+        public float SoundLifetime => _soundLifetime;
 
         [Header("인지 경계")]
         [SerializeField, Min(0.01f), Tooltip("인지 반경 안쪽에서 가장자리까지 흐려지는 거리(미터).")]
@@ -116,10 +122,11 @@ using UnityEngine;
             }
 
             float currentTime = Time.time;
+            float revealLifetime = _sensoryManager.CrouchPulseInterval;
             int remainingCount = 0;
             for (int i = 0; i < _soundCount; i++)
             {
-                if (currentTime - _soundRegions[i].w < _soundLifetime)
+                if (currentTime - _soundRegions[i].w < revealLifetime + _soundFadeDuration)
                     _soundRegions[remainingCount++] = _soundRegions[i];
             }
             _soundCount = remainingCount;
@@ -127,8 +134,15 @@ using UnityEngine;
             Vector3 observerPosition = _sensoryManager.Observer.position;
             Shader.SetGlobalVector(_observerRegionId,
                 new Vector4(observerPosition.x, observerPosition.y, observerPosition.z, _footstepOnly ? 0f : _playerRadius));
-            Shader.SetGlobalFloat(_soundRadiusId, _soundRadius);
-            Shader.SetGlobalFloat(_soundLifetimeId, _soundLifetime);
+            float waveEndRadius = _sensoryManager.WaveEndRadius;
+            float revealEndRadius = waveEndRadius > 0f ? waveEndRadius : _soundRadius;
+            float revealStartRadius = waveEndRadius > 0f
+                ? _sensoryManager.WaveStartRadius
+                : revealEndRadius;
+            Shader.SetGlobalFloat(_soundStartRadiusId, revealStartRadius);
+            Shader.SetGlobalFloat(_soundEndRadiusId, revealEndRadius);
+            Shader.SetGlobalFloat(_soundLifetimeId, revealLifetime);
+            Shader.SetGlobalFloat(_soundFadeDurationId, _soundFadeDuration);
             Shader.SetGlobalFloat(_edgeFadeId, _edgeFade);
             Shader.SetGlobalFloat(_perceptionTimeId, currentTime);
             Shader.SetGlobalInt(_soundCountId, _soundCount);

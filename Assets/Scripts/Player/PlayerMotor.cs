@@ -62,8 +62,15 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0f)] private float _iaidoMaxDistance = 7f;
     [SerializeField] private LayerMask _dashCollisionMask = ~0;
 
+    [Header("Dash anticipation")]
+    [SerializeField, Range(0.05f, 1f)] private float _dashSlowMotionScale = 0.35f;
+    [SerializeField, Min(0f)] private float _dashSlowMotionDuration = 0.12f;
+    private bool _isDashSlowMotionActive;
+    private float _dashSlowMotionElapsed;
+    private float _timeScaleBeforeDashSlowMotion;
+
     [Header("짧은 회피")]
-    [SerializeField, Min(0.1f)] private float _dodgeDistance = 1.2f;
+    [SerializeField, Min(0.1f)] private float _dodgeDistance = 2.4f;
     [SerializeField, Min(0.05f)] private float _dodgeDuration = 0.18f;
     [SerializeField, Min(0f)] private float _dodgeCooldown = 0.6f;
     private bool _isDodging;
@@ -201,6 +208,7 @@ public sealed class PlayerMotor : MonoBehaviour
     public void ClearInput()
     {
         CancelDodge();
+        RestoreDashSlowMotion();
         _moveInput = Vector2.zero;
         _pendingLookDelta = Vector2.zero;
         _planarVelocity = Vector3.zero;
@@ -401,6 +409,8 @@ public sealed class PlayerMotor : MonoBehaviour
 
         if (_dashGoalDistance <= 0.001f)
             FinishDash(hasTarget ? PlayerDashEndReason.TargetReached : PlayerDashEndReason.MaxDistanceReached);
+        else
+            BeginDashSlowMotion();
 
         return true;
     }
@@ -415,6 +425,9 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>대시 거리, 벽·적 충돌, 중력과 도착 여부를 갱신합니다.</summary>
 private void TickDash(float deltaTime)
     {
+        if (TickDashSlowMotion())
+            return;
+
         float remaining = _dashGoalDistance - _dashDistanceTravelled;
         if (remaining <= 0.001f)
         {
@@ -487,6 +500,45 @@ private void TickDash(float deltaTime)
         }
     }
 
+    /// <summary>짧은 대시 예고 동안 전역 시간을 낮춘다. 완료되면 원래 배율로 복구하고 즉시 대시를 진행한다.</summary>
+    private bool TickDashSlowMotion()
+    {
+        if (!_isDashSlowMotionActive)
+            return false;
+
+        _dashSlowMotionElapsed += Time.unscaledDeltaTime;
+        if (_dashSlowMotionElapsed < _dashSlowMotionDuration)
+            return true;
+
+        RestoreDashSlowMotion();
+        return false;
+    }
+
+    /// <summary>현재 시간 배율을 기억하고 대시 시작 전 짧은 슬로모션을 적용한다.</summary>
+    private void BeginDashSlowMotion()
+    {
+        if (_dashSlowMotionDuration <= 0f || Time.timeScale <= 0f)
+            return;
+
+        _timeScaleBeforeDashSlowMotion = Time.timeScale;
+        _dashSlowMotionElapsed = 0f;
+        _isDashSlowMotionActive = true;
+        Time.timeScale = _timeScaleBeforeDashSlowMotion * _dashSlowMotionScale;
+    }
+
+    /// <summary>대시 예고가 소유한 슬로모션을 종료하고 시작 전 시간 배율을 복구한다.</summary>
+    private void RestoreDashSlowMotion()
+    {
+        if (!_isDashSlowMotionActive)
+            return;
+
+        if (Time.timeScale > 0f)
+            Time.timeScale = _timeScaleBeforeDashSlowMotion;
+
+        _isDashSlowMotionActive = false;
+        _dashSlowMotionElapsed = 0f;
+    }
+
     /// <summary>지정 방향과 거리에서 플레이어 자신의 충돌체를 제외한 가장 가까운 장애물이나 목표 적을 반환합니다.</summary>
 private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out RaycastHit closestHit)
     {
@@ -554,6 +606,7 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
             return;
 
         _isDashing = false;
+        RestoreDashSlowMotion();
         _planarVelocity = Vector3.zero;
         _moveInput = Vector2.zero;
         PlayerDashEnd result = new PlayerDashEnd(reason, _dashTargetId, transform.position);
@@ -697,6 +750,7 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
 
     private void OnDisable()
     {
+        RestoreDashSlowMotion();
         _isDashing = false;
         _isDodging = false;
         _moveInput = Vector2.zero;

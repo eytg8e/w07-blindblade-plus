@@ -327,7 +327,9 @@ MonoBehaviour:
   _dashCollisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  _dodgeDistance: 1.2
+  _dashSlowMotionScale: 0.35
+  _dashSlowMotionDuration: 0.12
+  _dodgeDistance: 2.4
   _dodgeDuration: 0.18
   _dodgeCooldown: 0.6
   _recoilReturnSpeed: 18
