@@ -12,6 +12,7 @@ public sealed class EnemyDamageAudio : MonoBehaviour
     [Header("Damage Sound")]
     [SerializeField] private SoundId _damageSound = SoundId.SwordHit;
     [SerializeField, Min(0f)] private float _volume = 0.8f;
+    [SerializeField, Range(0.25f, 4f)] private float _pitch = 1f;
     private EnemyHealth _health;
 
     [Header("적 상태 연결")]
@@ -61,7 +62,7 @@ public sealed class EnemyDamageAudio : MonoBehaviour
         if (_health.CurrentHealth <= 0f)
             Managers.Sound.PlayCue(CombatSoundCue.EnemyFinished, context.Point, context.Instigator);
         else
-            Managers.Sound.Play(_damageSound, context.Point, _volume, context.Instigator);
+            Managers.Sound.Play(_damageSound, context.Point, _volume, context.Instigator, pitch: _pitch);
     }
 
     /// <summary>

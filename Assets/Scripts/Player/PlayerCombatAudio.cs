@@ -19,6 +19,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     [SerializeField, Min(0f)] private float _volume = 0.8f;
 
     [Header("방어·피격 신호")]
+    [SerializeField, Min(0f)] private float _damageVolumeMultiplier = 1f;
+    [SerializeField, Range(0.25f, 4f)] private float _damagePitch = 1f;
     private PlayerHealth _health;
     private PlayerActionDriver _timing;
     private PlayerMotor _motor;
@@ -198,7 +200,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     /// </summary>
     private void HandleDamage(DamageContext context)
     {
-        Managers.Sound.Play(SoundId.SwordHit, context.Point, _volume, gameObject);
+        Managers.Sound.Play(SoundId.SwordHit, context.Point,
+            _volume * _damageVolumeMultiplier, gameObject, pitch: _damagePitch);
     }
 
     /// <summary>

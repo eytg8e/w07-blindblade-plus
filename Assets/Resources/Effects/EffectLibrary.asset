@@ -28,3 +28,9 @@ MonoBehaviour:
   - _id: 6
     _prefab: {fileID: 6564618536807332847, guid: 5be6186618529914daacddbcf90bdf15, type: 3}
     _prewarmCount: 3
+  - _id: 7
+    _prefab: {fileID: 2299600387374475564, guid: d15caa22387874c32b1d26b3fb4a31d4, type: 3}
+    _prewarmCount: 3
+  - _id: 8
+    _prefab: {fileID: 2460711669981391284, guid: f688134df138c46e4aebe50a59f0eb33, type: 3}
+    _prewarmCount: 3

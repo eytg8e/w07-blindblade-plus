@@ -9,5 +9,7 @@ public enum EffectId
     SwordSlashTrail = 3,
     EnemySlash = 4,
     GuardClash = 5,
-    ParryClash = 6
+    ParryClash = 6,
+    BossDamageHit = 7,
+    PlayerDamageHit = 8
 }
