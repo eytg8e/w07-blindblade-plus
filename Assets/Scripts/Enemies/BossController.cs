@@ -57,6 +57,8 @@ public sealed class BossController : MonoBehaviour
 
     [Header("연속 돌진")]
     [SerializeField, Min(1f)] private float _teleportRadius = 6f;
+    [SerializeField, Range(1f, 180f), Tooltip("플레이어 시점 기준 돌진 등장 각도(도). 180도는 전방 반원입니다.")]
+    private float _teleportArc = 180f;
     [SerializeField, Min(0.1f)] private float _chargeInterval = 0.7f;
     private readonly Collider[] _placementContacts = new Collider[16];
 
@@ -136,8 +138,11 @@ public sealed class BossController : MonoBehaviour
         while (_health.IsAlive && _playerHealth.IsAlive)
         {
             yield return Roam();
-            ChangeState(BossState.Charging);
-            yield return Charge();
+            if (TryTeleportAround())
+            {
+                ChangeState(BossState.Charging);
+                yield return Charge();
+            }
             yield return ChainCharge();
             yield return Duel();
         }
@@ -228,23 +233,25 @@ public sealed class BossController : MonoBehaviour
     /// <summary>주변 유효 위치로 순간이동하고 각 위치에서 준비·돌진을 총 세 번 반복한다.</summary>
     private IEnumerator ChainCharge()
     {
-        ChangeState(BossState.ChainCharge);
         for (int i = 0; i < 3; i++)
         {
             if (!TryTeleportAround()) yield break;
+            ChangeState(BossState.ChainCharge);
             yield return Charge();
             yield return new WaitForSeconds(_chargeInterval);
         }
     }
 
-    /// <summary>플레이어 주변 랜덤 후보 중 유효한 지면과 빈 공간을 골라 순간이동하며 실패하면 false를 반환한다.</summary>
+    /// <summary>플레이어 전방 부채꼴의 랜덤 후보 중 유효한 지면과 빈 공간으로 순간이동하며 실패하면 false를 반환한다.</summary>
     private bool TryTeleportAround()
     {
+        Vector3 forward = _playerMotor.ViewForward;
         for (int attempt = 0; attempt < 12; attempt++)
         {
-            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
-            Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * _teleportRadius;
+            float angle = UnityEngine.Random.Range(-_teleportArc * 0.5f, _teleportArc * 0.5f);
+            Vector3 offset = Quaternion.Euler(0f, angle, 0f) * forward * _teleportRadius;
             if (!TrySamplePosition(_player.transform.position + offset, out Vector3 position)) continue;
+            if (Vector3.Dot(position - _player.transform.position, forward) < 0f) continue;
             if (!TryPlace(position)) continue;
             return true;
         }
