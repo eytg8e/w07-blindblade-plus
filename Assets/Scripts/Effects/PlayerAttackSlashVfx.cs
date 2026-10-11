@@ -1,4 +1,8 @@
+using System.Collections.Generic;
+
 using UnityEngine;
+
+using UnityEngine.Rendering;
 
 /// <summary>
 /// 플레이어 공격 시작에 자식 검기 파티클을 재생하고 완료 후 비활성화한다.
@@ -13,8 +17,12 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
     private ParticleSystem _slashVfx;
     [SerializeField, InspectorName("2타 VFX")]
     private ParticleSystem _secondSlashVfx;
-    [SerializeField, InspectorName("3타 VFX")]
+    [SerializeField, HideInInspector]
     private ParticleSystem _thirdSlashVfx;
+
+    [Header("검기 표현")]
+    [SerializeField, InspectorName("Outline Shader 사용"), Tooltip("켜면 검기를 OutlineVFX로 표시하고, 끄면 검기의 원래 재질로 표시합니다. 연결된 모든 공격 검기에 적용됩니다.")]
+    private bool _useOutlineShader = true;
     private PlayerActionDriver _timing;
     private KatanaCombatCoordinator _combat;
     private ParticleSystem _pendingSlashVfx;
@@ -22,11 +30,17 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
     private int _pendingAction;
     private PlayerAttackKind _pendingKind;
     private bool _pending;
+    private bool _appliedUseOutlineShader;
+    private readonly List<Material> _slashMaterials = new List<Material>();
 
     void Awake()
     {
         _timing = GetComponent<PlayerActionDriver>();
         _combat = GetComponent<KatanaCombatCoordinator>();
+        ConfigureSlash(_slashVfx);
+        ConfigureSlash(_secondSlashVfx);
+        ConfigureSlash(_thirdSlashVfx);
+        _appliedUseOutlineShader = _useOutlineShader;
         StopSlash();
     }
 
@@ -41,8 +55,21 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
         StopSlash();
     }
 
+    void OnDestroy()
+    {
+        foreach (Material material in _slashMaterials)
+            Destroy(material);
+    }
+
     void Update()
     {
+        if (_appliedUseOutlineShader != _useOutlineShader)
+        {
+            ApplyOutlineSetting(_slashVfx);
+            ApplyOutlineSetting(_secondSlashVfx);
+            ApplyOutlineSetting(_thirdSlashVfx);
+            _appliedUseOutlineShader = _useOutlineShader;
+        }
         if (_pending && !_player.IsPaused)
         {
             if (_player.CurrentActionId != _pendingAction || (_player.CurrentState != PlayerActionState.NormalAttack
@@ -62,6 +89,60 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
         }
         if (_currentSlashVfx != null && _currentSlashVfx.gameObject.activeSelf && !_currentSlashVfx.IsAlive(true))
             _currentSlashVfx.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// slash의 개별 재질을 복제해 벽 가림을 없애고 조명과 배경 왜곡을 끈다.
+    /// 검기에만 깊이·배경 샘플을 지정하며 공유 재질과 화면 렌더링 설정은 유지한다.
+    /// </summary>
+    private void ConfigureSlash(ParticleSystem slash)
+    {
+        if (slash == null) return;
+        ApplyOutlineSetting(slash);
+        foreach (ParticleSystem particle in slash.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var lights = particle.lights;
+            lights.enabled = false;
+        }
+        foreach (ParticleSystemRenderer renderer in slash.GetComponentsInChildren<ParticleSystemRenderer>(true))
+        {
+            renderer.allowOcclusionWhenDynamic = false;
+            if (renderer.sharedMaterial.shader.name == "Shader Graphs/Slash World")
+            {
+                renderer.enabled = false;
+                continue;
+            }
+            Material[] materials = renderer.sharedMaterials;
+            for (int i = 0; i < materials.Length; i++)
+            {
+                Material material = new Material(materials[i]);
+                material.name = materials[i].name + " (Player Slash)";
+                material.renderQueue = Mathf.Max(materials[i].renderQueue, (int)RenderQueue.Transparent);
+                material.SetFloat("_ZTest", (float)CompareFunction.Always);
+                material.SetFloat("_ZWrite", 0f);
+                if (material.HasProperty("_Emission")) material.SetFloat("_Emission", 1f);
+                _slashMaterials.Add(material);
+                materials[i] = material;
+            }
+            renderer.sharedMaterials = materials;
+            var properties = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(properties);
+            properties.SetTexture("_CameraDepthTexture",
+                SystemInfo.usesReversedZBuffer ? Texture2D.blackTexture : Texture2D.whiteTexture);
+            properties.SetTexture("_CameraOpaqueTexture", Texture2D.blackTexture);
+            renderer.SetPropertyBlock(properties);
+        }
+    }
+
+    /// <summary>
+    /// slash와 자식의 OutlineVFX 활성 여부를 Inspector의 검기 표현 선택으로 변경한다.
+    /// 비어 있는 검기 슬롯은 건너뛰며 재질과 파티클 재생 상태는 변경하지 않는다.
+    /// </summary>
+    private void ApplyOutlineSetting(ParticleSystem slash)
+    {
+        if (slash == null) return;
+        foreach (OutlineVFX outline in slash.GetComponentsInChildren<OutlineVFX>(true))
+            outline.enabled = _useOutlineShader;
     }
 
     /// <summary>
@@ -92,7 +173,7 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
         if (_combat == null || _combat.IsCounterAttack
             || kind == PlayerAttackKind.IaidoFinisher && _player.TargetedComboStrike == 0)
             return _slashVfx;
-        return _combat.Strike == 2 ? _secondSlashVfx : _combat.Strike == 3 ? _thirdSlashVfx : _slashVfx;
+        return _combat.Strike == 2 ? _secondSlashVfx : _slashVfx;
     }
 
     /// <summary>
