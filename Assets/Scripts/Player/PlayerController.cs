@@ -458,7 +458,7 @@ public sealed class PlayerController : MonoBehaviour
     {
         if (_state != PlayerActionState.Free
             || strike < 1
-            || strike > 3
+            || strike > 2
             || !TrySelectIaidoTarget(out PlayerCombatTarget combatTarget, out Vector3 perceivedPosition))
             return false;
 
@@ -515,12 +515,13 @@ public sealed class PlayerController : MonoBehaviour
             ApplyAttackResolution(new PlayerAttackResolution(_currentActionId, false, null, false));
 
         bool hasNextTarget = _targetedDashAttack
+            && _targetedComboStrike < 2
             && _currentAttackOutcome == PlayerAttackOutcome.Hit
             && _attackDeathConfirmed
             && TrySelectIaidoTarget(out _queuedTargetedCombatTarget, out _queuedTargetedPosition);
         _hasQueuedTargetedAttack = hasNextTarget;
         if (hasNextTarget)
-            _targetedComboStrike = _targetedComboStrike >= 3 ? 1 : _targetedComboStrike + 1;
+            _targetedComboStrike++;
         else if (_currentAttackOutcome != PlayerAttackOutcome.Hit || !_attackDeathConfirmed)
             _targetedComboStrike = 0;
         float recovery = hasNextTarget ? 0f : _currentAttackOutcome == PlayerAttackOutcome.Hit ? _iaidoHitRecovery : _iaidoMissRecovery;

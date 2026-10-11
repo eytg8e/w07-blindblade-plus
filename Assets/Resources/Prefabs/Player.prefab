@@ -457,6 +457,7 @@ MonoBehaviour:
   _combat: {fileID: 5663976393034796336}
   _actionDriver: {fileID: 1993857972930843498}
   _animator: {fileID: 8362338574495906464}
+  _firstAttackClip: {fileID: 7400000, guid: c83264164fb7e824ab09176b14e72719, type: 2}
   _secondAttackClip: {fileID: 7400000, guid: d9a77c9969028014aacc658086380a37, type: 2}
   _thirdAttackClip: {fileID: 7400000, guid: edf4cfcfc6f24514eb6ea570ca306c5e, type: 2}
   _showWeapon: 1
@@ -469,6 +470,7 @@ MonoBehaviour:
   _minimumCancelSheatheDuration: 0.12
   _openingImpactProgress: 0.5
   _openingEndProgress: 0.65
+  _firstAttackEndProgress: 1
   _comboBlendTime: 0.08
 --- !u!114 &7106073490442552728
 MonoBehaviour:
@@ -516,17 +518,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _swingSound: 3
   _hitSound: 10
-  _unsheathSound: 6
   _volume: 0.8
-  _parrySound: 11
-  _damageSound: 12
-  _parryVolume: 1.1
-  _guardPitch: 0.85
-  _parryPitch: 1.25
   _contactService: {fileID: 1080894898460965423}
-  _firstSwingLabel: A
-  _secondSwingLabel: B
-  _iaidoSwingLabel: C
 --- !u!114 &8491623887222581670
 MonoBehaviour:
   m_ObjectHideFlags: 0
