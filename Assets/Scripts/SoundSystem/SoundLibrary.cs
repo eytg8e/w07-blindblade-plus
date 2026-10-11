@@ -15,8 +15,31 @@ public class SoundLibrary : ScriptableObject
     [SerializeField] private string _bgmBusPath = "bus:/BGM_Bus";
     [SerializeField] private string _effectBusPath = "bus:/SFX_Bus";
 
+    [Header("전투 신호 청취")]
+    [SerializeField, Min(0f)] private float _combatFocusDuration = 0.35f;
+    [SerializeField, Range(0f, 1f)] private float _combatFootstepVolume = 0.35f;
+
     internal string BgmBusPath => _bgmBusPath;
     internal string EffectBusPath => _effectBusPath;
+    internal float CombatFocusDuration => _combatFocusDuration;
+    internal float CombatFootstepVolume => _combatFootstepVolume;
+
+    /// <summary>
+    /// soundId의 전투 신호와 2D 공간 보정 설정을 조회한다.
+    /// 등록된 항목의 플래그를 반환 인자로 채우며 미등록 ID는 두 설정을 끈다.
+    /// </summary>
+    internal void GetCueSettings(SoundId soundId, out bool combatCue, out bool spatialize2D)
+    {
+        combatCue = false;
+        spatialize2D = false;
+        foreach (SoundEntry entry in _sounds)
+        {
+            if (entry.Id != soundId) continue;
+            combatCue = entry.CombatCue;
+            spatialize2D = entry.Spatialize2D;
+            return;
+        }
+    }
 
     /// <summary>
     /// soundId에 연결된 FMOD 이벤트와 사운드 종류를 조회한다.
@@ -65,9 +88,14 @@ public class SoundLibrary : ScriptableObject
         [SerializeField] private SoundId _id;
         [SerializeField] private SoundType _type = SoundType.Effect;
         [SerializeField] private EventReference _event;
+        [SerializeField] private bool _combatCue;
+        [SerializeField, Tooltip("2D 이벤트에 청취자 기준 좌우 패닝과 거리 감쇠를 적용한다. 3D 이벤트는 FMOD 설정을 따른다.")]
+        private bool _spatialize2D;
 
         internal SoundId Id => _id;
         internal SoundType Type => _type;
         internal EventReference Event => _event;
+        internal bool CombatCue => _combatCue;
+        internal bool Spatialize2D => _spatialize2D;
     }
 }

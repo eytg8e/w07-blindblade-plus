@@ -29,6 +29,11 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     private float _phaseEndTime;
     private float _nextAttackTime;
 
+    [Header("공격 청각 신호")]
+    [SerializeField, Min(0f)] private float _telegraphVolume = 1f;
+    [SerializeField, Min(0f)] private float _actionVolume = 1f;
+    private SoundId _playingActionSound;
+
     public abstract float Range { get; }
     public string PatternId => string.IsNullOrEmpty(_patternId) ? GetType().Name : _patternId;
     public int Priority => _priority;
@@ -141,6 +146,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
 
         EnemyAttackContext context = _context;
         _phase = EnemyAttackPhase.Ready;
+        StopActionSound();
         OnAttackEnded(context, true);
         AttackCancelled?.Invoke(context);
     }
@@ -154,6 +160,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phase = EnemyAttackPhase.Active;
         _phaseEndTime = Time.time + ActiveDuration;
         EnemyAttackContext context = _context;
+        if (SoundAction == EnemySoundAction.Melee) StopActionSound();
         PlayActionSound(EnemySoundStage.Action);
         PerformAttack(context);
         if (_phase != EnemyAttackPhase.Active)
@@ -176,19 +183,36 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phase = EnemyAttackPhase.Recovery;
         _phaseEndTime = Time.time + Mathf.Max(_recoveryDuration, minimumDuration);
         EnemyAttackContext context = _context;
+        if (SoundAction == EnemySoundAction.Melee) StopActionSound();
         OnAttackEnded(context, false);
         AttackEnded?.Invoke(context);
     }
 
     /// <summary>
     /// 행동 종류와 stage로 공통 설정의 소리를 찾아 기존 매니저에 적 위치의 단발 효과음을 요청한다.
-    /// 전조 또는 공격 실행 직전에 한 번 호출하며 이미 시작한 발소리와 다른 효과음을 중단하지 않는다.
+    /// 전조·베기 음량을 적용하고 근접 대각선 방향은 SwingType A/B로 전달하며 현재 재생 ID를 보관한다.
     /// </summary>
     private void PlayActionSound(EnemySoundStage stage)
     {
         SoundId soundId = EnemySoundSettings.GetSound(SoundAction, stage);
-        if (soundId != SoundId.None)
-            Managers.Sound.PlayAttached(soundId, gameObject);
+        if (soundId == SoundId.None) return;
+        _playingActionSound = soundId;
+        float volume = stage == EnemySoundStage.Telegraph ? _telegraphVolume : _actionVolume;
+        if (this is EnemyMeleeAttack melee && stage == EnemySoundStage.Action && soundId == SoundId.EnemySwordSwing)
+            Managers.Sound.PlayAttachedWithLabel(soundId, gameObject, "SwingType", melee.IsLeftToRightSlash ? "A" : "B", volume);
+        else
+            Managers.Sound.PlayAttached(soundId, gameObject, volume);
+    }
+
+    /// <summary>
+    /// 현재 패턴이 시작한 소리 ID만 정지하고 재생 상태를 비운다.
+    /// 외부 입력 없이 공격 취소·근접 단계 전환에서 사용하며 발걸음과 방어 피드백은 유지한다.
+    /// </summary>
+    private void StopActionSound()
+    {
+        if (_playingActionSound != SoundId.None && Managers.IsInitialized)
+            Managers.Sound.StopFor(gameObject, _playingActionSound);
+        _playingActionSound = SoundId.None;
     }
 
     /// <summary>

@@ -503,9 +503,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _swingSound: 3
-  _hitSound: 4
+  _hitSound: 10
   _unsheathSound: 6
   _volume: 0.8
+  _parrySound: 11
+  _damageSound: 12
+  _parryVolume: 1.1
+  _guardPitch: 0.85
+  _parryPitch: 1.25
   _contactService: {fileID: 1080894898460965423}
   _firstSwingLabel: A
   _secondSwingLabel: B

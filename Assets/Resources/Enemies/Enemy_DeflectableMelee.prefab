@@ -389,6 +389,7 @@ GameObject:
   - component: {fileID: 4353215851983748173}
   - component: {fileID: 7784458502497758934}
   - component: {fileID: 7416946813330608602}
+  - component: {fileID: 1832850424984818868}
   m_Layer: 0
   m_Name: Enemy_DeflectableMelee
   m_TagString: Untagged
@@ -596,6 +597,8 @@ MonoBehaviour:
   _recoveryDuration: 0.55
   _cooldown: 0.4
   _cancelWhenHidden: 1
+  _telegraphVolume: 0.85
+  _actionVolume: 1
   _attackRange: 2.2
   _damage: 10
   _useBuiltInHitDetection: 1
@@ -661,6 +664,20 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &1832850424984818868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8382106560393218092}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37becb1a49869b446a804dfe774638c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _damageSound: 4
+  _volume: 0.8
 --- !u!1001 &3546448622811517368
 PrefabInstance:
   m_ObjectHideFlags: 0

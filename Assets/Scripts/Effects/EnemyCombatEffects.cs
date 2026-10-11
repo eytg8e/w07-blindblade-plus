@@ -88,7 +88,7 @@ public sealed class EnemyCombatEffects : MonoBehaviour
         slash.gameObject.SetActive(false);
     }
 
-    /// <summary>context의 실제 베기 방향으로 자식 검기를 선택하고 재생 속도만 베기 시간에 맞춘다. Transform은 변경하지 않는다.</summary>
+    /// <summary>context의 실제 베기 시작에 방향별 자식 검기를 재생한다. 속도만 베기 시간에 맞추며 Transform은 유지한다.</summary>
     private void HandleAttack(EnemyAttackContext context)
     {
         if (!(context.Pattern is EnemyMeleeAttack melee))

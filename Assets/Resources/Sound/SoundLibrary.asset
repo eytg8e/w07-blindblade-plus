@@ -22,6 +22,8 @@ MonoBehaviour:
         Data3: -716890462
         Data4: 1211083272
       Path: event:/Footsteps
+    _combatCue: 0
+    _spatialize2D: 0
   - _id: 2
     _type: 0
     _event:
@@ -31,6 +33,8 @@ MonoBehaviour:
         Data3: -606255725
         Data4: -1357935490
       Path: event:/Test/TestAmbience
+    _combatCue: 0
+    _spatialize2D: 0
   - _id: 3
     _type: 1
     _event:
@@ -40,6 +44,8 @@ MonoBehaviour:
         Data3: 1284546458
         Data4: -1998290846
       Path: event:/Sword/Sword_Swing/Swing_No_Impact
+    _combatCue: 0
+    _spatialize2D: 0
   - _id: 4
     _type: 1
     _event:
@@ -49,6 +55,8 @@ MonoBehaviour:
         Data3: -1263986257
         Data4: -1929883585
       Path: event:/Sword/Sword_Hit/Enemy_Damaged
+    _combatCue: 1
+    _spatialize2D: 0
   - _id: 5
     _type: 1
     _event:
@@ -58,6 +66,8 @@ MonoBehaviour:
         Data3: 1778078601
         Data4: -1443737530
       Path: event:/WarCry
+    _combatCue: 0
+    _spatialize2D: 0
   - _id: 6
     _type: 1
     _event:
@@ -67,6 +77,8 @@ MonoBehaviour:
         Data3: -942904443
         Data4: 2061359677
       Path: event:/Sword/Unsheath/Player_Sword_Release
+    _combatCue: 0
+    _spatialize2D: 0
   - _id: 7
     _type: 1
     _event:
@@ -76,5 +88,64 @@ MonoBehaviour:
         Data3: 1131030957
         Data4: -1012374735
       Path: event:/EnemyFootsteps
+    _combatCue: 0
+    _spatialize2D: 0
+  - _id: 8
+    _type: 1
+    _event:
+      Guid:
+        Data1: -1097931935
+        Data2: 1211882313
+        Data3: -942904443
+        Data4: 2061359677
+      Path: event:/Sword/Unsheath/Player_Sword_Release
+    _combatCue: 1
+    _spatialize2D: 1
+  - _id: 9
+    _type: 1
+    _event:
+      Guid:
+        Data1: 176830034
+        Data2: 1274157573
+        Data3: 1284546458
+        Data4: -1998290846
+      Path: event:/Sword/Sword_Swing/Swing_No_Impact
+    _combatCue: 1
+    _spatialize2D: 1
+  - _id: 10
+    _type: 1
+    _event:
+      Guid:
+        Data1: -602247626
+        Data2: 1288995397
+        Data3: -1835342190
+        Data4: 1286039222
+      Path: event:/TemporarySwordHit
+    _combatCue: 1
+    _spatialize2D: 1
+  - _id: 11
+    _type: 1
+    _event:
+      Guid:
+        Data1: -602247626
+        Data2: 1288995397
+        Data3: -1835342190
+        Data4: 1286039222
+      Path: event:/TemporarySwordHit
+    _combatCue: 1
+    _spatialize2D: 1
+  - _id: 12
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1500451467
+        Data2: 1275304294
+        Data3: -1263986257
+        Data4: -1929883585
+      Path: event:/Sword/Sword_Hit/Enemy_Damaged
+    _combatCue: 1
+    _spatialize2D: 0
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
+  _combatFocusDuration: 0.35
+  _combatFootstepVolume: 0.35
