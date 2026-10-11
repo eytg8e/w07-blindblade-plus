@@ -1,5 +1,13 @@
 ### FMOD 사운드 매니저
 
+#### 근접 교전 청각 연결 (2026-10-11)
+
+- 사용자 승인으로 기존 FMOD 이벤트를 근접 전투의 준비·베기·방어·피격에 연결했다. 상세 흐름·프리팹·검증은 [1인칭 근접 교전 6단계](1인칭_근접_교전.md)를 따른다. FMOD Studio 프로젝트·Bank·Bus 경로는 변경하지 않았다.
+- SoundId 8 EnemyAttackPrepare=event:/Sword/Unsheath/Player_Sword_Release, 9 EnemySwordSwing=event:/Sword/Sword_Swing/Swing_No_Impact, 10 SwordClash와 11 ParryClash=event:/TemporarySwordHit, 12 PlayerDamaged=event:/Sword/Sword_Hit/Enemy_Damaged를 SoundLibrary에 등록했다. 기존 ID와 이벤트 연결은 보존한다. SwingType은 기존 A/B/C Label이다.
+- Play·PlayAttached·PlayAttachedWithLabel의 마지막 선택 인자 pitch를 추가했다. 기존 호출은 기본값 1을 사용한다. StopFor(owner, soundId, allowFadeOut)는 지정 소유자의 해당 효과음만 정지하며 기존 StopFor(owner, allowFadeOut) 계약은 유지한다.
+- SoundLibrary 항목의 Combat Cue는 기본 0.35초 동안 발소리 음량을 35%로 낮추고 이동 중 음향 제한을 우회한다. Spatialize 2D는 원본 2D 이벤트에 Listener 기준 좌우 패닝·거리 감쇠를 적용하며 3D 이벤트는 원본 FMOD 설정을 따른다. UpdateEffectMix는 기존 ActiveEffect에 저장한 원래 음량·위치·부착 여부로 믹싱을 갱신한다. BGM과 옵션 음량은 유지한다.
+- 검증: Unity 컴파일 성공. 실제 Trigger 피격·일반 가드·패링·반격 사건의 재생 ID와 음높이, 2D 좌우 채널 믹스·거리 음량, 발소리 0.8→0.28→0.8 복원을 한 Play 세션에서 확인했다. 실제 청취와 다수 적 환경의 최종 믹싱은 미확인이다.
+
 - 2026-10-10 현재 적용: Stairwell, StraightCorridor, TCorridor의 플레이어/적 발걸음, 검 뽑기, 미충돌 스윙, 적 피격 및 일반 충돌을 연결했다. 아래 「게임 씬 적용」이 현재 구성의 기준이며 뒤의 이전 구현 기록과 구분한다.
 - 계단 BGM은 기존 StairwellMusic이 FMOD EventInstance를 직접 생성·재생하고 씬 이탈 시 정지·해제한다. 이동 중 효과음 제한과 독립적으로 유지된다. 이번에 재생은 확인했지만 현재 event:/StairWell은 145.894초 단발 이벤트다. 반복이 필요하면 Studio에서 Loop Region을 설정하고 Bank를 빌드해야 한다. 기존 BGM 코드와 루프 설정은 이번 효과음 적용에서 변경하지 않았다. [스테이지 이동 명세](스테이지_이동.md) 참고.
 

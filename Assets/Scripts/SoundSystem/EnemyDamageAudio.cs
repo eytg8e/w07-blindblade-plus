@@ -31,7 +31,7 @@ public sealed class EnemyDamageAudio : MonoBehaviour
 
     /// <summary>
     /// context의 검 공격자와 피해 접촉 위치를 사용해 실제 피격음을 재생한다.
-    /// 플레이어가 가한 피해만 처리하며 적이 즉시 비활성화되어도 피격음의 끝을 유지한다.
+    /// 플레이어가 가한 피해만 처리하며 적 사망 후에도 피격음의 끝을 유지한다.
     /// </summary>
     private void HandleDamage(DamageContext context)
     {

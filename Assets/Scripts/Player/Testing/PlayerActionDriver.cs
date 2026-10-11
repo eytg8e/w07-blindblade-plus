@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Drives impact and action-end callbacks with simple scaled-time timings for sandbox play.
-/// Replace with animation events when _player animations are available.
+/// 공격의 준비·베기·종료 시간을 관리하고 Animator 평가 뒤 실제 칼날 피해 검사를 요청한다.
+/// 표현 담당자에게 같은 베기 구간을 제공한다.
 /// </summary>
 public sealed class PlayerActionDriver : MonoBehaviour
 {
@@ -12,6 +12,16 @@ public sealed class PlayerActionDriver : MonoBehaviour
     [SerializeField, Min(0f)] private float _normalActionDuration = 0.4f;
     [SerializeField, Min(0f)] private float _iaidoHitTime = 0.42f;
     [SerializeField, Min(0f)] private float _iaidoSlashDuration = 0.72f;
+    [Header("베기 판정 구간")]
+    [SerializeField, Min(0.01f)] private float _normalStrikeWindow = 0.16f;
+    [SerializeField, Min(0.01f)] private float _strikeWindow = 0.22f;
+
+    [Header("패링 반격 타이밍")]
+    [SerializeField, Min(0.01f)] private float _counterHitTime = 0.12f;
+    [SerializeField, Min(0.01f)] private float _counterActionDuration = 0.34f;
+    [SerializeField, Min(0.01f)] private float _counterStrikeWindow = 0.12f;
+    private KatanaCombatCoordinator _combat;
+    private bool _activeNormalAttackIsCounter;
 
     private PlayerActionState _activeState;
     private int _activeActionId;
@@ -20,6 +30,9 @@ public sealed class PlayerActionDriver : MonoBehaviour
     private bool _endSent;
     private bool _useIaidoTimingForNextNormalAttack;
     private bool _activeNormalAttackUsesIaidoTiming;
+    private bool _sweepPending;
+    private bool _sweepFinalSample;
+    private bool _endPending;
 
     private void Awake()
     {
@@ -27,6 +40,7 @@ public sealed class PlayerActionDriver : MonoBehaviour
             _player = GetComponent<PlayerController>();
         if (_animationEventRelay == null)
             _animationEventRelay = GetComponent<PlayerAnimationEventRelay>();
+        _combat = GetComponent<KatanaCombatCoordinator>();
     }
 
     private void Update()
@@ -42,6 +56,8 @@ public sealed class PlayerActionDriver : MonoBehaviour
             _elapsed = 0f;
             _impactSent = false;
             _endSent = false;
+            _sweepPending = false;
+            _endPending = false;
             return;
         }
 
@@ -53,7 +69,9 @@ public sealed class PlayerActionDriver : MonoBehaviour
             _impactSent = false;
             _endSent = false;
             _activeNormalAttackUsesIaidoTiming = state == PlayerActionState.NormalAttack
-                && _useIaidoTimingForNextNormalAttack;
+                && (_useIaidoTimingForNextNormalAttack || (_combat != null && _combat.IsOpeningAttack));
+            _activeNormalAttackIsCounter = state == PlayerActionState.NormalAttack
+                && _combat != null && _combat.IsCounterAttack;
             if (state == PlayerActionState.NormalAttack)
                 _useIaidoTimingForNextNormalAttack = false;
         }
@@ -64,32 +82,37 @@ public sealed class PlayerActionDriver : MonoBehaviour
         _elapsed += Time.deltaTime;
         bool iaidoTiming = state == PlayerActionState.IaidoSlash
             || state == PlayerActionState.NormalAttack && _activeNormalAttackUsesIaidoTiming;
-        float hitTime = iaidoTiming ? _iaidoHitTime : _normalHitTime;
-        float actionDuration = iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
+        float hitTime = _activeNormalAttackIsCounter ? _counterHitTime : iaidoTiming ? _iaidoHitTime : _normalHitTime;
+        float actionDuration = _activeNormalAttackIsCounter ? _counterActionDuration : iaidoTiming ? _iaidoSlashDuration : _normalActionDuration;
 
-        if (!_impactSent && _elapsed >= hitTime)
+        float strikeWindow = _activeNormalAttackIsCounter ? _counterStrikeWindow
+            : iaidoTiming ? _strikeWindow : _normalStrikeWindow;
+        float strikeStart = Mathf.Max(0f, hitTime - strikeWindow * 0.5f);
+        float strikeEnd = Mathf.Min(actionDuration, hitTime + strikeWindow * 0.5f);
+        if (state == PlayerActionState.NormalAttack && !_impactSent && _elapsed >= strikeStart)
+        {
+            bool finalSample = _elapsed >= strikeEnd;
+            _sweepPending = true;
+            _sweepFinalSample = finalSample;
+            _impactSent = finalSample;
+        }
+
+        if (state == PlayerActionState.IaidoSlash && !_impactSent && _elapsed >= hitTime)
         {
             _impactSent = true;
-            if (state == PlayerActionState.NormalAttack)
-            {
-                if (_animationEventRelay != null)
-                    _animationEventRelay.NormalAttackImpactEvent();
-                else
-                    _player.NotifyNormalAttackImpact(_activeActionId);
-            }
-            else
-            {
-                if (_animationEventRelay != null)
-                    _animationEventRelay.IaidoSlashImpactEvent();
-                else
-                    _player.NotifyIaidoSlashImpact(_activeActionId);
-            }
+            if (_animationEventRelay != null) _animationEventRelay.IaidoSlashImpactEvent();
+            else _player.NotifyIaidoSlashImpact(_activeActionId);
         }
 
         if (_elapsed < actionDuration)
             return;
 
         _endSent = true;
+        if (state == PlayerActionState.NormalAttack && _sweepPending)
+        {
+            _endPending = true;
+            return;
+        }
         if (state == PlayerActionState.NormalAttack)
         {
             if (_animationEventRelay != null)
@@ -109,7 +132,13 @@ public sealed class PlayerActionDriver : MonoBehaviour
     /// <summary>kind의 실제 적중·종료 시간을 읽어 시각 모션에 제공한다. 드라이버의 판정 시간은 변경하지 않는다.</summary>
     public void GetPresentationTiming(PlayerAttackKind kind, out float impactTime, out float duration)
     {
-        bool iaido = kind == PlayerAttackKind.IaidoFinisher;
+        if (kind == PlayerAttackKind.Normal && _combat != null && _combat.IsCounterAttack)
+        {
+            impactTime = _counterHitTime;
+            duration = _counterActionDuration;
+            return;
+        }
+        bool iaido = kind == PlayerAttackKind.IaidoFinisher || (kind == PlayerAttackKind.Normal && _combat != null && _combat.IsOpeningAttack);
         impactTime = iaido ? _iaidoHitTime : _normalHitTime;
         duration = iaido ? _iaidoSlashDuration : _normalActionDuration;
     }
@@ -126,9 +155,33 @@ public sealed class PlayerActionDriver : MonoBehaviour
         return actionId == _activeActionId ? _elapsed : 0f;
     }
 
+    void LateUpdate()
+    {
+        if (!_sweepPending || _player.IsPaused) return;
+        _sweepPending = false;
+        _player.NotifyNormalAttackSweep(_activeActionId, _sweepFinalSample);
+        if (_endPending)
+        {
+            _endPending = false;
+            _player.NotifyNormalAttackAnimationEnded(_activeActionId);
+        }
+    }
+
+    /// <summary>kind의 실제 타격 시간과 베기 폭으로 피해·접촉·검기 표현의 공통 시작·종료 시간을 반환한다.</summary>
+    public void GetStrikeWindow(PlayerAttackKind kind, out float start, out float end)
+    {
+        GetPresentationTiming(kind, out float impact, out float duration);
+        float window = kind == PlayerAttackKind.Normal
+            ? (_combat != null && _combat.IsCounterAttack ? _counterStrikeWindow
+                : _combat != null && _combat.IsOpeningAttack ? _strikeWindow : _normalStrikeWindow) : _strikeWindow;
+        start = Mathf.Max(0f, impact - window * 0.5f);
+        end = Mathf.Min(duration, impact + window * 0.5f);
+    }
+
     private void OnValidate()
     {
         _normalHitTime = Mathf.Min(_normalHitTime, _normalActionDuration);
         _iaidoHitTime = Mathf.Min(_iaidoHitTime, _iaidoSlashDuration);
+        _counterHitTime = Mathf.Min(_counterHitTime, _counterActionDuration);
     }
 }

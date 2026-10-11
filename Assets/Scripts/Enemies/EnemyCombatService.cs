@@ -14,6 +14,30 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     private bool _hasResolution;
     private PlayerAttackResolution _lastResolution;
 
+    [Header("플레이어 칼날 궤적")]
+    [SerializeField] private Transform _bladeBase;
+    [SerializeField] private Transform _bladeTip;
+    [SerializeField] private bool _useViewModelReach = true;
+    private int _sweepActionId = -1;
+    private Vector3 _previousBladeBase;
+    private Vector3 _previousBladeTip;
+
+    [Header("공격 판정 기즈모")]
+    [SerializeField] private bool _showAttackGizmos = true;
+    [SerializeField, Min(0.1f)] private float _gizmoDuration = 2f;
+#if UNITY_EDITOR
+    private PlayerAttackRequest _debugRequest;
+    private bool _debugBladeSweep;
+    private Vector3 _debugPreviousBase;
+    private Vector3 _debugPreviousTip;
+    private Vector3 _debugCurrentBase;
+    private Vector3 _debugCurrentTip;
+    private bool _hasDebugRequest;
+    private bool _debugContact;
+    private bool _debugHit;
+    private float _debugUntil;
+#endif
+
     /// <summary>
     /// 새 공격 판정이 끝나면 요청, 최초 접촉체, 접촉 위치, 실제 적 피해 여부를 알린다.
     /// 접촉이 없으면 Collider는 null이며 동일 ActionId의 캐시 조회에는 다시 알리지 않는다.
@@ -68,7 +92,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
 
     /// <summary>
     /// request의 원점·방향·사거리로 가장 가까운 적 또는 장애물을 검사하여 피해·사망 결과를 반환한다.
-    /// 일반 공격은 설정 피해를 적용하고 발도는 남은 HP를 소진하며 같은 ActionId는 중복 적용하지 않는다.
+    /// 일반 공격과 발도에 설정 피해를 동일하게 적용하며 같은 ActionId는 중복 적용하지 않는다.
     /// 새 판정의 접촉체·위치·적 피해 여부는 AttackContactResolved로 구독자에게 알린다.
     /// </summary>
     public PlayerAttackResolution ResolvePlayerAttack(PlayerAttackRequest request)
@@ -87,13 +111,21 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
                 (string.IsNullOrEmpty(request.PreferredTargetId) || request.PreferredTargetId == health.TargetId))
             {
                 string id = health.TargetId;
-                float damage = request.Kind == PlayerAttackKind.IaidoFinisher ? health.CurrentHealth : _normalDamage;
+                float damage = _normalDamage;
                 health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
                 result = new PlayerAttackResolution(request.ActionId, true, id, health.CurrentHealth <= 0f);
             }
         }
         _hasResolution = true;
         _lastResolution = result;
+#if UNITY_EDITOR
+        _debugBladeSweep = false;
+        _debugRequest = request;
+        _debugContact = collider != null;
+        _debugHit = result.HitConfirmed;
+        _hasDebugRequest = request.Range > 0f && request.Direction.sqrMagnitude > 0f;
+        _debugUntil = Time.time + _gizmoDuration;
+#endif
         AttackContactResolved?.Invoke(request, collider, point, result.HitConfirmed);
         return result;
     }
@@ -140,4 +172,206 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         }
         return null;
     }
+
+#if UNITY_EDITOR
+    void OnDrawGizmos()
+    {
+        if (!_showAttackGizmos || !isActiveAndEnabled || !_hasDebugRequest
+            || !Application.isPlaying || Time.time > _debugUntil) return;
+        Color color = _debugHit ? Color.green : _debugContact ? Color.red : Color.cyan;
+        if (_debugBladeSweep)
+            DrawBladeHitboxGizmo(_debugPreviousBase, _debugPreviousTip, _debugCurrentBase, _debugCurrentTip, _hitRadius, color);
+        else
+            DrawBladeHitboxGizmo(_debugRequest.Origin, _debugRequest.Origin + _debugRequest.Direction * _debugRequest.Range,
+                _debugRequest.Origin, _debugRequest.Origin + _debugRequest.Direction * _debugRequest.Range, _hitRadius, color);
+        UnityEditor.Handles.Label(_debugBladeSweep ? _debugCurrentBase : _debugRequest.Origin,
+            _debugHit ? "플레이어 공격: 적중" : _debugContact ? "플레이어 공격: 접촉" : "플레이어 공격: 검사 범위");
+    }
+
+    /// <summary>origin·direction·range와 현재 칼날 참조로 예상 판정 영역의 외접 박스를 그린다. 물리 검사와 공격 상태는 변경하지 않는다.</summary>
+    internal void DrawAttackPreview(Vector3 origin, Vector3 direction, float range)
+    {
+        if (!_showAttackGizmos) return;
+        Vector3 start = _bladeBase != null && _bladeTip != null ? _bladeBase.position : origin;
+        Vector3 end = _bladeBase != null && _bladeTip != null
+            ? (_useViewModelReach ? GetWorldBladeTip(origin, start, _bladeTip.position, range) : _bladeTip.position)
+            : origin + direction.normalized * range;
+        DrawBladeHitboxGizmo(start, end, start, end, _hitRadius, Color.yellow);
+        UnityEditor.Handles.Label(start, "플레이어: 현재 칼날 판정 외접 박스");
+    }
+
+    /// <summary>이전·현재 칼날 끝점과 radius로 Capsule·SphereCast 검사 영역을 감싸는 color의 회전 박스를 그린다. Gizmos 상태를 복원한다.</summary>
+    private static void DrawBladeHitboxGizmo(Vector3 previousBase, Vector3 previousTip,
+        Vector3 currentBase, Vector3 currentTip, float radius, Color color)
+    {
+        Vector3 blade = currentTip - currentBase;
+        Quaternion rotation = blade.sqrMagnitude > 0.000001f
+            ? Quaternion.LookRotation(blade, Mathf.Abs(Vector3.Dot(blade.normalized, Vector3.up)) > 0.99f ? Vector3.forward : Vector3.up)
+            : Quaternion.identity;
+        Quaternion inverse = Quaternion.Inverse(rotation);
+        Vector3 previousStart = inverse * (previousBase - currentBase);
+        Vector3 previousEnd = inverse * (previousTip - currentBase);
+        Vector3 currentEnd = inverse * blade;
+        Vector3 minimum = Vector3.Min(Vector3.Min(previousStart, previousEnd), Vector3.Min(Vector3.zero, currentEnd));
+        Vector3 maximum = Vector3.Max(Vector3.Max(previousStart, previousEnd), Vector3.Max(Vector3.zero, currentEnd));
+        minimum -= Vector3.one * radius;
+        maximum += Vector3.one * radius;
+        Matrix4x4 previousMatrix = Gizmos.matrix;
+        Color previousColor = Gizmos.color;
+        Gizmos.matrix = Matrix4x4.TRS(currentBase, rotation, Vector3.one);
+        Gizmos.color = color;
+        Gizmos.DrawWireCube((minimum + maximum) * 0.5f, maximum - minimum);
+        Gizmos.matrix = previousMatrix;
+        Gizmos.color = previousColor;
+    }
+
+    /// <summary>origin·direction·range·angle로 color의 수평 부채꼴 범위 요약을 그린다. 물리 판정과 Handles 상태는 변경하지 않는다.</summary>
+    internal static void DrawAttackFanGizmo(Vector3 origin, Vector3 direction, float range, float angle, Color color)
+    {
+        Vector3 forward = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
+        if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
+        Vector3 start = Quaternion.AngleAxis(-angle * 0.5f, Vector3.up) * forward;
+        Color previous = UnityEditor.Handles.color;
+        UnityEditor.Handles.color = new Color(color.r, color.g, color.b, 0.08f);
+        UnityEditor.Handles.DrawSolidArc(origin, Vector3.up, start, angle, range);
+        UnityEditor.Handles.color = color;
+        UnityEditor.Handles.DrawWireArc(origin, Vector3.up, start, angle, range);
+        UnityEditor.Handles.DrawLine(origin, origin + start * range);
+        UnityEditor.Handles.DrawLine(origin, origin + Quaternion.AngleAxis(angle, Vector3.up) * start * range);
+        UnityEditor.Handles.color = previous;
+    }
+
+    /// <summary>
+    /// start부터 end까지 반경 radius인 구체 검사의 양 끝과 외곽선을 color로 그린다.
+    /// Gizmos 색상을 복원하며 게임 오브젝트와 물리 상태는 변경하지 않는다.
+    /// </summary>
+    internal static void DrawSweepGizmo(Vector3 start, Vector3 end, float radius, Color color)
+    {
+        Color previous = Gizmos.color;
+        Gizmos.color = color;
+        Gizmos.DrawWireSphere(start, radius);
+        Vector3 delta = end - start;
+        if (delta.sqrMagnitude > 0.000001f)
+        {
+            Vector3 direction = delta.normalized;
+            Vector3 side = Vector3.Cross(direction, Vector3.up);
+            if (side.sqrMagnitude < 0.000001f) side = Vector3.Cross(direction, Vector3.right);
+            side = side.normalized * radius;
+            Vector3 up = Vector3.Cross(direction, side).normalized * radius;
+            Gizmos.DrawWireSphere(end, radius);
+            Gizmos.DrawLine(start, end);
+            Gizmos.DrawLine(start + side, end + side);
+            Gizmos.DrawLine(start - side, end - side);
+            Gizmos.DrawLine(start + up, end + up);
+            Gizmos.DrawLine(start - up, end - up);
+        }
+        Gizmos.color = previous;
+    }
+#endif
+
+    /// <summary>
+    /// request의 베기 구간에서 칼날 경로를 검사한다. 접촉 또는 finalSample에서 결과를 확정한다.
+    /// 미완료 검사에는 IsComplete=false를 반환하며 완료된 공격은 중복 적용하지 않는다.
+    /// </summary>
+    public PlayerAttackResolution ResolvePlayerBladeAttack(PlayerAttackRequest request, bool finalSample)
+    {
+        if (_hasResolution && _lastResolution.ActionId == request.ActionId) return _lastResolution;
+        if (_bladeBase == null || _bladeTip == null) return ResolvePlayerAttack(request);
+        Vector3 currentBase = _bladeBase.position;
+        Vector3 currentTip = _bladeTip.position;
+        if (_useViewModelReach) currentTip = GetWorldBladeTip(request.Origin, currentBase, currentTip, request.Range);
+        if (_sweepActionId != request.ActionId)
+        {
+            _sweepActionId = request.ActionId;
+            _previousBladeBase = currentBase;
+            _previousBladeTip = currentTip;
+        }
+        Collider contact = FindBladeContact(_playerRoot, null, _previousBladeBase, _previousBladeTip,
+            currentBase, currentTip, _hitRadius, _attackMask, out Vector3 point);
+#if UNITY_EDITOR
+        _debugPreviousBase = _previousBladeBase;
+        _debugPreviousTip = _previousBladeTip;
+        _debugCurrentBase = currentBase;
+        _debugCurrentTip = currentTip;
+#endif
+        _previousBladeBase = currentBase;
+        _previousBladeTip = currentTip;
+        bool complete = contact != null || finalSample;
+        EnemyHealth health = contact != null ? contact.GetComponentInParent<EnemyHealth>() : null;
+        bool hit = health != null && health.IsAlive && health.gameObject.scene == gameObject.scene;
+        string id = hit ? health.TargetId : null;
+        if (hit) health.TakeDamage(new DamageContext(_normalDamage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
+        PlayerAttackResolution result = new PlayerAttackResolution(request.ActionId, hit, id,
+            hit && health.CurrentHealth <= 0f, complete);
+#if UNITY_EDITOR
+        _debugBladeSweep = true;
+        _debugRequest = request;
+        _debugContact = contact != null;
+        _debugHit = hit;
+        _hasDebugRequest = true;
+        _debugUntil = Time.time + _gizmoDuration;
+#endif
+        if (complete)
+        {
+            _hasResolution = true;
+            _lastResolution = result;
+            AttackContactResolved?.Invoke(request, contact, point, hit);
+        }
+        return result;
+    }
+
+    /// <summary>incomingPoint에서 연결된 플레이어 검의 가장 가까운 지점을 반환하여 방어 섬광 위치로 사용한다.</summary>
+    public Vector3 GetGuardContactPoint(Vector3 incomingPoint)
+    {
+        if (_bladeBase == null || _bladeTip == null) return incomingPoint;
+        Vector3 delta = _bladeTip.position - _bladeBase.position;
+        float fraction = delta.sqrMagnitude > 0.000001f
+            ? Mathf.Clamp01(Vector3.Dot(incomingPoint - _bladeBase.position, delta) / delta.sqrMagnitude) : 0f;
+        return _bladeBase.position + delta * fraction;
+    }
+
+    /// <summary>origin·bladeBase·viewTip의 칼날 방향을 유지하고 range로 축소된 1인칭 뷰모델의 월드 사거리를 보정한다.</summary>
+    private static Vector3 GetWorldBladeTip(Vector3 origin, Vector3 bladeBase, Vector3 viewTip, float range)
+    {
+        Vector3 direction = (viewTip - bladeBase).normalized;
+        float length = Mathf.Max(0f, range - Vector3.Distance(origin, bladeBase));
+        return bladeBase + direction * length;
+    }
+
+    /// <summary>
+    /// owner를 제외하고 칼날의 이전·현재 양 끝점 사이를 반경 radius로 검사한다.
+    /// target이 있으면 다른 적을 제외하며 가장 가까운 접촉체와 point를 반환한다.
+    /// </summary>
+    internal static Collider FindBladeContact(Transform owner, Transform target, Vector3 previousBase,
+        Vector3 previousTip, Vector3 currentBase, Vector3 currentTip, float radius, LayerMask mask, out Vector3 point)
+    {
+        Collider closest = null;
+        point = currentTip;
+        float nearest = float.PositiveInfinity;
+        foreach (Collider collider in Physics.OverlapCapsule(currentBase, currentTip, radius, mask, QueryTriggerInteraction.Ignore))
+        {
+            if (collider.transform.IsChildOf(owner) || (target != null
+                && !collider.transform.IsChildOf(target) && collider.GetComponentInParent<EnemyHealth>() != null)) continue;
+            Vector3 candidate = collider.ClosestPoint(currentBase);
+            float distance = (candidate - currentBase).sqrMagnitude;
+            if (distance < nearest) { nearest = distance; closest = collider; point = candidate; }
+        }
+        for (int i = 0; i < 5; i++)
+        {
+            float fraction = i / 4f;
+            Vector3 start = Vector3.Lerp(previousBase, previousTip, fraction);
+            Vector3 end = Vector3.Lerp(currentBase, currentTip, fraction);
+            Vector3 delta = end - start;
+            if (delta.sqrMagnitude < 0.000001f) continue;
+            foreach (RaycastHit hit in Physics.SphereCastAll(start, radius, delta.normalized, delta.magnitude, mask, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.transform.IsChildOf(owner) || (target != null
+                    && !hit.transform.IsChildOf(target) && hit.collider.GetComponentInParent<EnemyHealth>() != null)) continue;
+                float distance = (hit.point - currentBase).sqrMagnitude;
+                if (distance < nearest) { nearest = distance; closest = hit.collider; point = hit.point; }
+            }
+        }
+        return closest;
+    }
+
 }

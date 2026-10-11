@@ -16,6 +16,7 @@ public class SoundManager
 
     [Header("Effects")]
     private readonly List<ActiveEffect> _effects = new List<ActiveEffect>();
+    private float _combatFocusUntil;
 
     [Header("BGM")]
     private FMOD.Studio.EventInstance _bgm;
@@ -92,40 +93,40 @@ public class SoundManager
     }
 
     /// <summary>
-    /// soundId의 단발 효과음을 position에서 volume 배율로 재생한다.
+    /// soundId의 단발 효과음을 position에서 volume·pitch 배율로 재생한다.
     /// owner로 수명을 연결하고 playDuringMovement로 이동 중 재생 예외를 지정하며 성공 시 true를 반환한다.
     /// </summary>
-    public bool Play(SoundId soundId, Vector3 position = default, float volume = 1f, GameObject owner = null, bool playDuringMovement = false)
+    public bool Play(SoundId soundId, Vector3 position = default, float volume = 1f, GameObject owner = null, bool playDuringMovement = false, float pitch = 1f)
     {
-        return PlayEffect(soundId, position, owner, false, volume, playDuringMovement);
+        return PlayEffect(soundId, position, owner, false, volume, playDuringMovement, pitch: pitch);
     }
 
     /// <summary>
-    /// soundId의 단발 효과음을 source에 연결하여 volume 배율로 재생한다.
+    /// soundId의 단발 효과음을 source에 연결하여 volume·pitch 배율로 재생한다.
     /// 발이 닿거나 공격하는 시점에 호출하며, 재생 중 source의 위치를 추적하고 성공하면 true를 반환한다.
     /// </summary>
-    public bool PlayAttached(SoundId soundId, GameObject source, float volume = 1f)
+    public bool PlayAttached(SoundId soundId, GameObject source, float volume = 1f, float pitch = 1f)
     {
         if (source == null)
         {
             Debug.LogWarning("[SoundManager] PlayAttached requires a source GameObject.");
             return false;
         }
-        return PlayEffect(soundId, source.transform.position, source, true, volume);
+        return PlayEffect(soundId, source.transform.position, source, true, volume, pitch: pitch);
     }
 
     /// <summary>
     /// soundId의 단발음을 source에 연결하고 parameterName의 Label을 재생 전에 지정한다.
-    /// label과 volume을 FMOD에 전달하며 이벤트 설정과 재생이 성공하면 true를 반환한다.
+    /// label과 volume·pitch를 FMOD에 전달하며 이벤트 설정과 재생이 성공하면 true를 반환한다.
     /// </summary>
-    public bool PlayAttachedWithLabel(SoundId soundId, GameObject source, string parameterName, string label, float volume = 1f)
+    public bool PlayAttachedWithLabel(SoundId soundId, GameObject source, string parameterName, string label, float volume = 1f, float pitch = 1f)
     {
         if (source == null || string.IsNullOrWhiteSpace(parameterName) || string.IsNullOrWhiteSpace(label))
         {
             Debug.LogWarning("[SoundManager] A source, parameter name and label are required.");
             return false;
         }
-        return PlayEffect(soundId, source.transform.position, source, true, volume, parameterName: parameterName, label: label);
+        return PlayEffect(soundId, source.transform.position, source, true, volume, parameterName: parameterName, label: label, pitch: pitch);
     }
 
     /// <summary>
@@ -216,6 +217,18 @@ public class SoundManager
     }
 
     /// <summary>
+    /// owner가 재생한 soundId 효과음만 allowFadeOut 방식으로 정지한다.
+    /// 전조·베기 취소에서 사용하며 다른 ID의 발소리·피격음과 BGM은 유지한다.
+    /// </summary>
+    public void StopFor(GameObject owner, SoundId soundId, bool allowFadeOut = false)
+    {
+        if (owner == null) return;
+        foreach (ActiveEffect effect in _effects)
+            if (effect.HasOwner && effect.Owner == owner && effect.Id == soundId)
+                StopEffect(effect.Instance, allowFadeOut);
+    }
+
+    /// <summary>
     /// 외부 입력 없이 이 매니저의 단발 효과음을 모두 즉시 정지한다.
     /// BGM은 유지하며 보관한 효과음 목록을 비운다.
     /// </summary>
@@ -227,6 +240,7 @@ public class SoundManager
                 StopEffect(effect.Instance, false);
         }
         _effects.Clear();
+        _combatFocusUntil = 0f;
     }
 
     /// <summary>
@@ -255,7 +269,7 @@ public class SoundManager
 
     /// <summary>
     /// 보유 재생을 확인하여 비활성화 또는 파괴된 소유자의 사운드를 즉시 정지한다.
-    /// 외부 입력 없이 자연 종료된 핸들을 제거하고 BGM의 종료 및 소유자 상태를 정리한다.
+    /// 자연 종료된 핸들을 제거하고 전투 신호에 따른 발소리 음량·2D 패닝과 BGM 수명을 갱신한다.
     /// </summary>
     internal void Update()
     {
@@ -265,7 +279,11 @@ public class SoundManager
             if (effect.HasOwner && (effect.Owner == null || !effect.Owner.activeInHierarchy))
                 StopEffect(effect.Instance, false);
             if (!RuntimeManager.IsInitialized || !effect.Instance.isValid())
+            {
                 _effects.RemoveAt(i);
+                continue;
+            }
+            UpdateEffectMix(effect);
         }
         if (_hasBgmOwner && (_bgmOwner == null || !_bgmOwner.activeInHierarchy))
             StopBgm(false);
@@ -276,12 +294,16 @@ public class SoundManager
     }
 
     /// <summary>
-    /// soundId의 단발 효과음을 position 또는 source에서 volume 배율로 재생한다.
+    /// soundId의 단발 효과음을 position 또는 source에서 volume·pitch 배율로 재생한다.
     /// attach로 위치 추적과 playDuringMovement로 이동 예외를 선택하고 parameterName과 label을 시작 전에 적용한다.
     /// 이벤트 설정과 재생이 성공하면 true를 반환한다.
     /// </summary>
-    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false, string parameterName = null, string label = null)
+    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false, string parameterName = null, string label = null, float pitch = 1f)
     {
+        if (!TryResolveEvent(soundId, SoundType.Effect, out EventReference eventReference))
+            return false;
+        _library.GetCueSettings(soundId, out bool combatCue, out bool spatialize2D);
+        playDuringMovement |= combatCue;
         if (!CanPlayDuringMovement(soundId, source, playDuringMovement))
             return false;
         if (!ReferenceEquals(source, null) && (source == null || !source.activeInHierarchy))
@@ -289,8 +311,6 @@ public class SoundManager
             Debug.LogWarning("[SoundManager] The sound owner must be active.");
             return false;
         }
-        if (!TryResolveEvent(soundId, SoundType.Effect, out EventReference eventReference))
-            return false;
         Update();
         try
         {
@@ -301,11 +321,15 @@ public class SoundManager
                 return false;
             }
             var instance = RuntimeManager.CreateInstance(eventReference);
+            description.is3D(out bool is3D);
+            description.getMinMaxDistance(out float minimumDistance, out float maximumDistance);
             if (attach)
                 RuntimeManager.AttachInstanceToGameObject(instance, source);
             else
                 instance.set3DAttributes(RuntimeUtils.To3DAttributes(position));
             FMOD.RESULT result = instance.setVolume(Mathf.Max(0f, volume));
+            if (result == FMOD.RESULT.OK)
+                result = instance.setPitch(Mathf.Clamp(pitch, 0.25f, 4f));
             if (result == FMOD.RESULT.OK && parameterName != null)
                 result = instance.setParameterByNameWithLabel(parameterName, label);
             if (result == FMOD.RESULT.OK)
@@ -318,7 +342,12 @@ public class SoundManager
                 return false;
             }
             instance.release();
-            _effects.Add(new ActiveEffect(instance, source, soundId, playDuringMovement));
+            if (combatCue)
+                _combatFocusUntil = Time.unscaledTime + _library.CombatFocusDuration;
+            var effect = new ActiveEffect(instance, source, soundId, playDuringMovement, position, attach,
+                volume, spatialize2D && !is3D, minimumDistance, maximumDistance);
+            _effects.Add(effect);
+            foreach (ActiveEffect active in _effects) UpdateEffectMix(active);
             return true;
         }
         catch (EventNotFoundException exception)
@@ -326,6 +355,32 @@ public class SoundManager
             Debug.LogWarning("[SoundManager] Effect event not found in loaded banks: " + exception.Message);
             return false;
         }
+    }
+
+    /// <summary>
+    /// effect의 원래 음량에 전투 중 발소리 감쇠와 선택된 2D 공간 보정을 합성한다.
+    /// FMOD 0번 Listener의 위치·방향과 이동 소유자를 사용하며 채널 생성 전 패닝은 다음 Update에서 재시도한다.
+    /// </summary>
+    private void UpdateEffectMix(ActiveEffect effect)
+    {
+        if (!effect.Instance.isValid()) return;
+        float volume = Mathf.Max(0f, effect.Volume);
+        if (Time.unscaledTime < _combatFocusUntil && (effect.Id == SoundId.Footstep || effect.Id == SoundId.EnemyFootstep))
+            volume *= _library.CombatFootstepVolume;
+        if (effect.Spatialize2D && StudioListener.ListenerCount > 0
+            && RuntimeManager.StudioSystem.getListenerAttributes(0, out FMOD.ATTRIBUTES_3D listener) == FMOD.RESULT.OK)
+        {
+            Vector3 position = effect.Attach && effect.Owner != null ? effect.Owner.transform.position : effect.Position;
+            Vector3 offset = position - new Vector3(listener.position.x, listener.position.y, listener.position.z);
+            float distance = offset.magnitude;
+            volume *= 1f - Mathf.InverseLerp(effect.MinimumDistance, Mathf.Max(effect.MinimumDistance + 0.01f, effect.MaximumDistance), distance);
+            Vector3 right = Vector3.Cross(new Vector3(listener.up.x, listener.up.y, listener.up.z),
+                new Vector3(listener.forward.x, listener.forward.y, listener.forward.z)).normalized;
+            float pan = distance > 0.001f ? Mathf.Clamp(Vector3.Dot(offset / distance, right), -1f, 1f) : 0f;
+            if (effect.Instance.getChannelGroup(out FMOD.ChannelGroup group) == FMOD.RESULT.OK)
+                group.setPan(pan);
+        }
+        effect.Instance.setVolume(volume);
     }
 
     /// <summary>
@@ -410,24 +465,43 @@ public class SoundManager
         private readonly bool _hasOwner;
         private readonly SoundId _id;
         private readonly bool _playDuringMovement;
+        private readonly Vector3 _position;
+        private readonly bool _attach;
+        private readonly float _volume;
+        private readonly bool _spatialize2D;
+        private readonly float _minimumDistance;
+        private readonly float _maximumDistance;
 
         internal FMOD.Studio.EventInstance Instance => _instance;
         internal GameObject Owner => _owner;
         internal bool HasOwner => _hasOwner;
         internal SoundId Id => _id;
         internal bool PlayDuringMovement => _playDuringMovement;
+        internal Vector3 Position => _position;
+        internal bool Attach => _attach;
+        internal float Volume => _volume;
+        internal bool Spatialize2D => _spatialize2D;
+        internal float MinimumDistance => _minimumDistance;
+        internal float MaximumDistance => _maximumDistance;
 
         /// <summary>
-        /// instance와 owner, soundId 및 playDuringMovement를 내부 정리와 이동 중 허용 판정용 데이터로 기록한다.
-        /// 소유자 지정 여부를 보관하여 파괴된 Unity 오브젝트와 소유자 없는 재생을 구분한다.
+        /// instance·owner·soundId·playDuringMovement와 위치·부착·음량·거리 입력을 보관한다.
+        /// 공간 보정 플래그와 소유 여부를 기록하여 재생 수명 및 매 프레임 믹싱에 사용한다.
         /// </summary>
-        internal ActiveEffect(FMOD.Studio.EventInstance instance, GameObject owner, SoundId soundId, bool playDuringMovement)
+        internal ActiveEffect(FMOD.Studio.EventInstance instance, GameObject owner, SoundId soundId, bool playDuringMovement,
+            Vector3 position, bool attach, float volume, bool spatialize2D, float minimumDistance, float maximumDistance)
         {
             _instance = instance;
             _owner = owner;
             _hasOwner = owner != null;
             _id = soundId;
             _playDuringMovement = playDuringMovement;
+            _position = position;
+            _attach = attach;
+            _volume = volume;
+            _spatialize2D = spatialize2D;
+            _minimumDistance = minimumDistance;
+            _maximumDistance = maximumDistance;
         }
     }
 }

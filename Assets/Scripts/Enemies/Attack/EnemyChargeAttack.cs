@@ -44,7 +44,8 @@ public class EnemyChargeAttack : EnemyAttackBehaviour
             agentTypeID = _agent.agentTypeID,
             areaMask = _agent.areaMask
         };
-        return NavMesh.SamplePosition(target.position, out NavMeshHit sampled, 1f, filter) &&
+        Vector3 groundTarget = new Vector3(target.position.x, _agent.nextPosition.y, target.position.z);
+        return NavMesh.SamplePosition(groundTarget, out NavMeshHit sampled, 1f, filter) &&
             !NavMesh.Raycast(_agent.nextPosition, sampled.position, out _, filter);
     }
 

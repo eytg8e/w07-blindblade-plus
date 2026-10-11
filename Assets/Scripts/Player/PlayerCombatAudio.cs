@@ -2,17 +2,29 @@ using UnityEngine;
 
 
 /// <summary>
-/// 플레이어 행동 이벤트를 검 발도와 헛스윙 및 쳐내기 소리에 연결한다.
+/// 플레이어 베기·방어·피격을 FMOD 사운드에 연결한다.
 /// 실제 적 피격음은 EnemyDamageAudio가 처리하고 모든 재생은 Managers.Sound를 사용한다.
 /// </summary>
 [RequireComponent(typeof(PlayerController))]
+[DisallowMultipleComponent]
 public sealed class PlayerCombatAudio : MonoBehaviour
 {
     [Header("전투 효과음")]
     [SerializeField] private SoundId _swingSound = SoundId.SwordSwing;
-    [SerializeField] private SoundId _hitSound = SoundId.SwordHit;
+    [SerializeField] private SoundId _hitSound = SoundId.SwordClash;
     [SerializeField] private SoundId _unsheathSound = SoundId.SwordUnsheath;
     [SerializeField, Min(0f)] private float _volume = 0.8f;
+
+    [Header("방어·피격 신호")]
+    [SerializeField] private SoundId _parrySound = SoundId.ParryClash;
+    [SerializeField] private SoundId _damageSound = SoundId.PlayerDamaged;
+    [SerializeField, Min(0f)] private float _parryVolume = 1.1f;
+    [SerializeField, Range(0.25f, 4f)] private float _guardPitch = 0.85f;
+    [SerializeField, Range(0.25f, 4f)] private float _parryPitch = 1.25f;
+    private PlayerHealth _health;
+    private PlayerActionDriver _timing;
+    private int _pendingSwingAction = -1;
+    private float _swingBeginTime;
 
     [Header("Combat Contact")]
     [SerializeField] private EnemyCombatService _contactService;
@@ -28,38 +40,51 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     private int _lastHitAction = -1;
     private int _lastContactAction = -1;
     private bool _introPlayed;
+    private bool _isPrimary;
 
     void Awake()
     {
         _player = GetComponent<PlayerController>();
         _katana = GetComponent<KatanaCombatCoordinator>();
+        _health = GetComponent<PlayerHealth>();
+        _timing = GetComponent<PlayerActionDriver>();
+        // 기존 씬의 적 피격음 override도 금속 접촉음으로 연결한다.
+        if (_hitSound == SoundId.SwordHit) _hitSound = SoundId.SwordClash;
+        _isPrimary = GetComponent<PlayerCombatAudio>() == this;
+        if (!_isPrimary) enabled = false;
     }
 
     void OnEnable()
     {
+        if (!_isPrimary) return;
         _player.ActionEvent += HandleAction;
         _lastSwingAction = -1;
         _lastHitAction = -1;
         _lastContactAction = -1;
         _introPlayed = false;
+        _pendingSwingAction = -1;
+        _health.DamageReceived += HandleDamage;
         if (_contactService != null)
             _contactService.AttackContactResolved += HandleContact;
         if (_katana != null && _katana.isActiveAndEnabled)
         {
             _katana.EventRaised += HandleKatana;
-            _katana.ParrySucceeded += HandleParry;
+            _katana.DefenseSucceeded += HandleDefense;
         }
     }
 
     void OnDisable()
     {
+        if (!_isPrimary) return;
         _player.ActionEvent -= HandleAction;
+        _health.DamageReceived -= HandleDamage;
+        _pendingSwingAction = -1;
         if (_contactService != null)
             _contactService.AttackContactResolved -= HandleContact;
         if (_katana != null)
         {
             _katana.EventRaised -= HandleKatana;
-            _katana.ParrySucceeded -= HandleParry;
+            _katana.DefenseSucceeded -= HandleDefense;
         }
         if (Managers.IsInitialized)
             Managers.Sound.StopFor(gameObject);
@@ -72,10 +97,20 @@ public sealed class PlayerCombatAudio : MonoBehaviour
             _introPlayed = true;
             PlayUnsheath();
         }
+        if (_pendingSwingAction < 0 || _player.IsPaused || Time.deltaTime <= 0f) return;
+        if (_pendingSwingAction != _player.CurrentActionId
+            || (_player.CurrentState != PlayerActionState.NormalAttack && _player.CurrentState != PlayerActionState.IaidoSlash))
+        {
+            _pendingSwingAction = -1;
+            return;
+        }
+        if (_timing.GetPresentationElapsed(_pendingSwingAction) < _swingBeginTime) return;
+        PlaySwing(_pendingSwingAction);
+        _pendingSwingAction = -1;
     }
 
     /// <summary>
-    /// action의 공격 단계에서 SwingType을 선택하고 미충돌 결과에 헛스윙을 한 번 재생한다.
+    /// action의 공격 단계에서 SwingType을 선택하고 실제 베기 시작 시각에 스윙을 예약한다.
     /// 발도 베기 시작에는 검을 뽑는 소리를 연결하며 명중음은 적 피해 사건에 맡긴다.
     /// </summary>
     private void HandleAction(PlayerActionEvent action)
@@ -84,7 +119,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         {
             int strike = _katana != null && _katana.isActiveAndEnabled ? _katana.Strike
                 :  1;
-            _swingLabel = strike > 1 ? _secondSwingLabel : _firstSwingLabel;
+            _swingLabel = _katana != null && _katana.IsCounterAttack ? _secondSwingLabel
+                : strike == 1 ? _iaidoSwingLabel : strike == 2 ? _firstSwingLabel : _secondSwingLabel;
         }
         if (action.Stage == PlayerActionStage.SlashStarted)
         {
@@ -92,8 +128,15 @@ public sealed class PlayerCombatAudio : MonoBehaviour
             if (_katana == null || !_katana.isActiveAndEnabled)
                 PlayUnsheath();
         }
-        if (action.Stage == PlayerActionStage.Missed && _lastContactAction != action.ActionId)
-            PlayMiss(action.ActionId);
+        if ((action.Stage == PlayerActionStage.AttackStarted && action.State == PlayerActionState.NormalAttack)
+            || action.Stage == PlayerActionStage.SlashStarted)
+        {
+            _pendingSwingAction = action.ActionId;
+            _timing.GetStrikeWindow(action.State == PlayerActionState.IaidoSlash ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal,
+                out _swingBeginTime, out _);
+        }
+        if (action.Stage == PlayerActionStage.ActionEnded && action.ActionId == _pendingSwingAction)
+            _pendingSwingAction = -1;
         if (_contactService == null && action.Stage == PlayerActionStage.HitConfirmed && _lastHitAction != action.ActionId)
         {
             _lastHitAction = action.ActionId;
@@ -113,17 +156,15 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     }
 
     /// <summary>
-    /// request의 실제 collider와 point를 사용하여 미충돌 스윙과 일반 충돌음을 구분한다.
-    /// 적 피해가 확정된 경우 EnemyDamageAudio에 맡기고 나머지 접촉은 승인된 임시 충돌음을 한 번 재생한다.
+    /// request의 실제 collider와 point에 일반 충돌음을 한 번 재생한다.
+    /// 적 피해음은 EnemyDamageAudio에 맡기고 헛스윙에는 추가 결과음을 재생하지 않는다.
     /// </summary>
     private void HandleContact(PlayerAttackRequest request, Collider collider, Vector3 point, bool enemyDamaged)
     {
         if (request.ActionId != _player.CurrentActionId || _lastContactAction == request.ActionId)
             return;
         _lastContactAction = request.ActionId;
-        if (collider == null)
-            PlayMiss(request.ActionId);
-        else if (!enemyDamaged)
+        if (collider != null && !enemyDamaged)
         {
             _lastHitAction = request.ActionId;
             Managers.Sound.Play(_hitSound, point, _volume, gameObject);
@@ -131,20 +172,30 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     }
 
     /// <summary>
-    /// result의 실제 쳐내기 접촉 위치에 사용자가 승인한 임시 충돌음을 재생한다.
-    /// 피해 적용은 변경하지 않으며 이 플레이어를 소유자로 지정한다.
+    /// result의 방어 종류와 실제 접촉 위치로 가드·패링의 음량·음높이를 선택한다.
+    /// 전용 금속음을 재생하며 피해와 반격 기회는 변경하지 않는다.
     /// </summary>
-    private void HandleParry(KatanaParryResult result)
+    private void HandleDefense(KatanaDefenseResult result)
     {
-        Managers.Sound.Play(_hitSound, result.Incoming.Point, _volume, gameObject);
+        Managers.Sound.Play(result.IsParry ? _parrySound : _hitSound, result.Point,
+            result.IsParry ? _parryVolume : _volume, gameObject, pitch: result.IsParry ? _parryPitch : _guardPitch);
     }
 
     /// <summary>
-    /// actionId의 미충돌 베기에 현재 선택된 A/B/C Label을 재생 전에 적용한다.
+    /// context의 실제 플레이어 피해에 접촉 위치의 피격음을 재생한다.
+    /// 피해 수신 사건만 구독하므로 가드·패링에 피격음을 중복 재생하지 않는다.
+    /// </summary>
+    private void HandleDamage(DamageContext context)
+    {
+        Managers.Sound.Play(_damageSound, context.Point, _volume, gameObject);
+    }
+
+    /// <summary>
+    /// actionId의 베기 시작에 현재 선택된 A/B/C Label로 스윙을 재생한다.
     /// 기존 전투 시각화의 일반 공격은 판정 시점의 실제 타수를 사용한다.
     /// 동일 행동의 반복 알림을 무시하고 재생 ID를 기록한다.
     /// </summary>
-    private void PlayMiss(int actionId)
+    private void PlaySwing(int actionId)
     {
         if (_lastSwingAction == actionId)
             return;

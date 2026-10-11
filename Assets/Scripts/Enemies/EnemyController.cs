@@ -35,6 +35,7 @@ public class EnemyController : MonoBehaviour
     private float _noiseAlertUntil = float.NegativeInfinity;
 
     public EnemyState State => _state;
+    private bool AllowsWalkingChase => _allowWalkingChase || _attackSelector.MeleeOnly;
     public event Action<EnemyState> StateChanged;
 
     protected EnemySensor Sensor => _sensor;
@@ -69,6 +70,12 @@ public class EnemyController : MonoBehaviour
             return;
         }
 
+        if (_attackSelector.IsStaggered)
+        {
+            _motor.Stop();
+            ChangeState(EnemyState.Attacking);
+            return;
+        }
         if (_attackSelector.IsBusy)
         {
             ChangeState(EnemyState.Attacking);
@@ -181,7 +188,7 @@ public class EnemyController : MonoBehaviour
             _lastSeenTime = Time.time;
             ChangeState(_attackSelector.isActiveAndEnabled &&
                 _attackSelector.CanAttack(_sensor.Target) ? EnemyState.Attacking :
-                (_allowWalkingChase ? EnemyState.Chasing : EnemyState.Idle));
+                    (AllowsWalkingChase ? EnemyState.Chasing : EnemyState.Idle));
             return;
         }
 
@@ -194,7 +201,7 @@ public class EnemyController : MonoBehaviour
         }
 
         if (_state == EnemyState.Chasing || _state == EnemyState.Attacking)
-            ChangeState(_allowWalkingChase && _memoryDuration > 0f ? EnemyState.Searching : EnemyState.Idle);
+            ChangeState(AllowsWalkingChase && _memoryDuration > 0f ? EnemyState.Searching : EnemyState.Idle);
     }
 
     /// <summary>

@@ -18,6 +18,14 @@ public sealed class EnemyChargeHitbox : MonoBehaviour
     private EnemyAttackContext _context;
     private Vector3 _previousCenter;
 
+    [Header("공격 판정 기즈모")]
+    [SerializeField] private bool _showAttackGizmos = true;
+    [SerializeField, Min(0.1f)] private float _gizmoDuration = 2f;
+#if UNITY_EDITOR
+    private readonly List<Vector3> _debugCenters = new List<Vector3>();
+    private float _debugUntil;
+#endif
+
     void Awake()
     {
         _attacks = GetComponents<EnemyAttackBehaviour>();
@@ -70,6 +78,9 @@ public sealed class EnemyChargeHitbox : MonoBehaviour
         _activeAttack = context.Pattern;
         _previousCenter = transform.position + Vector3.up * _height;
         _damaged.Clear();
+#if UNITY_EDITOR
+        _debugCenters.Clear();
+#endif
     }
 
     /// <summary>
@@ -104,6 +115,11 @@ public sealed class EnemyChargeHitbox : MonoBehaviour
     /// </summary>
     private void CheckSegment(Vector3 center)
     {
+#if UNITY_EDITOR
+        if (_debugCenters.Count == 0) _debugCenters.Add(_previousCenter);
+        _debugCenters.Add(center);
+        _debugUntil = Time.time + _gizmoDuration;
+#endif
         foreach (Collider overlap in Physics.OverlapSphere(_previousCenter, _radius, _hitMask, QueryTriggerInteraction.Ignore))
             TryApplyDamage(overlap, overlap.ClosestPoint(_previousCenter));
         Vector3 delta = center - _previousCenter;
@@ -138,4 +154,23 @@ public sealed class EnemyChargeHitbox : MonoBehaviour
         _damaged.Add(receiver);
         receiver.TakeDamage(new DamageContext(_damage, gameObject, point, _context.Direction, _context.PatternId));
     }
+
+#if UNITY_EDITOR
+    void OnDrawGizmos()
+    {
+        if (!_showAttackGizmos || !isActiveAndEnabled || _debugCenters.Count < 2
+            || !Application.isPlaying || Time.time > _debugUntil) return;
+        for (int i = 1; i < _debugCenters.Count; i++)
+            EnemyCombatService.DrawSweepGizmo(_debugCenters[i - 1], _debugCenters[i], _radius, Color.red);
+        UnityEditor.Handles.Label(_debugCenters[_debugCenters.Count - 1], "적 돌진: 실제 검사 경로");
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (!_showAttackGizmos || Application.isPlaying) return;
+        Vector3 center = transform.position + Vector3.up * _height;
+        EnemyCombatService.DrawSweepGizmo(center, center, _radius, Color.yellow);
+        UnityEditor.Handles.Label(center, "적 돌진: 현재 히트박스 미리보기");
+    }
+#endif
 }

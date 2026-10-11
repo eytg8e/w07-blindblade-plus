@@ -15,6 +15,14 @@ public sealed class EnemyMotor : MonoBehaviour
     private Vector3 _destination;
     private bool _hasDestination;
 
+    [Header("피격 이동 상태")]
+    private Vector3 _pushDirection;
+    private float _pushDistance;
+    private float _pushDuration;
+    private float _pushElapsed;
+    private float _pushProgress;
+    private bool _isPushed;
+
     public bool IsReady => _agent.isActiveAndEnabled && _agent.isOnNavMesh;
     public bool HasArrived => IsReady && _hasDestination && !_agent.pathPending &&
         (IsWithinStoppingDistance(_destination) ||
@@ -29,6 +37,42 @@ public sealed class EnemyMotor : MonoBehaviour
         _agent.angularSpeed = _angularSpeed;
         _agent.stoppingDistance = _stoppingDistance;
         _agent.autoRepath = true;
+    }
+
+    void LateUpdate()
+    {
+        if (!_isPushed || Time.deltaTime <= 0f) return;
+        if (!IsReady) { _isPushed = false; return; }
+        _pushElapsed += Time.deltaTime;
+        float normalized = Mathf.Clamp01(_pushElapsed / _pushDuration);
+        float progress = 1f - (1f - normalized) * (1f - normalized);
+        Vector3 displacement = _pushDirection * (_pushDistance * (progress - _pushProgress));
+        if (_agent.Raycast(transform.position + displacement, out NavMeshHit hit))
+        {
+            displacement = hit.position - transform.position;
+            _isPushed = false;
+        }
+        _agent.Move(displacement);
+        _pushProgress = progress;
+        if (normalized >= 1f) _isPushed = false;
+    }
+
+    void OnDisable()
+    {
+        _isPushed = false;
+    }
+
+    /// <summary>direction·distance·duration으로 수평 피격 밀림을 예약한다. NavMesh 위에서만 이동하며 중복 밀림은 새 요청으로 교체한다.</summary>
+    public void ApplyHitPush(Vector3 direction, float distance, float duration)
+    {
+        Vector3 horizontal = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
+        if (!IsReady || distance <= 0f || duration <= 0f || horizontal.sqrMagnitude < 0.001f) return;
+        _pushDirection = horizontal;
+        _pushDistance = distance;
+        _pushDuration = duration;
+        _pushElapsed = 0f;
+        _pushProgress = 0f;
+        _isPushed = true;
     }
 
     /// <summary>

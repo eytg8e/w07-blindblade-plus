@@ -184,14 +184,16 @@ public struct PlayerAttackResolution
     public bool HitConfirmed { get; }
     public string HitTargetId { get; }
     public bool DeathConfirmed { get; }
+    public bool IsComplete { get; }
 
-    /// <summary>행동 식별자와 적중 대상, 사망 확정 여부로 적 시스템 판정 결과를 생성합니다.</summary>
-    public PlayerAttackResolution(int actionId, bool hitConfirmed, string hitTargetId, bool deathConfirmed)
+    /// <summary>actionId·적중 대상·사망 및 isComplete로 피해 판정 결과를 생성한다. 미완료 궤적 검사를 구분한다.</summary>
+    public PlayerAttackResolution(int actionId, bool hitConfirmed, string hitTargetId, bool deathConfirmed, bool isComplete = true)
     {
         ActionId = actionId;
         HitConfirmed = hitConfirmed;
         HitTargetId = hitTargetId;
         DeathConfirmed = deathConfirmed;
+        IsComplete = isComplete;
     }
 }
 
