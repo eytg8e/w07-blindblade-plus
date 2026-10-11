@@ -360,9 +360,13 @@ public sealed class BossController : MonoBehaviour
     private void HandleBossDamaged(DamageContext context)
     {
         if (!_health.IsAlive) return;
-        _resumeState = _state == BossState.Charging || _state == BossState.ChainCharge || _state == BossState.Duel
-            ? _state : BossState.Roaming;
-        if (_state == BossState.Roaming) _resumeState = BossState.Charging;
+        switch (_state)
+        {
+            case BossState.Roaming: _resumeState = BossState.Charging; break;
+            case BossState.Charging: _resumeState = BossState.ChainCharge; break;
+            case BossState.ChainCharge: _resumeState = BossState.Duel; break;
+            default: _resumeState = BossState.Roaming; break;
+        }
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
         RestoreNavigation();
