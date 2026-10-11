@@ -13,4 +13,9 @@ public enum SoundId
     SwordClash = 10,
     ParryClash = 11,
     PlayerDamaged = 12,
+    EnemyFinished = 13,
+    EnemyDie = 14,
+    Dodge = 15,
+    EnemyDetected = 16,
+    NormalHit = 17,
 }
