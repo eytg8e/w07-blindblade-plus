@@ -186,9 +186,10 @@ public sealed class BossController : MonoBehaviour
     {
         _nextPattern = nextPattern;
         _motor.Stop();
-        ChangeState(BossState.Idle);
+        if (!_hidden) ChangeState(BossState.Idle);
         float maximum = Mathf.Max(_patternWaitMin, _patternWaitMax);
         yield return new WaitForSeconds(UnityEngine.Random.Range(_patternWaitMin, maximum));
+        RestoreAfterDisappearance();
     }
 
     /// <summary>마지막 피격 기준 제한 시간 동안 플레이어 주변의 유효한 경로를 골라 배회한다.</summary>
@@ -424,7 +425,6 @@ public sealed class BossController : MonoBehaviour
     private IEnumerator RecoverFromHit()
     {
         yield return new WaitForSeconds(_hitRecoveryDuration);
-        RestoreAfterDisappearance();
         if (_health.IsAlive && _playerHealth.IsAlive) yield return RunBattle(_resumeState);
         _routine = null;
     }
