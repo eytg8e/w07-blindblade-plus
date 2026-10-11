@@ -330,7 +330,9 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 Play("SheathedHold", _blendTime);
                 break;
             case KatanaStage.SlashStarted:
-                BeginStrike("IaidoDoubleSlash", e);
+                string slash = _combat.Strike == 2 ? "Normal1"
+                    : _combat.Strike == 3 ? "Normal2" : "IaidoDoubleSlash";
+                BeginStrike(slash, e);
                 break;
             case KatanaStage.Died:
                 Play("Dead", _blendTime);
@@ -341,7 +343,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     /// <summary>name과 e의 타수·행동 ID 및 kind로 베기 모션을 선택한다. 공통 타격 시간과 해당 클립의 적중 진행도를 설정한다.</summary>
     private void BeginStrike(string name, KatanaEvent e, PlayerAttackKind kind = PlayerAttackKind.IaidoFinisher)
     {
-        if (kind == PlayerAttackKind.Normal) ApplyAttackClips(_combat.IsCounterAttack);
+        if (kind == PlayerAttackKind.Normal || _combat.Player.TargetedComboStrike > 1)
+            ApplyAttackClips(_combat.IsCounterAttack);
         bool opening = kind == PlayerAttackKind.Normal && _combat.IsOpeningAttack;
         float blend = kind == PlayerAttackKind.Normal && !opening && !_combat.IsCounterAttack
             ? Mathf.Max(_blendTime, _comboBlendTime) : _blendTime;
