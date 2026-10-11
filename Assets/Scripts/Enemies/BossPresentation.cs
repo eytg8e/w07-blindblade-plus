@@ -81,14 +81,20 @@ public sealed class BossPresentation : MonoBehaviour
     {
         Vector3 movement = Vector3.ProjectOnPlane(transform.position - _previousPosition, Vector3.up);
         _previousPosition = transform.position;
-        bool walking = _boss.State == BossState.Roaming || IsChargeState();
+        bool walking = _boss.State == BossState.Roaming || IsChargeState() || _boss.State == BossState.Duel;
         if (!walking || movement.sqrMagnitude < 0.000001f) return;
         _stepDistanceAccumulated += movement.magnitude;
         if (_stepDistanceAccumulated < _stepDistance) return;
         _stepDistanceAccumulated %= _stepDistance;
         Managers.Sound.Play(_footstepSound, transform.position, owner: gameObject, playDuringMovement: true);
-        if (!IsChargeState() || !Game.IsInitialized) return;
+        if (!Game.IsInitialized) return;
         Vector3 direction = movement.normalized;
+        EmitFootprint(direction);
+    }
+
+    /// <summary>현재 보스 발 위치의 지면에 direction 방향으로 좌우 발자국을 번갈아 생성한다.</summary>
+    private void EmitFootprint(Vector3 direction)
+    {
         Vector3 foot = transform.position + Vector3.Cross(Vector3.up, direction) * (_leftStep ? -0.15f : 0.15f);
         _leftStep = !_leftStep;
         if (Physics.Raycast(foot + Vector3.up * 0.4f, Vector3.down, out RaycastHit hit,
@@ -96,12 +102,10 @@ public sealed class BossPresentation : MonoBehaviour
             Game.Instance.SensoryManager.EmitFootstep(new SensoryEvent(hit.point, hit.normal, direction), _leftStep, true);
     }
 
-    /// <summary>state가 돌진·정면승부·스턴일 때 지정된 보스 외형을 표시하고 걸음 누적을 초기화한다.</summary>
+    /// <summary>모든 state에서 보스 외형을 숨기고 걸음 누적과 상태별 소리를 갱신한다.</summary>
     private void HandleState(BossState state)
     {
-        bool visible = state == BossState.Charging || state == BossState.ChainCharge
-            || state == BossState.Duel || state == BossState.Stunned;
-        foreach (Renderer body in _bodyRenderers) body.enabled = visible;
+        foreach (Renderer body in _bodyRenderers) body.enabled = false;
         ResetSteps();
         if (Managers.IsInitialized)
         {
@@ -141,6 +145,8 @@ public sealed class BossPresentation : MonoBehaviour
     {
         _previousPosition = transform.position;
         _stepDistanceAccumulated = 0f;
+        if (Game.IsInitialized && _boss.State != BossState.Idle && _boss.State != BossState.Dead)
+            EmitFootprint(transform.forward);
     }
 
     /// <summary>사운드 초기화를 기다린 뒤 FMOD 개발용 오버레이를 한 번 찾아 보스전 동안 숨긴다.</summary>

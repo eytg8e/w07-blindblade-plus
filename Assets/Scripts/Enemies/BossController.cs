@@ -29,6 +29,8 @@ public sealed class BossController : MonoBehaviour
     private bool _playerHit;
     private BossState _state;
     private bool _started;
+    [SerializeField, Min(0f), Tooltip("피격으로 행동을 취소한 뒤 멈추는 시간(초)")]
+    private float _hitRecoveryDuration = 0.5f;
 
     [Header("배회")]
     [SerializeField, Min(0.1f), Tooltip("마지막 피격 이후 돌진까지의 시간(초)")]
@@ -343,10 +345,28 @@ public sealed class BossController : MonoBehaviour
         Teleported?.Invoke();
     }
 
-    /// <summary>context의 배회 피격으로 돌진 제한 시간을 재설정하고 추가 스턴은 부여하지 않는다.</summary>
+    /// <summary>context의 실제 피격 시 현재 행동을 취소하고 잠시 멈춘 뒤 배회부터 다시 시작한다.</summary>
     private void HandleBossDamaged(DamageContext context)
     {
-        if (_state == BossState.Roaming) _roamUntil = Time.time + _roamDuration;
+        if (!_health.IsAlive) return;
+        if (_routine != null) StopCoroutine(_routine);
+        _routine = null;
+        RestoreNavigation();
+        _melee.CancelAttack();
+        _motor.Stop();
+        _strike = 0;
+        _strikeResolved = false;
+        _parriedStrikes = 0;
+        ChangeState(BossState.Idle);
+        _routine = StartCoroutine(RecoverFromHit());
+    }
+
+    /// <summary>피격 정지 시간 동안 행동하지 않고 생존 중이면 배회부터 전투 흐름을 재개한다.</summary>
+    private IEnumerator RecoverFromHit()
+    {
+        yield return new WaitForSeconds(_hitRecoveryDuration);
+        if (_health.IsAlive && _playerHealth.IsAlive) yield return RunBattle();
+        _routine = null;
     }
 
     /// <summary>context가 현재 보스 3연격의 피해이면 남은 공격을 중단하도록 적중을 기록한다.</summary>
