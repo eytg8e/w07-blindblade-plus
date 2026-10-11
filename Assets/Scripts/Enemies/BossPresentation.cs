@@ -96,10 +96,11 @@ public sealed class BossPresentation : MonoBehaviour
             Game.Instance.SensoryManager.EmitFootstep(new SensoryEvent(hit.point, hit.normal, direction), _leftStep, true);
     }
 
-    /// <summary>state가 돌진 또는 스턴일 때만 지정된 보스 외형을 표시하고 걸음 누적을 초기화한다.</summary>
+    /// <summary>state가 돌진·정면승부·스턴일 때 지정된 보스 외형을 표시하고 걸음 누적을 초기화한다.</summary>
     private void HandleState(BossState state)
     {
-        bool visible = state == BossState.Charging || state == BossState.ChainCharge || state == BossState.Stunned;
+        bool visible = state == BossState.Charging || state == BossState.ChainCharge
+            || state == BossState.Duel || state == BossState.Stunned;
         foreach (Renderer body in _bodyRenderers) body.enabled = visible;
         ResetSteps();
         if (Managers.IsInitialized)
