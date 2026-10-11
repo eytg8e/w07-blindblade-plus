@@ -221,6 +221,54 @@ MonoBehaviour:
     _combatCue: 1
     _spatialize2D: 0
     _finishNaturally: 0
+  - _id: 18
+    _type: 1
+    _event:
+      Guid:
+        Data1: -805074739
+        Data2: 1110757516
+        Data3: 1431091131
+        Data4: 1445526569
+      Path: event:/Enemy/EnemyPrepare
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
+    _combatCue: 1
+    _spatialize2D: 1
+    _finishNaturally: 1
+  - _id: 19
+    _type: 1
+    _event:
+      Guid:
+        Data1: -805074739
+        Data2: 1110757516
+        Data3: 1431091131
+        Data4: 1445526569
+      Path: event:/Enemy/EnemyPrepare
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
+    _combatCue: 1
+    _spatialize2D: 1
+    _finishNaturally: 1
+  - _id: 20
+    _type: 1
+    _event:
+      Guid:
+        Data1: -805074739
+        Data2: 1110757516
+        Data3: 1431091131
+        Data4: 1445526569
+      Path: event:/Enemy/EnemyPrepare
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 1
+    _combatCue: 1
+    _spatialize2D: 1
+    _finishNaturally: 1
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
   _combatFocusDuration: 0.35

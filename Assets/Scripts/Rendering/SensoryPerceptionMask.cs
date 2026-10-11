@@ -55,6 +55,16 @@ using UnityEngine;
             PublishMask();
         }
 
+        /// <summary>radius(미터)로 소리 인지 반경을 변경하고 이전 반경을 반환한다. 이전 인지 영역은 지운다.</summary>
+        public float SetSoundRadius(float radius)
+        {
+            float previous = _soundRadius;
+            _soundRadius = Mathf.Max(0f, radius);
+            ClearMask();
+            PublishMask();
+            return previous;
+        }
+
         /// <summary>enabled로 착지 전용 표시를 전환하고 이전 영역을 비운다.</summary>
         public void SetFootstepOnly(bool enabled)
         {

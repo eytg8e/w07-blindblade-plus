@@ -10,8 +10,12 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     [Header("플레이어 공격 판정")]
     [SerializeField] private Transform _playerRoot;
     [SerializeField, Min(0f)] private float _normalDamage = 10f;
+    [SerializeField, Tooltip("켜면 발도 베기가 남은 체력 전체를 피해로 적용합니다. 끄면 일반 공격 피해량을 적용합니다.")]
+    private bool _iaidoInstantKill = true;
     [SerializeField, Min(0.01f)] private float _hitRadius = 0.2f;
     [SerializeField] private LayerMask _attackMask = ~0;
+    [SerializeField, Tooltip("칼날 길이 대신 시점 방향으로 거리 제한 없이 공격 판정합니다. 벽에 막히는 규칙은 유지합니다.")]
+    private bool _unlimitedRange;
     private bool _hasResolution;
     private PlayerAttackResolution _lastResolution;
     private readonly List<PlayerPerceivedTarget> _targetCandidates = new List<PlayerPerceivedTarget>();
@@ -114,11 +118,17 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
 
     /// <summary>
     /// request의 원점·방향·사거리로 가장 가까운 적 또는 장애물을 검사하여 피해·사망 결과를 반환한다.
-    /// IaidoFinisher는 대상의 남은 체력을 모두 피해로 적용하며 일반 공격은 설정 피해를 적용한다.
+    /// 즉사 설정이 켜진 일반 적의 IaidoFinisher는 남은 체력 전체를, 보스와 그 외 공격은 설정 피해를 적용한다.
     /// 같은 ActionId는 중복 적용하지 않는다.
     /// 새 판정의 접촉체·위치·적 피해 여부는 AttackContactResolved로 구독자에게 알린다.
     /// </summary>
     public PlayerAttackResolution ResolvePlayerAttack(PlayerAttackRequest request)
+    {
+        return ResolveAttack(request, true);
+    }
+
+    /// <summary>request의 시점 방향 접촉을 검사하고 접촉 또는 finalSample에서 피해·결과·이벤트를 한 번 확정한다.</summary>
+    private PlayerAttackResolution ResolveAttack(PlayerAttackRequest request, bool finalSample)
     {
         if (_hasResolution && _lastResolution.ActionId == request.ActionId)
             return _lastResolution;
@@ -134,15 +144,22 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
                 (string.IsNullOrEmpty(request.PreferredTargetId) || request.PreferredTargetId == health.TargetId))
             {
                 string id = health.TargetId;
-                float damage = request.Kind == PlayerAttackKind.IaidoFinisher
+                float damage = _iaidoInstantKill && request.Kind == PlayerAttackKind.IaidoFinisher
+                    && health.GetComponent<BossController>() == null
                     ? health.CurrentHealth
                     : _normalDamage;
                 health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
                 result = new PlayerAttackResolution(request.ActionId, true, id, health.CurrentHealth <= 0f);
             }
         }
-        _hasResolution = true;
-        _lastResolution = result;
+        bool complete = collider != null || finalSample;
+        result = new PlayerAttackResolution(request.ActionId, result.HitConfirmed,
+            result.HitTargetId, result.DeathConfirmed, complete);
+        if (complete)
+        {
+            _hasResolution = true;
+            _lastResolution = result;
+        }
 #if UNITY_EDITOR
         _debugBladeSweep = false;
         _debugRequest = request;
@@ -151,7 +168,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         _hasDebugRequest = request.Range > 0f && request.Direction.sqrMagnitude > 0f;
         _debugUntil = Time.time + _gizmoDuration;
 #endif
-        AttackContactResolved?.Invoke(request, collider, point, result.HitConfirmed);
+        if (complete) AttackContactResolved?.Invoke(request, collider, point, result.HitConfirmed);
         return result;
     }
 
@@ -186,7 +203,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
             return closestOverlap;
 
         RaycastHit[] hits = Physics.SphereCastAll(request.Origin, _hitRadius, request.Direction,
-            request.Range, _attackMask, QueryTriggerInteraction.Ignore);
+            _unlimitedRange ? Mathf.Infinity : request.Range, _attackMask, QueryTriggerInteraction.Ignore);
         Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
         foreach (RaycastHit hit in hits)
         {
@@ -301,6 +318,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     public PlayerAttackResolution ResolvePlayerBladeAttack(PlayerAttackRequest request, bool finalSample)
     {
         if (_hasResolution && _lastResolution.ActionId == request.ActionId) return _lastResolution;
+        if (_unlimitedRange) return ResolveAttack(request, finalSample);
         if (_bladeBase == null || _bladeTip == null) return ResolvePlayerAttack(request);
         Vector3 currentBase = _bladeBase.position;
         Vector3 currentTip = _bladeTip.position;
@@ -327,7 +345,8 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         string id = hit ? health.TargetId : null;
         if (hit)
         {
-            float damage = request.Kind == PlayerAttackKind.IaidoFinisher
+            float damage = _iaidoInstantKill && request.Kind == PlayerAttackKind.IaidoFinisher
+                && health.GetComponent<BossController>() == null
                 ? health.CurrentHealth
                 : _normalDamage;
             health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));

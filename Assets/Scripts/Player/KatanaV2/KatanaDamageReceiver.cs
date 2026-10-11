@@ -1,7 +1,7 @@
 using UnityEngine;
 
 
-/// <summary>적의 기존 IDamageable 호출을 받아 피해 전달 전에 전방 근접 쳐내기를 확인한다.</summary>
+/// <summary>적의 기존 IDamageable 호출을 받아 피해 전달 전에 전방 근접·보스 돌진 방어를 확인한다.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(KatanaCombatCoordinator))]
 public sealed class KatanaDamageReceiver : PlayerHealth
@@ -10,10 +10,12 @@ public sealed class KatanaDamageReceiver : PlayerHealth
     [SerializeField] private KatanaCombatCoordinator _combat;
     [SerializeField] private Transform _view;
     [SerializeField, Range(1f, 180f)] private float _frontArc = 120f;
+    private PlayerMotor _motor;
 
     protected override void Awake()
     {
         base.Awake();
+        _motor = GetComponent<PlayerMotor>();
         if (_combat == null) _combat = GetComponent<KatanaCombatCoordinator>();
         if (_view == null)
         {
@@ -23,14 +25,14 @@ public sealed class KatanaDamageReceiver : PlayerHealth
     }
 
     /// <summary>
-    /// context의 전방 근접 피해를 먼저 패링으로 검사한다.
+    /// context의 전방 근접·보스 돌진 피해를 먼저 가드·패링으로 검사한다.
     /// 성공하면 피해를 소비하고 실패하면 PlayerHealth가 HP 차감과 사망 및 피해 이벤트를 처리한다.
     /// </summary>
     public override void TakeDamage(DamageContext context)
     {
         if (!isActiveAndEnabled || context.Amount <= 0f || _combat.Player.IsPaused
             || Time.timeScale <= 0f || _combat.Player.CurrentState == PlayerActionState.Dead) return;
-        if (_combat.TryDefendIncoming(context, IsFrontMelee(context))) return;
+        if (_combat.TryDefendIncoming(context, IsFrontMelee(context) || IsFrontBossCharge(context))) return;
         base.TakeDamage(context);
     }
 
@@ -47,12 +49,23 @@ public sealed class KatanaDamageReceiver : PlayerHealth
         }
         if (!(matching is EnemyMeleeAttack) || matching.Phase != EnemyAttackPhase.Active) return false;
         Vector3 toEnemy = Vector3.ProjectOnPlane(context.Instigator.transform.position - transform.position, Vector3.up);
-        Vector3 forward = Vector3.ProjectOnPlane(_combat.Player.GetComponent<PlayerMotor>().ViewForward, Vector3.up);
+        Vector3 forward = _motor.ViewForward;
         return toEnemy.sqrMagnitude > 0.0001f && forward.sqrMagnitude > 0.0001f
             && Vector3.Angle(forward, toEnemy) <= _frontArc * 0.5f;
     }
 
-    /// <summary>context의 방향 제한 없는 기본 가드는 사용하지 않는다. 전방 근접 방어는 Coordinator에서 확정한다.</summary>
+    /// <summary>context가 진행 중인 보스 돌진이고 진입 방향이 전방 방어 각도 안인지 반환한다.</summary>
+    private bool IsFrontBossCharge(DamageContext context)
+    {
+        if (context.PatternId != "BossCharge" || context.Instigator == null) return false;
+        BossController boss = context.Instigator.GetComponent<BossController>();
+        if (boss == null || (boss.State != BossState.Charging && boss.State != BossState.ChainCharge)) return false;
+        Vector3 incoming = Vector3.ProjectOnPlane(-context.Direction, Vector3.up);
+        return incoming.sqrMagnitude > 0.0001f
+            && Vector3.Angle(_motor.ViewForward, incoming) <= _frontArc * 0.5f;
+    }
+
+    /// <summary>context의 방향 제한 없는 기본 가드는 사용하지 않는다. 전방 근접·보스 돌진 방어는 Coordinator에서 확정한다.</summary>
     protected override bool CanBlockDamage(DamageContext context)
     {
         return false;

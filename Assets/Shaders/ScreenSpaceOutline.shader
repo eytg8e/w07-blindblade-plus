@@ -41,7 +41,6 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float _TransparentThreshold;
             CBUFFER_END
 
-            TEXTURE2D_X(_AlwaysVisibleOutlineMask);
             TEXTURE2D_X(_OutlineOpaqueColor);
             TEXTURE2D_X(_OutlineAlwaysVisibleVfxColor);
             TEXTURE2D_X(_OutlineTransparentDepth);
@@ -74,8 +73,6 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             {
                 if (hasSurface == 0.0)
                     return 0.0;
-                if (SAMPLE_TEXTURE2D_X(_AlwaysVisibleOutlineMask, sampler_PointClamp, uv).r > 0.5)
-                    return _LineColor.rgb * _LineColor.a;
                 if (_UsePerceptionMask < 0.5)
                     return _LineColor.rgb * _LineColor.a;
 

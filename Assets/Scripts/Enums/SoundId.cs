@@ -18,4 +18,7 @@ public enum SoundId
     Dodge = 15,
     EnemyDetected = 16,
     NormalHit = 17,
+    BossChargeCry = 18,
+    BossDuelCry = 19,
+    BossStunCry = 20,
 }
