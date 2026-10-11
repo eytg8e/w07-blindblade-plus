@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using UnityEngine;
 
 
@@ -42,12 +44,18 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     private bool _introPlayed;
     private bool _isPrimary;
 
+    [Header("중앙 사운드 설정")]
+    private CombatSoundProfile _profile;
+    private readonly List<PendingCue> _pendingCues = new List<PendingCue>();
+    private float _cueClock;
+
     void Awake()
     {
         _player = GetComponent<PlayerController>();
         _katana = GetComponent<KatanaCombatCoordinator>();
         _health = GetComponent<PlayerHealth>();
         _timing = GetComponent<PlayerActionDriver>();
+        _profile = Resources.Load<CombatSoundProfile>(CombatSoundProfile.RESOURCE_PATH);
         // 기존 씬의 적 피격음 override도 금속 접촉음으로 연결한다.
         if (_hitSound == SoundId.SwordHit) _hitSound = SoundId.SwordClash;
         _isPrimary = GetComponent<PlayerCombatAudio>() == this;
@@ -63,6 +71,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         _lastContactAction = -1;
         _introPlayed = false;
         _pendingSwingAction = -1;
+        _pendingCues.Clear();
+        _cueClock = 0f;
         _health.DamageReceived += HandleDamage;
         if (_contactService != null)
             _contactService.AttackContactResolved += HandleContact;
@@ -79,6 +89,7 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         _player.ActionEvent -= HandleAction;
         _health.DamageReceived -= HandleDamage;
         _pendingSwingAction = -1;
+        _pendingCues.Clear();
         if (_contactService != null)
             _contactService.AttackContactResolved -= HandleContact;
         if (_katana != null)
@@ -95,7 +106,12 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         if (!_introPlayed)
         {
             _introPlayed = true;
-            PlayUnsheath();
+            PlayUnsheath(CombatSoundCue.IntroUnsheath);
+        }
+        if (!_player.IsPaused && Time.deltaTime > 0f)
+        {
+            _cueClock += Time.deltaTime;
+            UpdatePendingCues();
         }
         if (_pendingSwingAction < 0 || _player.IsPaused || Time.deltaTime <= 0f) return;
         if (_pendingSwingAction != _player.CurrentActionId
@@ -126,7 +142,7 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         {
             _swingLabel = _iaidoSwingLabel;
             if (_katana == null || !_katana.isActiveAndEnabled)
-                PlayUnsheath();
+                PlayUnsheath(CombatSoundCue.IaidoUnsheath, action.ActionId);
         }
         if ((action.Stage == PlayerActionStage.AttackStarted && action.State == PlayerActionState.NormalAttack)
             || action.Stage == PlayerActionStage.SlashStarted)
@@ -134,13 +150,20 @@ public sealed class PlayerCombatAudio : MonoBehaviour
             _pendingSwingAction = action.ActionId;
             _timing.GetStrikeWindow(action.State == PlayerActionState.IaidoSlash ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal,
                 out _swingBeginTime, out _);
+            if (_lastSwingAction == action.ActionId
+                || QueueCue(GetSwingCue(action), Vector3.zero, true, action.ActionId, _swingBeginTime, true))
+            {
+                _lastSwingAction = action.ActionId;
+                _pendingSwingAction = -1;
+            }
         }
         if (action.Stage == PlayerActionStage.ActionEnded && action.ActionId == _pendingSwingAction)
             _pendingSwingAction = -1;
         if (_contactService == null && action.Stage == PlayerActionStage.HitConfirmed && _lastHitAction != action.ActionId)
         {
             _lastHitAction = action.ActionId;
-            Managers.Sound.PlayAttached(_hitSound, gameObject, _volume);
+            if (!QueueCue(CombatSoundCue.Contact, Vector3.zero, true))
+                Managers.Sound.PlayAttached(_hitSound, gameObject, _volume);
         }
     }
 
@@ -152,7 +175,9 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     {
         if (((action.Stage == KatanaStage.NormalStarted || action.Stage == KatanaStage.ParrySucceeded) && !action.WasDrawn)
             || action.Stage == KatanaStage.SlashStarted)
-            PlayUnsheath();
+            PlayUnsheath(action.Stage == KatanaStage.SlashStarted ? CombatSoundCue.IaidoUnsheath
+                : action.Stage == KatanaStage.ParrySucceeded ? CombatSoundCue.ParryUnsheath : CombatSoundCue.AttackUnsheath,
+                action.ActionId);
     }
 
     /// <summary>
@@ -167,7 +192,8 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         if (collider != null && !enemyDamaged)
         {
             _lastHitAction = request.ActionId;
-            Managers.Sound.Play(_hitSound, point, _volume, gameObject);
+            if (!QueueCue(CombatSoundCue.Contact, point, false))
+                Managers.Sound.Play(_hitSound, point, _volume, gameObject);
         }
     }
 
@@ -177,6 +203,7 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     /// </summary>
     private void HandleDefense(KatanaDefenseResult result)
     {
+        if (QueueCue(result.IsParry ? CombatSoundCue.Parry : CombatSoundCue.Guard, result.Point, false)) return;
         Managers.Sound.Play(result.IsParry ? _parrySound : _hitSound, result.Point,
             result.IsParry ? _parryVolume : _volume, gameObject, pitch: result.IsParry ? _parryPitch : _guardPitch);
     }
@@ -187,6 +214,7 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     /// </summary>
     private void HandleDamage(DamageContext context)
     {
+        if (QueueCue(CombatSoundCue.PlayerDamage, context.Point, false)) return;
         Managers.Sound.Play(_damageSound, context.Point, _volume, gameObject);
     }
 
@@ -206,11 +234,103 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     }
 
     /// <summary>
-    /// Inspector의 발도 사운드 ID와 음량으로 플레이어의 검 뽑기 소리를 한 번 재생한다.
-    /// FMOD 인스턴스는 매니저가 생성하고 자연 종료 시 해제한다.
+    /// cue와 actionId로 중앙 설정의 발도음을 예약하고 설정이 없으면 기존 Inspector 값을 재생한다.
+    /// 행동에 연결된 예약은 취소 시 제거하며 시작 발도는 별도 설정으로 처리한다.
     /// </summary>
-    private void PlayUnsheath()
+    private void PlayUnsheath(CombatSoundCue cue = CombatSoundCue.AttackUnsheath, int actionId = -1)
     {
+        if (QueueCue(cue, Vector3.zero, true, actionId)) return;
         Managers.Sound.PlayAttached(_unsheathSound, gameObject, _volume);
+    }
+
+    /// <summary>
+    /// action의 공격 종류와 현재 타수·반격 여부를 중앙 사운드 상황으로 변환한다.
+    /// 기존 SwingType 선택에 대응하는 상황을 반환하며 전투 상태를 변경하지 않는다.
+    /// </summary>
+    private CombatSoundCue GetSwingCue(PlayerActionEvent action)
+    {
+        if (action.State == PlayerActionState.IaidoSlash) return CombatSoundCue.IaidoSlash;
+        if (_katana == null || !_katana.isActiveAndEnabled) return CombatSoundCue.ThirdSlash;
+        if (_katana.IsCounterAttack) return CombatSoundCue.CounterSlash;
+        return _katana.Strike == 1 ? CombatSoundCue.FirstSlash
+            : _katana.Strike == 2 ? CombatSoundCue.SecondSlash : CombatSoundCue.ThirdSlash;
+    }
+
+    /// <summary>
+    /// cue의 모든 활성 음원을 position·attach·actionId와 기준 시간으로 예약한다.
+    /// presentationTime이면 베기 시작에서 앞뒤 조정하며 다른 사건은 양수 지연만 적용한다.
+    /// 프로필이 존재하면 누락·비활성 상황도 처리된 것으로 반환하여 기존 재생을 억제한다.
+    /// </summary>
+    private bool QueueCue(CombatSoundCue cue, Vector3 position, bool attach, int actionId = -1,
+        float baseTime = 0f, bool presentationTime = false)
+    {
+        if (_profile == null) return false;
+        foreach (CombatSoundEntry entry in _profile.Entries)
+        {
+            if (entry.Cue != cue) continue;
+            if (!entry.Enabled) continue;
+            float dueTime = presentationTime ? Mathf.Max(0f, baseTime + entry.TimeOffset)
+                : _cueClock + Mathf.Max(0f, entry.TimeOffset);
+            _pendingCues.Add(new PendingCue(entry, position, attach, actionId, dueTime, presentationTime, _player.CurrentState));
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 예약된 사운드의 행동 ID와 게임 시간을 검사하여 만료된 음원을 재생한다.
+    /// 취소·사망 예약을 제거하고 일시정지 중에는 호출하지 않아 지연 시간을 유지한다.
+    /// </summary>
+    private void UpdatePendingCues()
+    {
+        for (int i = 0; i < _pendingCues.Count;)
+        {
+            PendingCue pending = _pendingCues[i];
+            if ((_player.CurrentState == PlayerActionState.Dead && pending.Entry.Cue != CombatSoundCue.PlayerDamage)
+                || (pending.ActionId >= 0 && (pending.ActionId != _player.CurrentActionId
+                    || pending.ExpectedState != _player.CurrentState)))
+            {
+                _pendingCues.RemoveAt(i);
+                continue;
+            }
+            float elapsed = pending.PresentationTime ? _timing.GetPresentationElapsed(pending.ActionId) : _cueClock;
+            if (elapsed < pending.DueTime) { i++; continue; }
+            Managers.Sound.PlayCombatCue(pending.Entry, gameObject, pending.Position, pending.Attach);
+            _pendingCues.RemoveAt(i);
+        }
+    }
+
+    private readonly struct PendingCue
+    {
+        private readonly CombatSoundEntry _entry;
+        private readonly Vector3 _position;
+        private readonly bool _attach;
+        private readonly int _actionId;
+        private readonly float _dueTime;
+        private readonly bool _presentationTime;
+        private readonly PlayerActionState _expectedState;
+
+        internal CombatSoundEntry Entry => _entry;
+        internal Vector3 Position => _position;
+        internal bool Attach => _attach;
+        internal int ActionId => _actionId;
+        internal float DueTime => _dueTime;
+        internal bool PresentationTime => _presentationTime;
+        internal PlayerActionState ExpectedState => _expectedState;
+
+        /// <summary>
+        /// entry·position·attach·actionId·dueTime·presentationTime·expectedState를 하나의 예약으로 저장한다.
+        /// 재생 위치와 취소 조건을 보존하며 게임 시스템의 상태는 변경하지 않는다.
+        /// </summary>
+        internal PendingCue(CombatSoundEntry entry, Vector3 position, bool attach, int actionId, float dueTime, bool presentationTime,
+            PlayerActionState expectedState)
+        {
+            _entry = entry;
+            _position = position;
+            _attach = attach;
+            _actionId = actionId;
+            _dueTime = dueTime;
+            _presentationTime = presentationTime;
+            _expectedState = expectedState;
+        }
     }
 }

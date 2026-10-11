@@ -1,0 +1,210 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20d3725b298d015409caf354187b262f, type: 3}
+  m_Name: CombatSoundProfile
+  m_EditorClassIdentifier: 
+  _entries:
+  - _cue: 0
+    _enabled: 1
+    _soundId: 3
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: SwingType
+    _label: C
+    _timeOffset: 0
+  - _cue: 1
+    _enabled: 1
+    _soundId: 3
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: SwingType
+    _label: A
+    _timeOffset: 0
+  - _cue: 2
+    _enabled: 1
+    _soundId: 3
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: SwingType
+    _label: B
+    _timeOffset: 0
+  - _cue: 3
+    _enabled: 1
+    _soundId: 3
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: SwingType
+    _label: B
+    _timeOffset: 0
+  - _cue: 4
+    _enabled: 1
+    _soundId: 3
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: SwingType
+    _label: C
+    _timeOffset: 0
+  - _cue: 5
+    _enabled: 1
+    _soundId: 6
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: 
+    _label: 
+    _timeOffset: 0
+  - _cue: 6
+    _enabled: 1
+    _soundId: 6
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: 
+    _label: 
+    _timeOffset: 0
+  - _cue: 7
+    _enabled: 1
+    _soundId: 6
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: 
+    _label: 
+    _timeOffset: 0
+  - _cue: 8
+    _enabled: 1
+    _soundId: 6
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: 
+    _label: 
+    _timeOffset: 0
+  - _cue: 9
+    _enabled: 1
+    _soundId: 10
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: 
+    _label: 
+    _timeOffset: 0
+  - _cue: 10
+    _enabled: 1
+    _soundId: 10
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 0.85
+    _parameterName: 
+    _label: 
+    _timeOffset: 0
+  - _cue: 11
+    _enabled: 1
+    _soundId: 11
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 1.1
+    _pitch: 1.25
+    _parameterName: 
+    _label: 
+    _timeOffset: 0
+  - _cue: 12
+    _enabled: 1
+    _soundId: 12
+    _eventOverride:
+      Guid:
+        Data1: 0
+        Data2: 0
+        Data3: 0
+        Data4: 0
+      Path: 
+    _volume: 0.8
+    _pitch: 1
+    _parameterName: 
+    _label: 
+    _timeOffset: 0

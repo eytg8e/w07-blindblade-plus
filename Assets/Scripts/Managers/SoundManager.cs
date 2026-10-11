@@ -17,6 +17,10 @@ public class SoundManager
     [Header("Effects")]
     private readonly List<ActiveEffect> _effects = new List<ActiveEffect>();
     private float _combatFocusUntil;
+#if UNITY_EDITOR
+    private readonly List<string> _recentPlayback = new List<string>();
+    public IReadOnlyList<string> RecentPlayback => _recentPlayback;
+#endif
 
     [Header("BGM")]
     private FMOD.Studio.EventInstance _bgm;
@@ -130,6 +134,19 @@ public class SoundManager
     }
 
     /// <summary>
+    /// entry의 중앙 설정을 source 또는 position에 적용해 효과음을 재생한다.
+    /// 직접 이벤트·음량·pitch·Label을 사용하며 실제 재생 성공 여부를 반환한다.
+    /// </summary>
+    public bool PlayCombatCue(CombatSoundEntry entry, GameObject source, Vector3 position, bool attach)
+    {
+        if (!entry.Enabled || (attach && source == null)) return false;
+        return PlayEffect(entry.SoundId, attach ? source.transform.position : position, source, attach, entry.Volume,
+            parameterName: string.IsNullOrEmpty(entry.ParameterName) ? null : entry.ParameterName,
+            label: entry.Label, pitch: entry.Pitch,
+            eventOverride: entry.EventOverride.IsNull ? null : entry.EventOverride, cueName: entry.Cue.ToString());
+    }
+
+    /// <summary>
     /// soundId의 2D BGM을 재생하고 다른 곡이면 이전 BGM을 즉시 정지한다.
     /// 같은 BGM은 중복 생성하지 않고 owner에 소유권을 넘기며, 유효하면 true, 페이드 정지 중이면 false를 반환한다.
     /// </summary>
@@ -218,11 +235,11 @@ public class SoundManager
 
     /// <summary>
     /// owner가 재생한 soundId 효과음만 allowFadeOut 방식으로 정지한다.
-    /// 전조·베기 취소에서 사용하며 다른 ID의 발소리·피격음과 BGM은 유지한다.
+    /// Library의 자연 종료 설정이면 단계 전환·취소에도 음원 끝을 유지하며 전체 정리 요청은 별도로 처리한다.
     /// </summary>
     public void StopFor(GameObject owner, SoundId soundId, bool allowFadeOut = false)
     {
-        if (owner == null) return;
+        if (owner == null || _library.ShouldFinishNaturally(soundId)) return;
         foreach (ActiveEffect effect in _effects)
             if (effect.HasOwner && effect.Owner == owner && effect.Id == soundId)
                 StopEffect(effect.Instance, allowFadeOut);
@@ -296,12 +313,14 @@ public class SoundManager
     /// <summary>
     /// soundId의 단발 효과음을 position 또는 source에서 volume·pitch 배율로 재생한다.
     /// attach로 위치 추적과 playDuringMovement로 이동 예외를 선택하고 parameterName과 label을 시작 전에 적용한다.
-    /// 이벤트 설정과 재생이 성공하면 true를 반환한다.
+    /// eventOverride와 cueName으로 중앙 설정의 음원 및 기록을 적용하며 재생 성공 여부를 반환한다.
     /// </summary>
-    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false, string parameterName = null, string label = null, float pitch = 1f)
+    private bool PlayEffect(SoundId soundId, Vector3 position, GameObject source, bool attach, float volume, bool playDuringMovement = false, string parameterName = null, string label = null, float pitch = 1f,
+        EventReference? eventOverride = null, string cueName = null)
     {
-        if (!TryResolveEvent(soundId, SoundType.Effect, out EventReference eventReference))
-            return false;
+        EventReference eventReference;
+        if (eventOverride.HasValue) eventReference = eventOverride.Value;
+        else if (!TryResolveEvent(soundId, SoundType.Effect, out eventReference)) return false;
         _library.GetCueSettings(soundId, out bool combatCue, out bool spatialize2D);
         playDuringMovement |= combatCue;
         if (!CanPlayDuringMovement(soundId, source, playDuringMovement))
@@ -347,6 +366,10 @@ public class SoundManager
             var effect = new ActiveEffect(instance, source, soundId, playDuringMovement, position, attach,
                 volume, spatialize2D && !is3D, minimumDistance, maximumDistance);
             _effects.Add(effect);
+#if UNITY_EDITOR
+            _recentPlayback.Add($"{Time.time:F2}s | {cueName ?? soundId.ToString()} | {eventReference.Path} | {source?.name ?? "world"} | {label} | volume={volume:F2}");
+            if (_recentPlayback.Count > 16) _recentPlayback.RemoveAt(0);
+#endif
             foreach (ActiveEffect active in _effects) UpdateEffectMix(active);
             return true;
         }

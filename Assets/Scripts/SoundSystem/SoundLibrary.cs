@@ -25,6 +25,17 @@ public class SoundLibrary : ScriptableObject
     internal float CombatFootstepVolume => _combatFootstepVolume;
 
     /// <summary>
+    /// soundId의 개별 정지 요청에서 자연 종료를 허용하는 설정을 조회한다.
+    /// 단계 전환과 취소 시 음원 끝을 유지할지 반환하며 소유자 전체 정지에는 적용하지 않는다.
+    /// </summary>
+    internal bool ShouldFinishNaturally(SoundId soundId)
+    {
+        foreach (SoundEntry entry in _sounds)
+            if (entry.Id == soundId) return entry.FinishNaturally;
+        return false;
+    }
+
+    /// <summary>
     /// soundId의 전투 신호와 2D 공간 보정 설정을 조회한다.
     /// 등록된 항목의 플래그를 반환 인자로 채우며 미등록 ID는 두 설정을 끈다.
     /// </summary>
@@ -91,11 +102,14 @@ public class SoundLibrary : ScriptableObject
         [SerializeField] private bool _combatCue;
         [SerializeField, Tooltip("2D 이벤트에 청취자 기준 좌우 패닝과 거리 감쇠를 적용한다. 3D 이벤트는 FMOD 설정을 따른다.")]
         private bool _spatialize2D;
+        [SerializeField, Tooltip("이 ID만 정지하는 요청을 무시하고 단발음을 끝까지 재생한다. 공격 취소에도 꼬리가 남으며 소유자 정리·전체 정지는 유지한다.")]
+        private bool _finishNaturally;
 
         internal SoundId Id => _id;
         internal SoundType Type => _type;
         internal EventReference Event => _event;
         internal bool CombatCue => _combatCue;
         internal bool Spatialize2D => _spatialize2D;
+        internal bool FinishNaturally => _finishNaturally;
     }
 }
