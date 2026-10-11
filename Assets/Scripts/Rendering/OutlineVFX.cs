@@ -16,18 +16,20 @@ public sealed class OutlineVFX : MonoBehaviour
     [Header("인지 표시")]
     [SerializeField] private bool _ignorePerception;
     internal bool IgnorePerception { get => _ignorePerception; set => _ignorePerception = value; }
+    internal bool IgnoreOcclusion { get; set; }
 
     void OnEnable() { _active.Add(this); }
     void OnDisable() { _active.Remove(this); }
 
     /// <summary>
-    /// 활성 컴포넌트의 렌더러를 result에, 인지 예외 렌더러를 alwaysVisible에 모은다.
+    /// 활성 컴포넌트의 렌더러를 result에, 인지 예외를 alwaysVisible에, 차폐 예외를 overlay에 모은다.
     /// 동적 자식도 포함하며 같은 렌더러는 한 번만 등록한다.
     /// </summary>
-    internal static void Collect(HashSet<Renderer> result, HashSet<Renderer> alwaysVisible)
+    internal static void Collect(HashSet<Renderer> result, HashSet<Renderer> alwaysVisible, HashSet<Renderer> overlay)
     {
         result.Clear();
         alwaysVisible.Clear();
+        overlay.Clear();
         foreach (OutlineVFX marker in _active)
         {
             if (marker == null || !marker.isActiveAndEnabled || !marker.gameObject.scene.IsValid())
@@ -38,6 +40,8 @@ public sealed class OutlineVFX : MonoBehaviour
                     result.Add(renderer);
                     if (marker._ignorePerception)
                         alwaysVisible.Add(renderer);
+                    if (marker.IgnoreOcclusion)
+                        overlay.Add(renderer);
                 }
         }
     }

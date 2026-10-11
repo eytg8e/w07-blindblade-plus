@@ -34,11 +34,12 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
         private readonly OutlineVFXRouting _routing = new OutlineVFXRouting();
         private CapturePass _capture;
         private CapturePass _alwaysVisibleCapture;
+        private CapturePass _overlayCapture;
         private TransparentDepthPass _depth;
         private OutlinePass _outline;
 
         /// <summary>
-        /// 연결된 셰이더로 색상 캡처·투명 깊이·최종 윤곽선 패스를 생성한다.
+        /// 연결된 셰이더로 일반·차폐 예외 색상 캡처와 투명 깊이·최종 윤곽선 패스를 생성한다.
         /// 기존 패스 리소스를 해제하고 현재 설정으로 재생성한다.
         /// </summary>
         public override void Create()
@@ -61,8 +62,9 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             _depthMaterial.SetFloat("_DepthBlendOp", SystemInfo.usesReversedZBuffer ? 4f : 3f);
             _capture = new CapturePass(OutlineVFXRouting.SELECTED_MASK, false);
             _alwaysVisibleCapture = new CapturePass(OutlineVFXRouting.ALWAYS_VISIBLE_MASK, true);
+            _overlayCapture = new CapturePass(OutlineVFXRouting.OVERLAY_MASK, false, true);
             _depth = new TransparentDepthPass(_depthMaterial);
-            _outline = new OutlinePass(_material, _capture, _depth, _alwaysVisibleCapture);
+            _outline = new OutlinePass(_material, _capture, _depth, _alwaysVisibleCapture, _overlayCapture);
             RenderPipelineManager.beginCameraRendering += BeginCamera;
             RenderPipelineManager.endCameraRendering += EndCamera;
         }
@@ -88,7 +90,7 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
         private void EndCamera(ScriptableRenderContext context, Camera camera) { _routing.Restore(); }
 
         /// <summary>
-        /// 기본 게임 카메라와 Scene View에 현재 설정을 전달하고 세 패스를 등록한다.
+        /// 기본 게임 카메라와 Scene View에 현재 설정을 전달하고 캡처·깊이·윤곽선 패스를 등록한다.
         /// Overlay·Preview·Reflection 카메라는 기존처럼 제외한다.
         /// </summary>
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -105,6 +107,7 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             _material.SetFloat(_usePerceptionMaskId, Application.isPlaying ? 1f : 0f);
             renderer.EnqueuePass(_capture);
             renderer.EnqueuePass(_alwaysVisibleCapture);
+            renderer.EnqueuePass(_overlayCapture);
             renderer.EnqueuePass(_depth);
             renderer.EnqueuePass(_outline);
         }
@@ -128,12 +131,14 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             CoreUtils.Destroy(_depthMaterial);
             _capture?.Release();
             _alwaysVisibleCapture?.Release();
+            _overlayCapture?.Release();
             _depth?.Release();
             _outline?.Release();
             _material = null;
             _depthMaterial = null;
             _capture = null;
             _alwaysVisibleCapture = null;
+            _overlayCapture = null;
             _depth = null;
             _outline = null;
         }
@@ -142,15 +147,17 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
         {
             public TextureHandle Opaque { get; set; }
             public TextureHandle AlwaysVisibleVfx { get; set; }
+            public TextureHandle OverlayVfx { get; set; }
             public TextureHandle TransparentDepth { get; set; }
 
             /// <summary>
-            /// 프레임 종료 시 두 핸들을 비워 다른 카메라나 프레임에 남기지 않는다.
+            /// 프레임 종료 시 모든 핸들을 비워 다른 카메라나 프레임에 남기지 않는다.
             /// </summary>
             public override void Reset()
             {
                 Opaque = TextureHandle.nullHandle;
                 AlwaysVisibleVfx = TextureHandle.nullHandle;
+                OverlayVfx = TextureHandle.nullHandle;
                 TransparentDepth = TextureHandle.nullHandle;
             }
         }
@@ -164,17 +171,28 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             };
             private readonly FilteringSettings _filter;
             private readonly bool _alwaysVisible;
-            private sealed class ColorData { public RendererListHandle Renderers { get; set; } }
+            private readonly bool _overlay;
+            private sealed class ColorData
+            {
+                public RendererListHandle Renderers { get; set; }
+                public bool Overlay { get; set; }
+                public TextureHandle SceneDepth { get; set; }
+                public TextureHandle SceneColor { get; set; }
+                public TextureHandle EmptyDepth { get; set; }
+                public TextureHandle EmptyColor { get; set; }
+            }
             private RTHandle _legacyColor;
             public RTHandle LegacyColor => _legacyColor;
 
             /// <summary>
-            /// renderingMask와 alwaysVisible로 캡처 대상을 구분하고 중간 카메라 타깃을 요청한다.
+            /// renderingMask와 alwaysVisible·overlay로 캡처 대상을 구분하고 중간 카메라 타깃을 요청한다.
+            /// overlay는 월드 깊이 없이 검기를 기록하며 일반 캡처는 기존 차폐를 유지한다.
             /// </summary>
-            public CapturePass(uint renderingMask, bool alwaysVisible)
+            public CapturePass(uint renderingMask, bool alwaysVisible, bool overlay = false)
             {
                 _filter = new FilteringSettings(RenderQueueRange.all, -1, renderingMask);
                 _alwaysVisible = alwaysVisible;
+                _overlay = overlay;
                 renderPassEvent = RenderPassEvent.BeforeRenderingTransparents;
                 requiresIntermediateTexture = true;
             }
@@ -186,7 +204,8 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             {
                 var resources = frameData.Get<UniversalResourceData>();
                 var desc = resources.activeColorTexture.GetDescriptor(graph);
-                desc.name = _alwaysVisible ? "Outline Always Visible VFX" : "Outline Opaque Color";
+                desc.name = _overlay ? "Outline Overlay VFX"
+                    : (_alwaysVisible ? "Outline Always Visible VFX" : "Outline Opaque Color");
                 desc.depthBufferBits = DepthBits.None;
                 desc.msaaSamples = MSAASamples.None;
                 desc.clearBuffer = true;
@@ -197,14 +216,31 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
                 var parameters = new RendererListParams(frameData.Get<UniversalRenderingData>().cullResults, drawing, _filter);
                 using var builder = graph.AddRasterRenderPass<ColorData>(desc.name, out var data);
                 data.Renderers = graph.CreateRendererList(parameters);
+                data.Overlay = _overlay;
                 builder.UseRendererList(data.Renderers);
                 builder.AllowPassCulling(false);
                 builder.UseAllGlobalTextures(true);
                 builder.SetRenderAttachment(copy, 0, AccessFlags.Write);
-                builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.ReadWrite);
+                if (_overlay)
+                {
+                    data.SceneDepth = resources.cameraDepthTexture;
+                    data.SceneColor = resources.cameraOpaqueTexture;
+                    data.EmptyDepth = SystemInfo.usesReversedZBuffer
+                        ? graph.defaultResources.blackTexture : graph.defaultResources.whiteTexture;
+                    data.EmptyColor = graph.defaultResources.blackTexture;
+                    builder.UseTexture(data.EmptyDepth, AccessFlags.Read);
+                    builder.UseTexture(data.EmptyColor, AccessFlags.Read);
+                    if (data.SceneDepth.IsValid()) builder.UseTexture(data.SceneDepth, AccessFlags.Read);
+                    if (data.SceneColor.IsValid()) builder.UseTexture(data.SceneColor, AccessFlags.Read);
+                    builder.AllowGlobalStateModification(true);
+                }
+                else
+                    builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.ReadWrite);
                 builder.SetRenderFunc<ColorData>(DrawColor);
                 var frame = frameData.GetOrCreate<FrameTextures>();
-                if (_alwaysVisible)
+                if (_overlay)
+                    frame.OverlayVfx = copy;
+                else if (_alwaysVisible)
                     frame.AlwaysVisibleVfx = copy;
                 else
                     frame.Opaque = copy;
@@ -215,7 +251,18 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             /// </summary>
             private static void DrawColor(ColorData data, RasterGraphContext context)
             {
+                if (data.Overlay)
+                {
+                    // 검기 캡처에서만 깊이 페이드와 배경 샘플링을 차단한다.
+                    context.cmd.SetGlobalTexture("_CameraDepthTexture", data.EmptyDepth);
+                    context.cmd.SetGlobalTexture("_CameraOpaqueTexture", data.EmptyColor);
+                }
                 context.cmd.DrawRendererList(data.Renderers);
+                if (data.Overlay)
+                {
+                    if (data.SceneDepth.IsValid()) context.cmd.SetGlobalTexture("_CameraDepthTexture", data.SceneDepth);
+                    if (data.SceneColor.IsValid()) context.cmd.SetGlobalTexture("_CameraOpaqueTexture", data.SceneColor);
+                }
             }
 
             /// <summary>
@@ -233,15 +280,33 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
                 desc.depthBufferBits = 0;
                 desc.msaaSamples = 1;
                 RenderingUtils.ReAllocateHandleIfNeeded(ref _legacyColor, desc,
-                    name: _alwaysVisible ? "Outline Always Visible VFX" : "Outline Opaque Color");
+                    name: _overlay ? "Outline Overlay VFX"
+                        : (_alwaysVisible ? "Outline Always Visible VFX" : "Outline Opaque Color"));
                 var cmd = CommandBufferPool.Get("Outline Opaque Capture");
-                CoreUtils.SetRenderTarget(cmd, LegacyColor, renderingData.cameraData.renderer.cameraDepthTargetHandle,
-                    ClearFlag.Color, Color.clear);
+                Texture sceneDepth = Shader.GetGlobalTexture("_CameraDepthTexture");
+                Texture sceneColor = Shader.GetGlobalTexture("_CameraOpaqueTexture");
+                if (_overlay)
+                {
+                    CoreUtils.SetRenderTarget(cmd, LegacyColor, ClearFlag.Color, Color.clear);
+                    cmd.SetGlobalTexture("_CameraDepthTexture",
+                        SystemInfo.usesReversedZBuffer ? Texture2D.blackTexture : Texture2D.whiteTexture);
+                    cmd.SetGlobalTexture("_CameraOpaqueTexture", Texture2D.blackTexture);
+                }
+                else
+                    CoreUtils.SetRenderTarget(cmd, LegacyColor, renderingData.cameraData.renderer.cameraDepthTargetHandle,
+                        ClearFlag.Color, Color.clear);
                 context.ExecuteCommandBuffer(cmd);
-                CommandBufferPool.Release(cmd);
+                cmd.Clear();
                 var drawing = CreateDrawingSettings(_tags, ref renderingData, SortingCriteria.CommonTransparent);
                 var filter = _filter;
                 context.DrawRenderers(renderingData.cullResults, ref drawing, ref filter);
+                if (_overlay)
+                {
+                    cmd.SetGlobalTexture("_CameraDepthTexture", sceneDepth);
+                    cmd.SetGlobalTexture("_CameraOpaqueTexture", sceneColor);
+                    context.ExecuteCommandBuffer(cmd);
+                }
+                CommandBufferPool.Release(cmd);
             }
 #pragma warning restore CS0618, CS0672
         }
@@ -342,6 +407,7 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
             private readonly CapturePass _capture;
             private readonly TransparentDepthPass _depth;
             private readonly CapturePass _alwaysVisibleCapture;
+            private readonly CapturePass _overlayCapture;
             private RTHandle _legacyResult;
 
             private sealed class PassData
@@ -350,22 +416,24 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
                 public TextureHandle Source { get; set; }
                 public TextureHandle Opaque { get; set; }
                 public TextureHandle AlwaysVisibleVfx { get; set; }
+                public TextureHandle OverlayVfx { get; set; }
                 public TextureHandle TransparentDepth { get; set; }
                 public TextureHandle SceneDepth { get; set; }
                 public TextureHandle Normals { get; set; }
             }
 
             /// <summary>
-            /// material과 capture·depth·alwaysVisibleCapture를 연결해 윤곽선 입력을 준비한다.
+            /// material과 capture·depth·alwaysVisibleCapture·overlayCapture를 연결해 윤곽선 입력을 준비한다.
             /// 깊이·노멀 입력과 중간 카메라 타깃을 요청한다.
             /// </summary>
             public OutlinePass(Material material, CapturePass capture, TransparentDepthPass depth,
-                CapturePass alwaysVisibleCapture)
+                CapturePass alwaysVisibleCapture, CapturePass overlayCapture)
             {
                 _material = material;
                 _capture = capture;
                 _depth = depth;
                 _alwaysVisibleCapture = alwaysVisibleCapture;
+                _overlayCapture = overlayCapture;
                 renderPassEvent = RenderPassEvent.BeforeRenderingTransparents;
                 requiresIntermediateTexture = true;
                 ConfigureInput(ScriptableRenderPassInput.Depth | ScriptableRenderPassInput.Normal);
@@ -390,12 +458,14 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
                     data.Source = resources.activeColorTexture;
                     data.Opaque = frame.Opaque;
                     data.AlwaysVisibleVfx = frame.AlwaysVisibleVfx;
+                    data.OverlayVfx = frame.OverlayVfx;
                     data.TransparentDepth = frame.TransparentDepth;
                     data.SceneDepth = resources.cameraDepthTexture;
                     data.Normals = resources.cameraNormalsTexture;
                     builder.UseTexture(data.Source, AccessFlags.Read);
                     builder.UseTexture(data.Opaque, AccessFlags.Read);
                     builder.UseTexture(data.AlwaysVisibleVfx, AccessFlags.Read);
+                    builder.UseTexture(data.OverlayVfx, AccessFlags.Read);
                     builder.UseTexture(data.TransparentDepth, AccessFlags.Read);
                     builder.UseTexture(data.SceneDepth, AccessFlags.Read);
                     builder.UseTexture(data.Normals, AccessFlags.Read);
@@ -415,6 +485,7 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
                 properties.SetVector("_BlitScaleBias", new Vector4(1, 1, 0, 0));
                 properties.SetTexture("_OutlineOpaqueColor", data.Opaque);
                 properties.SetTexture("_OutlineAlwaysVisibleVfxColor", data.AlwaysVisibleVfx);
+                properties.SetTexture("_OutlineOverlayVfxColor", data.OverlayVfx);
                 properties.SetTexture("_OutlineTransparentDepth", data.TransparentDepth);
                 properties.SetTexture("_CameraDepthTexture", data.SceneDepth);
                 properties.SetTexture("_CameraNormalsTexture", data.Normals);
@@ -438,6 +509,7 @@ public sealed class ScreenSpaceOutlineFeature : ScriptableRendererFeature
                 RenderingUtils.ReAllocateHandleIfNeeded(ref _legacyResult, desc, name: "Outline Composite");
                 _material.SetTexture("_OutlineOpaqueColor", _capture.LegacyColor);
                 _material.SetTexture("_OutlineAlwaysVisibleVfxColor", _alwaysVisibleCapture.LegacyColor);
+                _material.SetTexture("_OutlineOverlayVfxColor", _overlayCapture.LegacyColor);
                 _material.SetTexture("_OutlineTransparentDepth", _depth.LegacyDepth);
                 var cmd = CommandBufferPool.Get("Screen Space Outline");
                 Blitter.BlitCameraTexture(cmd, renderingData.cameraData.renderer.cameraColorTargetHandle,

@@ -27,6 +27,9 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
     {
         _timing = GetComponent<PlayerActionDriver>();
         _combat = GetComponent<KatanaCombatCoordinator>();
+        ConfigureSlash(_slashVfx);
+        ConfigureSlash(_secondSlashVfx);
+        ConfigureSlash(_thirdSlashVfx);
         StopSlash();
     }
 
@@ -62,6 +65,29 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
         }
         if (_currentSlashVfx != null && _currentSlashVfx.gameObject.activeSelf && !_currentSlashVfx.IsAlive(true))
             _currentSlashVfx.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// slash의 월드 파티클을 차폐 없는 검기로 등록하고 조명과 배경 왜곡을 끈다.
+    /// 자식 파티클의 Lights 모듈과 왜곡 전용 렌더러를 비활성화하며 공유 재질은 유지한다.
+    /// </summary>
+    private void ConfigureSlash(ParticleSystem slash)
+    {
+        if (slash == null) return;
+        OutlineVFX outline = slash.GetComponent<OutlineVFX>();
+        if (outline == null) outline = slash.gameObject.AddComponent<OutlineVFX>();
+        outline.IgnoreOcclusion = true;
+        foreach (ParticleSystem particle in slash.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var lights = particle.lights;
+            lights.enabled = false;
+        }
+        foreach (ParticleSystemRenderer renderer in slash.GetComponentsInChildren<ParticleSystemRenderer>(true))
+        {
+            renderer.allowOcclusionWhenDynamic = false;
+            if (renderer.sharedMaterial.shader.name == "Shader Graphs/Slash World")
+                renderer.enabled = false;
+        }
     }
 
     /// <summary>
