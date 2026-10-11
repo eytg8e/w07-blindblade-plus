@@ -39,6 +39,7 @@ using UnityEngine;
         [SerializeField, Min(0.01f), Tooltip("인지 반경 안쪽에서 가장자리까지 흐려지는 거리(미터).")]
         private float _edgeFade = 0.75f;
         private SensoryManager _sensoryManager;
+        private TerrainMemory _terrainMemory;
 
         void Awake()
         {
@@ -96,7 +97,10 @@ using UnityEngine;
             RegisterRegion(sensoryEvent.Position);
         }
 
-        /// <summary>position에 임시 표시 영역을 등록하고 오래된 영역을 교체한다.</summary>
+        /// <summary>
+        /// position에 임시 표시 영역을 등록하고 파동의 확산을 지형 기억에 전달한다.
+        /// 가장 오래된 임시 표시 영역은 버퍼가 가득 차면 교체한다.
+        /// </summary>
         private void RegisterRegion(Vector3 position)
         {
             if (_soundCount == MAX_SOUND_REGIONS)
@@ -107,6 +111,16 @@ using UnityEngine;
             }
 
             _soundRegions[_soundCount++] = new Vector4(position.x, position.y, position.z, Time.time);
+            if (_terrainMemory == null)
+                _terrainMemory = FindAnyObjectByType<TerrainMemory>();
+            if (_terrainMemory != null)
+            {
+                _terrainMemory.RememberExpandingWave(
+                    position,
+                    _sensoryManager.WaveStartRadius,
+                    _sensoryManager.WaveEndRadius,
+                    _sensoryManager.CrouchPulseInterval);
+            }
             PublishMask();
         }
 
