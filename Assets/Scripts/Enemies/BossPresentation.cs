@@ -1,4 +1,8 @@
+using System.Collections;
+
 using UnityEngine;
+
+using FMODUnity;
 
 /// <summary>보스의 상태별 외형과 공간 소리·돌진 발자국을 독립적으로 표현한다.</summary>
 [DisallowMultipleComponent]
@@ -11,6 +15,9 @@ public sealed class BossPresentation : MonoBehaviour
     private Vector3 _previousPosition;
     private float _stepDistanceAccumulated;
     private bool _leftStep;
+    private FMODRuntimeManagerOnGUIHelper _debugOverlay;
+    private bool _debugOverlayWasEnabled;
+    private Coroutine _overlayRoutine;
 
     [Header("보행")]
     [SerializeField, Min(0.1f), Tooltip("걸음 사이 이동 거리(미터)")]
@@ -45,10 +52,13 @@ public sealed class BossPresentation : MonoBehaviour
         _melee.TelegraphStarted += HandleStrikePreparing;
         ResetSteps();
         HandleState(_boss.State);
+        _overlayRoutine = StartCoroutine(HideDebugOverlay());
     }
 
     void OnDisable()
     {
+        if (_overlayRoutine != null) StopCoroutine(_overlayRoutine);
+        _overlayRoutine = null;
         _boss.StateChanged -= HandleState;
         _boss.ChargePreparing -= HandleChargePreparing;
         _boss.Teleported -= ResetSteps;
@@ -60,6 +70,11 @@ public sealed class BossPresentation : MonoBehaviour
             Managers.Sound.StopFor(gameObject, _stunCry);
             Managers.Sound.StopFor(gameObject, _strikeCue);
         }
+    }
+
+    void OnDestroy()
+    {
+        if (_debugOverlay != null) _debugOverlay.enabled = _debugOverlayWasEnabled;
     }
 
     void LateUpdate()
@@ -125,5 +140,24 @@ public sealed class BossPresentation : MonoBehaviour
     {
         _previousPosition = transform.position;
         _stepDistanceAccumulated = 0f;
+    }
+
+    /// <summary>사운드 초기화를 기다린 뒤 FMOD 개발용 오버레이를 한 번 찾아 보스전 동안 숨긴다.</summary>
+    private IEnumerator HideDebugOverlay()
+    {
+        while (!RuntimeManager.IsInitialized) yield return null;
+        yield return null;
+        if (_debugOverlay == null)
+        {
+            foreach (FMODRuntimeManagerOnGUIHelper overlay in Resources.FindObjectsOfTypeAll<FMODRuntimeManagerOnGUIHelper>())
+            {
+                if (!overlay.gameObject.scene.IsValid()) continue;
+                _debugOverlay = overlay;
+                break;
+            }
+            if (_debugOverlay != null) _debugOverlayWasEnabled = _debugOverlay.enabled;
+        }
+        if (_debugOverlay != null) _debugOverlay.enabled = false;
+        _overlayRoutine = null;
     }
 }

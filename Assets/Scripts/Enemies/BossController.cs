@@ -66,6 +66,10 @@ public sealed class BossController : MonoBehaviour
     [SerializeField, Min(0.1f)] private float _duelPreparation = 0.6f;
     [SerializeField, Min(0.1f)] private float _strikeInterval = 0.45f;
     [SerializeField, Min(0.1f)] private float _stunDuration = 3f;
+    private bool _duelPoseActive;
+    private bool _previousUpdatePosition;
+    private bool _previousUpdateRotation;
+    private Vector3 _duelNavigationPosition;
 
     public BossState State => _state;
     public event Action<BossState> StateChanged;
@@ -267,43 +271,72 @@ public sealed class BossController : MonoBehaviour
     /// <summary>정면 준비 뒤 칼날 공격을 세 번 실행하고 유효타는 중단하며 세 번의 패링만 스턴으로 보상한다.</summary>
     private IEnumerator Duel()
     {
-        if (!PlaceInFront()) yield break;
-        ChangeState(BossState.Duel);
-        _parriedStrikes = 0;
-        _playerHit = false;
-        for (_strike = 1; _strike <= 3; _strike++)
-        {
-            _strikeResolved = false;
-            float until = Time.time + _duelPreparation;
-            while (Time.time < until)
-            {
-                if (!PlaceInFront()) yield break;
-                yield return null;
-            }
-            if (!_melee.TryAttack(_player.transform)) yield break;
-            while (_melee.IsBusy && !_playerHit) yield return null;
-            if (_playerHit) break;
-            yield return new WaitForSeconds(_strikeInterval);
-        }
-        _strike = 0;
-        if (_parriedStrikes != 3 || _playerHit) yield break;
         _motor.Stop();
-        ChangeState(BossState.Stunned);
-        yield return new WaitForSeconds(_stunDuration);
+        _duelNavigationPosition = _agent.nextPosition;
+        _previousUpdatePosition = _agent.updatePosition;
+        _previousUpdateRotation = _agent.updateRotation;
+        _duelPoseActive = true;
+        _agent.updatePosition = false;
+        _agent.updateRotation = false;
+        try
+        {
+            PlaceInFront();
+            ChangeState(BossState.Duel);
+            _parriedStrikes = 0;
+            _playerHit = false;
+            for (_strike = 1; _strike <= 3; _strike++)
+            {
+                _strikeResolved = false;
+                float until = Time.time + _duelPreparation;
+                while (Time.time < until)
+                {
+                    PlaceInFront();
+                    yield return null;
+                }
+                if (!_melee.TryAttack(_player.transform)) yield break;
+                while (_melee.IsBusy && !_playerHit) yield return null;
+                if (_playerHit) break;
+                yield return new WaitForSeconds(_strikeInterval);
+            }
+            _strike = 0;
+            if (_parriedStrikes != 3 || _playerHit) yield break;
+            _motor.Stop();
+            ChangeState(BossState.Stunned);
+            yield return new WaitForSeconds(_stunDuration);
+        }
+        finally
+        {
+            RestoreNavigation();
+        }
     }
 
-    /// <summary>플레이어 수평 정면의 빈 지면에 보스를 배치하며 정면 공간이 없으면 공격을 시작하지 않는다.</summary>
-    private bool PlaceInFront()
+    /// <summary>플레이어 위치와 수평 시점으로 정면에 배치하며 준비 중에는 NavMesh 경계를 적용하지 않는다.</summary>
+    private void PlaceInFront()
     {
         Vector3 forward = _playerMotor.ViewForward;
-        if (!TrySamplePosition(_player.transform.position + forward * _duelDistance, out Vector3 position)
-            || !TryPlace(position)) return false;
-        Vector3 direction = Vector3.ProjectOnPlane(_player.transform.position - position, Vector3.up);
-        if (direction.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(direction);
-        return true;
+        transform.SetPositionAndRotation(_player.transform.position + forward * _duelDistance,
+            Quaternion.LookRotation(-forward));
     }
 
-    /// <summary>context의 보스 피격을 받는다. 기본 피해 적용에 추가 스턴을 부여하지 않는다.</summary>
+    /// <summary>정면승부 종료·취소 시 유효한 지면으로 복귀하고 기존 에이전트 위치·회전 갱신 설정을 복원한다.</summary>
+    private void RestoreNavigation()
+    {
+        if (!_duelPoseActive) return;
+        _duelPoseActive = false;
+        Vector3 position = transform.position;
+        position.y = _duelNavigationPosition.y;
+        NavMeshQueryFilter filter = new NavMeshQueryFilter { agentTypeID = _agent.agentTypeID, areaMask = _agent.areaMask };
+        if (NavMesh.SamplePosition(position, out NavMeshHit hit, _duelDistance + 1f, filter))
+            position = hit.position;
+        else
+            position = _duelNavigationPosition;
+        _agent.updatePosition = _previousUpdatePosition;
+        _agent.updateRotation = _previousUpdateRotation;
+        if (_agent.isActiveAndEnabled) _agent.Warp(position);
+        Teleported?.Invoke();
+    }
+
+    /// <summary>context의 배회 피격으로 돌진 제한 시간을 재설정하고 추가 스턴은 부여하지 않는다.</summary>
     private void HandleBossDamaged(DamageContext context)
     {
         if (_state == BossState.Roaming) _roamUntil = Time.time + _roamDuration;
@@ -350,6 +383,7 @@ public sealed class BossController : MonoBehaviour
     {
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
+        RestoreNavigation();
         if (_melee != null) _melee.CancelAttack();
         _motor.Stop();
         _health.Damaged -= HandleBossDamaged;

@@ -152,7 +152,7 @@ MonoBehaviour:
   _targetOffset: {x: 0, y: 1, z: 0}
   _obstacleMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 0
 --- !u!114 &5109041760811172805
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -255,7 +255,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   _obstacleMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 0
   _swingDuration: 0.24
   _startAngle: -70
   _endAngle: 70
@@ -290,7 +290,7 @@ MonoBehaviour:
   _chargeHitRadius: 0.65
   _obstacleMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 4294967291
   _teleportRadius: 6
   _chargeInterval: 0.7
   _duelDistance: 1.6
