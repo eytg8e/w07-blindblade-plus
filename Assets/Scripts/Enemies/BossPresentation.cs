@@ -22,6 +22,16 @@ public sealed class BossPresentation : MonoBehaviour
     [SerializeField] private SoundId _chargeCry = SoundId.WarCry;
     [SerializeField, Range(0.1f, 3f)] private float _chargeCryPitch = 0.85f;
 
+    [Header("정면승부 기합2와 공격 직전음")]
+    [SerializeField] private BossMeleeAttack _melee;
+    [SerializeField] private SoundId _duelCry = SoundId.WarCry;
+    [SerializeField, Range(0.1f, 3f)] private float _duelCryPitch = 1.25f;
+    [SerializeField] private SoundId _strikeCue = SoundId.EnemySwordSwing;
+
+    [Header("스턴 비명1")]
+    [SerializeField] private SoundId _stunCry = SoundId.WarCry;
+    [SerializeField, Range(0.1f, 3f)] private float _stunCryPitch = 0.55f;
+
     void Awake()
     {
         _boss = GetComponent<BossController>();
@@ -32,6 +42,7 @@ public sealed class BossPresentation : MonoBehaviour
         _boss.StateChanged += HandleState;
         _boss.ChargePreparing += HandleChargePreparing;
         _boss.Teleported += ResetSteps;
+        _melee.TelegraphStarted += HandleStrikePreparing;
         ResetSteps();
         HandleState(_boss.State);
     }
@@ -41,7 +52,14 @@ public sealed class BossPresentation : MonoBehaviour
         _boss.StateChanged -= HandleState;
         _boss.ChargePreparing -= HandleChargePreparing;
         _boss.Teleported -= ResetSteps;
-        if (Managers.IsInitialized) Managers.Sound.StopFor(gameObject, _chargeCry);
+        _melee.TelegraphStarted -= HandleStrikePreparing;
+        if (Managers.IsInitialized)
+        {
+            Managers.Sound.StopFor(gameObject, _chargeCry);
+            Managers.Sound.StopFor(gameObject, _duelCry);
+            Managers.Sound.StopFor(gameObject, _stunCry);
+            Managers.Sound.StopFor(gameObject, _strikeCue);
+        }
     }
 
     void LateUpdate()
@@ -69,12 +87,31 @@ public sealed class BossPresentation : MonoBehaviour
         bool visible = state == BossState.Charging || state == BossState.ChainCharge || state == BossState.Stunned;
         foreach (Renderer body in _bodyRenderers) body.enabled = visible;
         ResetSteps();
+        if (Managers.IsInitialized)
+        {
+            Managers.Sound.StopFor(gameObject, _chargeCry);
+            Managers.Sound.StopFor(gameObject, _duelCry);
+            Managers.Sound.StopFor(gameObject, _stunCry);
+            Managers.Sound.StopFor(gameObject, _strikeCue);
+        }
+        if (state == BossState.Duel)
+            Managers.Sound.Play(_duelCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _duelCryPitch);
+        else if (state == BossState.Stunned)
+            Managers.Sound.Play(_stunCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _stunCryPitch);
     }
 
     /// <summary>돌진 준비 시 현재 보스 위치에서 기합1을 재생한다.</summary>
     private void HandleChargePreparing()
     {
+        Managers.Sound.StopFor(gameObject, _chargeCry);
         Managers.Sound.Play(_chargeCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _chargeCryPitch);
+    }
+
+    /// <summary>context의 타격 전조가 시작되면 실제 칼날 판정 전에 공격 직전음을 재생한다.</summary>
+    private void HandleStrikePreparing(EnemyAttackContext context)
+    {
+        Managers.Sound.StopFor(gameObject, _duelCry);
+        Managers.Sound.Play(_strikeCue, transform.position, owner: gameObject, playDuringMovement: true);
     }
 
     /// <summary>현재 상태가 시각적 발자국을 남기는 돌진 패턴인지 반환한다.</summary>

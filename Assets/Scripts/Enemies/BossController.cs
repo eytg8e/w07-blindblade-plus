@@ -19,6 +19,7 @@ public sealed class BossController : MonoBehaviour
     private EnemySensor _sensor;
     private NavMeshAgent _agent;
     private PlayerController _player;
+    private PlayerMotor _playerMotor;
     private PlayerHealth _playerHealth;
     private KatanaCombatCoordinator _combat;
     private Coroutine _routine;
@@ -58,6 +59,13 @@ public sealed class BossController : MonoBehaviour
     [SerializeField, Min(1f)] private float _teleportRadius = 6f;
     [SerializeField, Min(0.1f)] private float _chargeInterval = 0.7f;
     private readonly Collider[] _placementContacts = new Collider[16];
+
+    [Header("정면승부")]
+    [SerializeField, Min(0.8f), Tooltip("플레이어 정면 배치 거리(미터)")]
+    private float _duelDistance = 1.6f;
+    [SerializeField, Min(0.1f)] private float _duelPreparation = 0.6f;
+    [SerializeField, Min(0.1f)] private float _strikeInterval = 0.45f;
+    [SerializeField, Min(0.1f)] private float _stunDuration = 3f;
 
     public BossState State => _state;
     public event Action<BossState> StateChanged;
@@ -99,9 +107,10 @@ public sealed class BossController : MonoBehaviour
         if (_player != null)
         {
             _playerHealth = _player.GetComponent<PlayerHealth>();
+            _playerMotor = _player.GetComponent<PlayerMotor>();
             _combat = _player.GetComponent<KatanaCombatCoordinator>();
         }
-        if (_melee == null || _player == null || _playerHealth == null || _combat == null || !_motor.IsReady)
+        if (_melee == null || _player == null || _playerMotor == null || _playerHealth == null || _combat == null || !_motor.IsReady)
         {
             Debug.LogError("보스의 근접 공격·플레이어·방어 계약·NavMesh 연결이 누락되었습니다.", this);
             enabled = false;
@@ -125,6 +134,7 @@ public sealed class BossController : MonoBehaviour
             ChangeState(BossState.Charging);
             yield return Charge();
             yield return ChainCharge();
+            yield return Duel();
         }
         _routine = null;
     }
@@ -249,6 +259,45 @@ public sealed class BossController : MonoBehaviour
         _motor.Stop();
         if (!_agent.Warp(position)) return false;
         Teleported?.Invoke();
+        return true;
+    }
+
+    /// <summary>정면 준비 뒤 칼날 공격을 세 번 실행하고 유효타는 중단하며 세 번의 패링만 스턴으로 보상한다.</summary>
+    private IEnumerator Duel()
+    {
+        if (!PlaceInFront()) yield break;
+        ChangeState(BossState.Duel);
+        _parriedStrikes = 0;
+        _playerHit = false;
+        for (_strike = 1; _strike <= 3; _strike++)
+        {
+            _strikeResolved = false;
+            float until = Time.time + _duelPreparation;
+            while (Time.time < until)
+            {
+                if (!PlaceInFront()) yield break;
+                yield return null;
+            }
+            if (!_melee.TryAttack(_player.transform)) yield break;
+            while (_melee.IsBusy && !_playerHit) yield return null;
+            if (_playerHit) break;
+            yield return new WaitForSeconds(_strikeInterval);
+        }
+        _strike = 0;
+        if (_parriedStrikes != 3 || _playerHit) yield break;
+        _motor.Stop();
+        ChangeState(BossState.Stunned);
+        yield return new WaitForSeconds(_stunDuration);
+    }
+
+    /// <summary>플레이어 수평 정면의 빈 지면에 보스를 배치하며 정면 공간이 없으면 공격을 시작하지 않는다.</summary>
+    private bool PlaceInFront()
+    {
+        Vector3 forward = _playerMotor.ViewForward;
+        if (!TrySamplePosition(_player.transform.position + forward * _duelDistance, out Vector3 position)
+            || !TryPlace(position)) return false;
+        Vector3 direction = Vector3.ProjectOnPlane(_player.transform.position - position, Vector3.up);
+        if (direction.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(direction);
         return true;
     }
 
