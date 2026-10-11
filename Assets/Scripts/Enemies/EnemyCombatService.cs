@@ -12,6 +12,8 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     [SerializeField, Min(0f)] private float _normalDamage = 10f;
     [SerializeField, Min(0.01f)] private float _hitRadius = 0.2f;
     [SerializeField] private LayerMask _attackMask = ~0;
+    [SerializeField, Tooltip("칼날 길이 대신 시점 방향으로 거리 제한 없이 공격 판정합니다. 벽에 막히는 규칙은 유지합니다.")]
+    private bool _unlimitedRange;
     private bool _hasResolution;
     private PlayerAttackResolution _lastResolution;
     private readonly List<PlayerPerceivedTarget> _targetCandidates = new List<PlayerPerceivedTarget>();
@@ -120,6 +122,12 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     /// </summary>
     public PlayerAttackResolution ResolvePlayerAttack(PlayerAttackRequest request)
     {
+        return ResolveAttack(request, true);
+    }
+
+    /// <summary>request의 시점 방향 접촉을 검사하고 접촉 또는 finalSample에서 피해·결과·이벤트를 한 번 확정한다.</summary>
+    private PlayerAttackResolution ResolveAttack(PlayerAttackRequest request, bool finalSample)
+    {
         if (_hasResolution && _lastResolution.ActionId == request.ActionId)
             return _lastResolution;
 
@@ -141,8 +149,14 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
                 result = new PlayerAttackResolution(request.ActionId, true, id, health.CurrentHealth <= 0f);
             }
         }
-        _hasResolution = true;
-        _lastResolution = result;
+        bool complete = collider != null || finalSample;
+        result = new PlayerAttackResolution(request.ActionId, result.HitConfirmed,
+            result.HitTargetId, result.DeathConfirmed, complete);
+        if (complete)
+        {
+            _hasResolution = true;
+            _lastResolution = result;
+        }
 #if UNITY_EDITOR
         _debugBladeSweep = false;
         _debugRequest = request;
@@ -151,7 +165,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         _hasDebugRequest = request.Range > 0f && request.Direction.sqrMagnitude > 0f;
         _debugUntil = Time.time + _gizmoDuration;
 #endif
-        AttackContactResolved?.Invoke(request, collider, point, result.HitConfirmed);
+        if (complete) AttackContactResolved?.Invoke(request, collider, point, result.HitConfirmed);
         return result;
     }
 
@@ -186,7 +200,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
             return closestOverlap;
 
         RaycastHit[] hits = Physics.SphereCastAll(request.Origin, _hitRadius, request.Direction,
-            request.Range, _attackMask, QueryTriggerInteraction.Ignore);
+            _unlimitedRange ? Mathf.Infinity : request.Range, _attackMask, QueryTriggerInteraction.Ignore);
         Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
         foreach (RaycastHit hit in hits)
         {
@@ -301,6 +315,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     public PlayerAttackResolution ResolvePlayerBladeAttack(PlayerAttackRequest request, bool finalSample)
     {
         if (_hasResolution && _lastResolution.ActionId == request.ActionId) return _lastResolution;
+        if (_unlimitedRange) return ResolveAttack(request, finalSample);
         if (_bladeBase == null || _bladeTip == null) return ResolvePlayerAttack(request);
         Vector3 currentBase = _bladeBase.position;
         Vector3 currentTip = _bladeTip.position;
