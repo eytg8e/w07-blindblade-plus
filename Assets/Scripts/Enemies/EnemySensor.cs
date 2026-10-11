@@ -4,7 +4,7 @@ using UnityEngine;
 public sealed class EnemySensor : MonoBehaviour
 {
     [Header("감지 설정")]
-    [SerializeField, Tooltip("비어 있으면 시작 시 Player 태그의 오브젝트를 대상으로 연결합니다.")]
+    [SerializeField, Tooltip("게임 시작 시 Game.Player를 사용합니다. 독립 씬에서는 이 참조를 사용합니다.")]
     private Transform _target;
     [SerializeField, Min(0f)] private float _detectionRange = 12f;
     [SerializeField] private Vector3 _eyeOffset = new Vector3(0f, 1.5f, 0f);
@@ -14,14 +14,10 @@ public sealed class EnemySensor : MonoBehaviour
     public Transform Target => _target;
     public float DetectionRange => _detectionRange;
 
-    void Awake()
+    void Start()
     {
-        if (_target == null)
-        {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-                _target = player.transform;
-        }
+        if (Game.Player != null)
+            _target = Game.Player.transform;
     }
 
     /// <summary>

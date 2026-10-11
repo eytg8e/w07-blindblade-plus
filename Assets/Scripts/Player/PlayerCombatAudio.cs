@@ -6,6 +6,7 @@ using UnityEngine;
 /// 실제 적 피격음은 EnemyDamageAudio가 처리하고 모든 재생은 Managers.Sound를 사용한다.
 /// </summary>
 [RequireComponent(typeof(PlayerController))]
+[DisallowMultipleComponent]
 public sealed class PlayerCombatAudio : MonoBehaviour
 {
     [Header("전투 효과음")]
@@ -28,15 +29,19 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     private int _lastHitAction = -1;
     private int _lastContactAction = -1;
     private bool _introPlayed;
+    private bool _isPrimary;
 
     void Awake()
     {
         _player = GetComponent<PlayerController>();
         _katana = GetComponent<KatanaCombatCoordinator>();
+        _isPrimary = GetComponent<PlayerCombatAudio>() == this;
+        if (!_isPrimary) enabled = false;
     }
 
     void OnEnable()
     {
+        if (!_isPrimary) return;
         _player.ActionEvent += HandleAction;
         _lastSwingAction = -1;
         _lastHitAction = -1;
@@ -47,19 +52,20 @@ public sealed class PlayerCombatAudio : MonoBehaviour
         if (_katana != null && _katana.isActiveAndEnabled)
         {
             _katana.EventRaised += HandleKatana;
-            _katana.ParrySucceeded += HandleParry;
+            _katana.DefenseSucceeded += HandleDefense;
         }
     }
 
     void OnDisable()
     {
+        if (!_isPrimary) return;
         _player.ActionEvent -= HandleAction;
         if (_contactService != null)
             _contactService.AttackContactResolved -= HandleContact;
         if (_katana != null)
         {
             _katana.EventRaised -= HandleKatana;
-            _katana.ParrySucceeded -= HandleParry;
+            _katana.DefenseSucceeded -= HandleDefense;
         }
         if (Managers.IsInitialized)
             Managers.Sound.StopFor(gameObject);
@@ -134,9 +140,9 @@ public sealed class PlayerCombatAudio : MonoBehaviour
     /// result의 실제 쳐내기 접촉 위치에 사용자가 승인한 임시 충돌음을 재생한다.
     /// 피해 적용은 변경하지 않으며 이 플레이어를 소유자로 지정한다.
     /// </summary>
-    private void HandleParry(KatanaParryResult result)
+    private void HandleDefense(KatanaDefenseResult result)
     {
-        Managers.Sound.Play(_hitSound, result.Incoming.Point, _volume, gameObject);
+        Managers.Sound.Play(_hitSound, result.Point, result.IsParry ? 1f : _volume, gameObject);
     }
 
     /// <summary>

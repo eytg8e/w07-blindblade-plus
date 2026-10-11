@@ -335,7 +335,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _maxHealth: 30
-  _dieOnAnyHit: 1
+  _dieOnAnyHit: 0
   _hitCollider: {fileID: 7002509349255642647}
   _cancelAttackOnHit: 0
 --- !u!114 &7429742852752373956
@@ -359,6 +359,8 @@ MonoBehaviour:
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 51
+  _showAttackGizmos: 1
+  _gizmoDuration: 2
 --- !u!1001 &172936748127884816
 PrefabInstance:
   m_ObjectHideFlags: 0

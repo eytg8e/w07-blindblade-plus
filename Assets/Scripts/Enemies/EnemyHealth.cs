@@ -12,9 +12,10 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
     [Header("적 체력")]
     [SerializeField, Min(1f)] private float _maxHealth = 30f;
     [SerializeField, Tooltip("켜면 양수 피해를 주는 유효한 공격 한 번에 사망합니다.")]
-    private bool _dieOnAnyHit = true;
+    private bool _dieOnAnyHit;
     [SerializeField] private Collider _hitCollider;
     [SerializeField] private bool _cancelAttackOnHit;
+    [SerializeField, Min(0f)] private float _hitRecovery = 0.2f;
     private EnemyAttackSelector _attackSelector;
     private float _currentHealth;
 
@@ -53,7 +54,7 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
 
         _currentHealth = _dieOnAnyHit ? 0f : Mathf.Max(0f, _currentHealth - context.Amount);
         if (_cancelAttackOnHit && _attackSelector != null)
-            _attackSelector.CancelCurrentAttack();
+            _attackSelector.Stagger(_hitRecovery);
         Damaged?.Invoke(context);
         HealthChanged?.Invoke(_currentHealth, _maxHealth);
         if (_currentHealth <= 0f)

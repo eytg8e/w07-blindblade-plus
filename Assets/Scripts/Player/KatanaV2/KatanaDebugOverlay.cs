@@ -44,7 +44,7 @@ public sealed class KatanaDebugOverlay : MonoBehaviour
     {
         if (!_showOverlay) return;
         _text.Clear();
-        _text.AppendLine("KATANA V2 | LMB Iaido attack / Ctrl hold + C toggle crouch / Esc cursor");
+        _text.AppendLine("MELEE | LMB attack / RMB guard + timed parry / Ctrl + C crouch / Esc cursor");
         _text.Append("Action: ").Append(_combat.Player.CurrentState)
             .Append("  Recovery: ").AppendLine(_combat.Player.RecoveryRemaining.ToString("0.00"));
         _text.Append("Weapon: ").Append(_combat.WeaponState).AppendLine("  Attack: Iaido single-hit");

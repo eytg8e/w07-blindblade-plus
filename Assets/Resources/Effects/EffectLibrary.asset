@@ -22,3 +22,6 @@ MonoBehaviour:
   - _id: 4
     _prefab: {fileID: 8307060409358143758, guid: 8f767d0b23c8e3b4cb2ead5380b1074d, type: 3}
     _prewarmCount: 3
+  - _id: 5
+    _prefab: {fileID: 1499756520878855477, guid: 16c65b54a312dd04d884f81ff137f963, type: 3}
+    _prewarmCount: 3

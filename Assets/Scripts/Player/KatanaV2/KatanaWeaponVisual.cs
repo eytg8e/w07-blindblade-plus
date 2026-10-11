@@ -118,7 +118,16 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         float dt = Time.deltaTime;
         _elapsed += dt;
         _flash = Mathf.Max(0f, _flash - dt * 5f);
-        if (_finishingInsertion)
+        if (_combat.Player.IsGuarding)
+        {
+            if (_motion == "GuardEnter" || _motion == "GuardDeflect")
+            {
+                _animator.SetFloat(ActionProgressId, Mathf.Clamp01(_elapsed / Mathf.Max(0.01f, _duration)));
+                if (_elapsed >= _duration) Play("GuardHold", _blendTime);
+            }
+            else _animator.SetFloat(ActionProgressId, 1f);
+        }
+        else if (_finishingInsertion)
         {
             float progress = Mathf.SmoothStep(_insertionStart, _drawnSheatheProgress,
                 Mathf.Clamp01(_elapsed / _insertionDuration));
@@ -176,8 +185,24 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 break;
             case KatanaStage.ParrySucceeded:
                 _flash = 1f;
-                if (_attack)
-                    _parry = true;
+                Play("GuardDeflect", _blendTime);
+                _duration = 0.16f;
+                break;
+            case KatanaStage.GuardStarted:
+                _attack = false;
+                _parry = false;
+                _finishingInsertion = false;
+                Play("GuardEnter", _blendTime);
+                _duration = 0.12f;
+                break;
+            case KatanaStage.GuardSucceeded:
+                _flash = 0.6f;
+                Play("GuardDeflect", _blendTime);
+                _duration = 0.16f;
+                break;
+            case KatanaStage.GuardEnded:
+                Play("GuardHold", _blendTime);
+                _animator.SetFloat(ActionProgressId, 1f);
                 break;
             case KatanaStage.ParryMotionEnded:
             case KatanaStage.DrawnWaiting:

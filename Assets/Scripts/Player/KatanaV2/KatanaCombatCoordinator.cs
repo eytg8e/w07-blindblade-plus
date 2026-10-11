@@ -8,7 +8,7 @@ public enum KatanaStage
 {
     NormalStarted, StrikeEnded, ParryAttempted, ParryWindowClosed, ParrySucceeded, ParryFailed, ParryMotionEnded,
     DrawnWaiting, SheatheStarted, SheatheEnded, ChargeStarted, ChargeReady,
-    ChargeReleased, DashStarted, SlashStarted, Died, RequestRejected
+    ChargeReleased, DashStarted, SlashStarted, Died, RequestRejected, GuardStarted, GuardEnded, GuardSucceeded
 }
 
 public readonly struct KatanaEvent
@@ -43,7 +43,7 @@ public readonly struct KatanaParryResult
     }
 }
 
-/// <summary>기존 플레이어 판정에 단일 발도 공격, 공격 직전 쳐내기 창, 납도 흐름을 연결한다.</summary>
+/// <summary>플레이어의 단일 베기, 유지 가드·정확한 패링, 납도 흐름과 방어 피드백을 연결한다.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
 [DefaultExecutionOrder(-50)]
@@ -57,6 +57,12 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
 
     [Header("Attack / sheathe")]
     [SerializeField, Min(0f)] private float _normalSheatheDelay = 0.8f;
+
+    [Header("방어")]
+    [SerializeField, Min(0.01f)] private float _parryWindow = 0.18f;
+    [SerializeField, Min(0f)] private float _blockInputRecovery = 0.18f;
+    private PlayerMotor _motor;
+    private float _defenseReadyUntil;
 
     [Header("Sheathe")]
     [SerializeField, Min(0.01f)] private float _sheatheDuration = 0.3f;
@@ -80,23 +86,25 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
 
     public event Action<KatanaEvent> EventRaised;
     public event Action<KatanaParryResult> ParrySucceeded;
+    public event Action<KatanaDefenseResult> DefenseSucceeded;
     public PlayerController Player => _player;
     public KatanaWeaponState WeaponState => _weaponState;
     public int Strike => _strike;
-    public bool IsParryWindowOpen => _parryOpen && _clock < _parryUntil
-        && GetAttackElapsed() < _attackParryHitTime;
+    public bool IsParryWindowOpen => _parryOpen && Time.time < _parryUntil
+        && _player.IsGuarding;
     public bool IsParryMotion => _parryMotion;
     public float SheatheDuration => _sheatheDuration;
-    public float ParryRemaining => IsParryWindowOpen ? Mathf.Max(0f, _parryUntil - _clock) : 0f;
+    public float ParryRemaining => IsParryWindowOpen ? Mathf.Max(0f, _parryUntil - Time.time) : 0f;
     public bool CanStartAction => isActiveAndEnabled && _player != null
         && Time.timeScale > 0f && _player.CurrentState == PlayerActionState.Free
-        && _weaponState != KatanaWeaponState.Sheathing && !_parryOpen && !_parryMotion;
+        && _weaponState != KatanaWeaponState.Sheathing && !_parryOpen && !_parryMotion && Time.time >= _defenseReadyUntil;
 
     void Awake()
     {
         if (_player == null)
             _player = GetComponent<PlayerController>();
         _actionDriver = GetComponent<PlayerActionDriver>();
+        _motor = GetComponent<PlayerMotor>();
     }
 
     void OnEnable()
@@ -191,38 +199,10 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         return _player.RequestIaidoAttack();
     }
 
-    /// <summary>현재 발도 공격의 적중 판정 전에 호출한다. 유효한 전방 근접 타격이면 수신 피해를 막고 플레이어 피해를 취소한다.</summary>
+    /// <summary>incoming과 eligible을 현재 가드의 패링 시간에 검사한다. 유효한 정확한 패링의 방어 성공 여부를 반환한다.</summary>
     public bool TryParryIncoming(DamageContext incoming, bool eligible)
     {
-        if (!isActiveAndEnabled || incoming.Amount <= 0f || _player.IsPaused || Time.timeScale <= 0f
-            || _player.CurrentState != PlayerActionState.NormalAttack || !_parryOpen)
-            return false;
-
-        if (!IsParryWindowOpen)
-        {
-            CloseAttackParryWindow();
-            return false;
-        }
-        if (!eligible)
-        {
-            FailParry("Attack type or direction not parryable");
-            return false;
-        }
-
-        int actionId = _player.CurrentActionId;
-        float elapsed = GetAttackElapsed();
-        GetIaidoTiming(out _, out float actionDuration);
-        bool wasDrawn = _weaponState != KatanaWeaponState.Sheathed;
-        _strike = 1;
-        _waiting = false;
-        _parryOpen = false;
-        _parryMotion = true;
-        _parryMotionUntil = _clock + Mathf.Max(0f, actionDuration - elapsed);
-        _weaponState = KatanaWeaponState.Drawn;
-        Publish(KatanaStage.ParrySucceeded, incoming.PatternId, wasDrawn);
-        ParrySucceeded?.Invoke(new KatanaParryResult(incoming, _strike));
-        _player.CancelNormalAttack(actionId);
-        return true;
+        return IsParryWindowOpen && TryDefendIncoming(incoming, eligible);
     }
 
     /// <summary>상위 시스템의 paused를 기존 Controller에 전달한다. 카타나 타이머도 Update에서 함께 정지한다.</summary>
@@ -256,24 +236,22 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             : Mathf.Max(0f, _clock - _attackStartedAt);
     }
 
-    /// <summary>발도 적중 시각을 쳐내기 창의 종료점으로 사용하고 공격 시각화 이벤트를 발행한다.</summary>
-    private void OpenAttackParryWindow()
+    /// <summary>현재 클럭과 _parryWindow로 가드 시작 직후의 패링 창을 열고 시각화 이벤트를 발행한다.</summary>
+    private void OpenDefenseWindow()
     {
-        GetIaidoTiming(out _attackParryHitTime, out _);
-        _attackStartedAt = _clock;
-        _parryUntil = _clock + _attackParryHitTime;
+        _parryUntil = Time.time + _parryWindow;
         _parryOpen = true;
-        Publish(KatanaStage.ParryAttempted, "LMB Iaido attack: parry until slash impact");
+        Publish(KatanaStage.ParryAttempted, "Guard started: timed parry window");
     }
 
-    /// <summary>정상 공격 판정 프레임에 도달하면 쳐내기 창만 닫고 진행 중인 발도 공격은 유지한다.</summary>
+    /// <summary>패링 시간이 지나면 정확한 패링 창만 닫는다. 우클릭 유지 가드는 계속 허용한다.</summary>
     private void CloseAttackParryWindow()
     {
         if (!_parryOpen)
             return;
 
         _parryOpen = false;
-        Publish(KatanaStage.ParryWindowClosed, "No incoming attack before slash impact");
+        Publish(KatanaStage.ParryWindowClosed, "Timed parry window ended; held guard remains");
     }
 
     /// <summary>공격 회복이 끝난 뒤 단일 행동의 납도 대기를 시작하고 디버그 이벤트를 발행한다.</summary>
@@ -345,7 +323,20 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                 _actionDriver?.UseIaidoTimingForNextNormalAttack();
                 _weaponState = KatanaWeaponState.Drawn;
                 Publish(KatanaStage.NormalStarted, "Single Iaido attack", _attackWasDrawn);
-                OpenAttackParryWindow();
+                _parryOpen = false;
+                break;
+            case PlayerActionStage.GuardStarted:
+                _weaponState = KatanaWeaponState.Drawn;
+                _waiting = false;
+                Publish(KatanaStage.GuardStarted);
+                break;
+            case PlayerActionStage.GuardEnded:
+                _parryOpen = false;
+                Publish(KatanaStage.GuardEnded);
+                BeginWaiting();
+                break;
+            case PlayerActionStage.GuardSucceeded:
+                Publish(KatanaStage.GuardSucceeded);
                 break;
             case PlayerActionStage.ChargeStarted:
                 bool drawn = _weaponState != KatanaWeaponState.Sheathed;
@@ -395,5 +386,67 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     private void Publish(KatanaStage stage, string detail = "", bool wasDrawn = false)
     {
         EventRaised?.Invoke(new KatanaEvent(stage, _strike, _player.CurrentActionId, wasDrawn, detail));
+    }
+
+    /// <summary>자유 상태에서 가드를 시작하고 짧은 패링 창을 연다. 방어 입력 수락 여부를 반환한다.</summary>
+    public bool BeginDefense()
+    {
+        if (!isActiveAndEnabled || _player.CurrentState != PlayerActionState.Free || _player.IsPaused
+            || Time.timeScale <= 0f || Time.time < _defenseReadyUntil) return false;
+        _waiting = false;
+        if (!_player.BeginGuard()) return false;
+        OpenDefenseWindow();
+        return true;
+    }
+
+    /// <summary>유지 가드와 패링 창을 종료한다. 기존 행동 상태와 납도 대기 흐름으로 복귀한다.</summary>
+    public void EndDefense()
+    {
+        _parryOpen = false;
+        _player.EndGuard();
+    }
+
+    /// <summary>
+    /// incoming이 eligible인 전방 근접 접촉이고 가드 중이면 피해를 차단한다.
+    /// 패링 시간에 따라 적 회복·검 반동·카메라 및 공통 방어 피드백을 발생시키고 성공 여부를 반환한다.
+    /// </summary>
+    public bool TryDefendIncoming(DamageContext incoming, bool eligible)
+    {
+        if (!isActiveAndEnabled || !eligible || !_player.IsGuarding || _player.IsPaused
+            || incoming.Amount <= 0f || Time.timeScale <= 0f) return false;
+        bool perfect = IsParryWindowOpen;
+        _defenseReadyUntil = perfect ? Time.time : Time.time + _blockInputRecovery;
+        Vector3 point = _player.GetComponent<EnemyCombatService>().GetGuardContactPoint(incoming.Point);
+        _parryOpen = false;
+        _waiting = false;
+        _weaponState = KatanaWeaponState.Drawn;
+        _player.NotifyGuardSuccess();
+        _motor.AddCombatRecoil(incoming.Direction, perfect ? 0.9f : 0.6f);
+        foreach (EnemyAttackBehaviour pattern in incoming.Instigator.GetComponents<EnemyAttackBehaviour>())
+            if (pattern.PatternId == incoming.PatternId && pattern is EnemyMeleeAttack melee) melee.Deflect(perfect, point);
+        DefenseSucceeded?.Invoke(new KatanaDefenseResult(incoming, point, perfect));
+        if (perfect)
+        {
+            Publish(KatanaStage.ParrySucceeded, incoming.PatternId, true);
+            ParrySucceeded?.Invoke(new KatanaParryResult(incoming, 1));
+        }
+        return true;
+    }
+
+}
+
+/// <summary>방어 접촉의 원래 피해, 검 앞 접촉점, 정확한 패링 여부를 표현 담당자에게 전달한다.</summary>
+public readonly struct KatanaDefenseResult
+{
+    public DamageContext Incoming { get; }
+    public Vector3 Point { get; }
+    public bool IsParry { get; }
+
+    /// <summary>incoming·point·isParry를 저장한다. 피해나 공격 상태를 직접 변경하지 않는다.</summary>
+    public KatanaDefenseResult(DamageContext incoming, Vector3 point, bool isParry)
+    {
+        Incoming = incoming;
+        Point = point;
+        IsParry = isParry;
     }
 }

@@ -8,12 +8,14 @@ using UnityEngine;
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerController))]
-public sealed class PlayerHealth : DamageReceiver
+public class PlayerHealth : DamageReceiver
 {
     [Header("플레이어 체력")]
     [SerializeField, Min(1f)] private float _maxHealth = 100f;
+    [SerializeField, Min(0f)] private float _hitRecovery = 0.18f;
 
     private PlayerController _player;
+    private PlayerMotor _motor;
     private float _currentHealth;
 
     public float CurrentHealth => _currentHealth;
@@ -25,9 +27,10 @@ public sealed class PlayerHealth : DamageReceiver
     public event Action<DamageContext> DamageBlocked;
     public event Action<PlayerHealth> Died;
 
-    void Awake()
+    protected virtual void Awake()
     {
         _player = GetComponent<PlayerController>();
+        _motor = GetComponent<PlayerMotor>();
         _currentHealth = _maxHealth;
     }
 
@@ -40,7 +43,7 @@ public sealed class PlayerHealth : DamageReceiver
         if (!IsAlive || !(context.Amount > 0f))
             return;
 
-        if (_player.TryBlockIncomingAttack())
+        if (CanBlockDamage(context))
         {
             _player.NotifyGuardSuccess();
             DamageBlocked?.Invoke(context);
@@ -48,13 +51,22 @@ public sealed class PlayerHealth : DamageReceiver
         }
 
         _currentHealth = Mathf.Max(0f, _currentHealth - context.Amount);
+        _motor.AddCombatRecoil(context.Direction, 1.4f);
         bool died = _currentHealth <= 0f;
         if (died)
             _player.SetDead();
+        else
+            _player.NotifyHitReaction(_hitRecovery);
 
         HealthChanged?.Invoke(_currentHealth, _maxHealth);
         base.TakeDamage(context);
         if (died)
             Died?.Invoke(this);
+    }
+
+    /// <summary>context의 피해를 현재 가드로 막을 수 있는지 반환한다. 카타나 수신자는 방향 제한을 별도로 적용한다.</summary>
+    protected virtual bool CanBlockDamage(DamageContext context)
+    {
+        return _player.TryBlockIncomingAttack();
     }
 }

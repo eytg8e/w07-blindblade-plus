@@ -7,5 +7,6 @@ public enum EffectId
     BloodHit = 1,
     SwordHit = 2,
     SwordSlashTrail = 3,
-    EnemySlash = 4
+    EnemySlash = 4,
+    GuardClash = 5
 }

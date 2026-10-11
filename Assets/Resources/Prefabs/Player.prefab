@@ -46,7 +46,7 @@ GameObject:
   - component: {fileID: 1785940605279904065}
   m_Layer: 0
   m_Name: Player Camera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -229,17 +229,16 @@ GameObject:
   - component: {fileID: 1239245691009019635}
   - component: {fileID: 1215301452296053969}
   - component: {fileID: 6616511219798166873}
-  - component: {fileID: 8080766884053089683}
   - component: {fileID: 1993857972930843498}
   - component: {fileID: 4370518358218400631}
   - component: {fileID: 5663976393034796336}
-  - component: {fileID: 4517625516249246978}
   - component: {fileID: 2388544270244161858}
   - component: {fileID: 7354578201373670101}
   - component: {fileID: 7106073490442552728}
   - component: {fileID: 3744323796873655163}
   - component: {fileID: 9012958133378258241}
-  - component: {fileID: 4656219414510662599}
+  - component: {fileID: 8491623887222581670}
+  - component: {fileID: 1080894898460965423}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -302,13 +301,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _characterController: {fileID: 1239245691009019635}
   _cameraPivot: {fileID: 658615258030587121}
-  _walkSpeed: 2
-  _guardWalkSpeed: 1
+  _walkSpeed: 3.5
+  _guardWalkSpeed: 2.2
   _chargingWalkSpeed: 0.8
-  _acceleration: 8
-  _deceleration: 12
+  _acceleration: 12
+  _deceleration: 14
   _gravity: 20
-  _crouchWalkSpeed: 0.7
+  _crouchWalkSpeed: 1.4
   _crouchedCharacterHeight: 1.6
   _crouchedCameraHeight: 1.325
   _crouchTransitionDuration: 0.15
@@ -326,6 +325,7 @@ MonoBehaviour:
   _dashCollisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  _recoilReturnSpeed: 18
 --- !u!114 &6616511219798166873
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -341,7 +341,7 @@ MonoBehaviour:
   _motor: {fileID: 1215301452296053969}
   _viewCamera: {fileID: 421133909551674746}
   _perceptionProviderSource: {fileID: 0}
-  _combatServiceSource: {fileID: 0}
+  _combatServiceSource: {fileID: 1080894898460965423}
   _mapServiceSource: {fileID: 0}
   _enableChargeAttack: 0
   _minimumChargeTime: 1
@@ -349,7 +349,7 @@ MonoBehaviour:
   _iaidoAttackRange: 2
   _targetStandOff: 0.15
   _attackOriginHeight: 1.1
-  _normalAttackRecovery: 0.25
+  _normalAttackRecovery: 0.18
   _guardStartRecovery: 0
   _guardEndRecovery: 0
   _guardSuccessRecovery: 0
@@ -358,20 +358,6 @@ MonoBehaviour:
   _iaidoHitRecovery: 0.15
   _iaidoMissRecovery: 0.7
   _iaidoWallBlockedRecovery: 0.9
---- !u!114 &8080766884053089683
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2147414133172360306}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c432986896538ae49845595c1649e01a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _player: {fileID: 6616511219798166873}
-  _lockCursorOnMouseClick: 1
 --- !u!114 &1993857972930843498
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -388,8 +374,9 @@ MonoBehaviour:
   _animationEventRelay: {fileID: 0}
   _normalHitTime: 0.15
   _normalActionDuration: 0.4
-  _iaidoHitTime: 0.42
-  _iaidoSlashDuration: 0.72
+  _iaidoHitTime: 0.32
+  _iaidoSlashDuration: 0.6
+  _strikeWindow: 0.2
 --- !u!114 &4370518358218400631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -417,21 +404,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _player: {fileID: 6616511219798166873}
   _normalSheatheDelay: 0.8
+  _parryWindow: 0.18
+  _blockInputRecovery: 0.18
   _sheatheDuration: 0.3
---- !u!114 &4517625516249246978
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2147414133172360306}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68d90435cdae4324fa31e773b449e62f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _combat: {fileID: 5663976393034796336}
-  _lockCursorOnClick: 1
 --- !u!114 &2388544270244161858
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -447,6 +422,8 @@ MonoBehaviour:
   _onDamageReceived:
     m_PersistentCalls:
       m_Calls: []
+  _maxHealth: 100
+  _hitRecovery: 0.18
   _combat: {fileID: 5663976393034796336}
   _view: {fileID: 658615258030587121}
   _frontArc: 120
@@ -514,18 +491,18 @@ MonoBehaviour:
   _hitSound: 4
   _unsheathSound: 6
   _volume: 0.8
-  _contactService: {fileID: 0}
+  _contactService: {fileID: 1080894898460965423}
   _firstSwingLabel: A
   _secondSwingLabel: B
   _iaidoSwingLabel: C
---- !u!114 &4656219414510662599
+--- !u!114 &8491623887222581670
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2147414133172360306}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 70aa434fc0f92584598bd3686654f418, type: 3}
   m_Name: 
@@ -533,11 +510,31 @@ MonoBehaviour:
   _player: {fileID: 6616511219798166873}
   _timing: {fileID: 1993857972930843498}
   _contacts: {fileID: 0}
-  _physicalContacts: {fileID: 0}
+  _physicalContacts: {fileID: 3796482945788141926}
   _katana: {fileID: 5663976393034796336}
-  _normalWindupFraction: 0.45
-  _iaidoWindupFraction: 0.8
-  _followThroughFraction: 0.85
+--- !u!114 &1080894898460965423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147414133172360306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 458ebb8608561cb419b77df2896b5afd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _playerRoot: {fileID: 9061784569180931348}
+  _normalDamage: 10
+  _hitRadius: 0.1
+  _attackMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _bladeBase: {fileID: 8419536739964497533}
+  _bladeTip: {fileID: 87512033506737446}
+  _useViewModelReach: 1
+  _showAttackGizmos: 1
+  _gizmoDuration: 2
 --- !u!1001 &4942158160852825287
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -711,7 +708,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7811620188448204293, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 87512033506737446}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8975707642210050042, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3796482945788141926}
   m_SourcePrefab: {fileID: 100100000, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}
 --- !u!4 &2953905633047843522 stripped
 Transform:
@@ -723,6 +723,32 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8123843000988514292, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}
   m_PrefabInstance: {fileID: 4942158160852825287}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4036927457039641405 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8975707642210050042, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}
+  m_PrefabInstance: {fileID: 4942158160852825287}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3796482945788141926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4036927457039641405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bfa96d3ac4cada429b3825cb55579ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _bladeBase: {fileID: 8419536739964497533}
+  _bladeTip: {fileID: 87512033506737446}
+  _ownerRoot: {fileID: 9061784569180931348}
+  _contactLayers:
+    serializedVersion: 2
+    m_Bits: 55
+  _contactRadius: 0.04
+  _teleportDistance: 3
+  _bloodOnEnemyContact: 1
 --- !u!95 &8362338574495906464 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 3502371185263496807, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}

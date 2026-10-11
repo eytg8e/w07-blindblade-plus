@@ -8,8 +8,21 @@ using UnityEngine;
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerMotor))]
+[DefaultExecutionOrder(-30)]
 public sealed class PlayerController : MonoBehaviour
 {
+#if UNITY_EDITOR
+    void OnDrawGizmosSelected()
+    {
+        if (Application.isPlaying) return;
+        EnemyCombatService combat = GetComponent<EnemyCombatService>();
+        if (combat == null) return;
+        Vector3 origin = _viewCamera != null ? _viewCamera.transform.position
+            : transform.position + Vector3.up * _attackOriginHeight;
+        combat.DrawAttackPreview(origin, GetHorizontalViewDirection(), _normalAttackRange);
+    }
+#endif
+
     [Header("References")]
     [SerializeField] private PlayerMotor _motor;
     [SerializeField] private Camera _viewCamera;
@@ -309,8 +322,36 @@ public sealed class PlayerController : MonoBehaviour
         if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId || _attackImpactResolved)
             return;
 
-        PlayerAttackResolution resolution = ResolveAttack(PlayerAttackKind.Normal, null, _normalAttackRange, _lockedAttackDirection);
-        ApplyAttackResolution(resolution);
+        NotifyNormalAttackSweep(actionId, true);
+    }
+
+    /// <summary>actionId의 베기 구간을 finalSample까지 검사하고 완료된 피해·빗나감 결과만 행동에 반영한다.</summary>
+    public void NotifyNormalAttackSweep(int actionId, bool finalSample)
+    {
+        if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId || _attackImpactResolved) return;
+        EnemyCombatService combat = _combatService as EnemyCombatService;
+        if (combat == null) return;
+        PlayerAttackRequest request = new PlayerAttackRequest(actionId, PlayerAttackKind.Normal, null,
+            _motor.ViewOrigin, _motor.ViewForward, _normalAttackRange, Time.time);
+        PlayerAttackResolution resolution = combat.ResolvePlayerBladeAttack(request, finalSample);
+        if (resolution.IsComplete) ApplyAttackResolution(resolution);
+    }
+
+    /// <summary>duration의 피격 회복을 적용한다. 진행 중인 일반 공격·가드를 중단하고 추가 피해 판정을 닫는다.</summary>
+    public void NotifyHitReaction(float duration)
+    {
+        if (_state == PlayerActionState.NormalAttack)
+        {
+            _attackImpactResolved = true;
+            FinishAttackAction(duration, _currentAttackOutcome);
+        }
+        else if (_state == PlayerActionState.Free || _state == PlayerActionState.Guarding)
+        {
+            if (_state == PlayerActionState.Guarding) EndGuard();
+            BeginRecovery(duration, PlayerAttackOutcome.None);
+        }
+        else if (_state == PlayerActionState.Recovery)
+            _recoveryRemaining = Mathf.Max(_recoveryRemaining, duration);
     }
 
     /// <summary>일반 공격 애니메이션 종료를 처리하고 미판정 공격을 빗나감으로 확정한 뒤 회복을 적용합니다.</summary>
@@ -668,7 +709,8 @@ public sealed class PlayerController : MonoBehaviour
     private Vector3 GetHorizontalViewDirection()
     {
         Transform source = _viewCamera != null ? _viewCamera.transform : transform;
-        Vector3 direction = Vector3.ProjectOnPlane(source.forward, Vector3.up).normalized;
+        Vector3 forward = Application.isPlaying ? _motor.ViewForward : source.forward;
+        Vector3 direction = Vector3.ProjectOnPlane(forward, Vector3.up).normalized;
         return direction.sqrMagnitude > 0.0001f ? direction : transform.forward;
     }
 

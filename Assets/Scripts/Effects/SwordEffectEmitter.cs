@@ -31,6 +31,7 @@ public sealed class SwordEffectEmitter : MonoBehaviour
     private Vector3 _previousTip;
     private bool _swinging;
     private bool _reportedCapacity;
+    private int _effectiveContactLayers;
     public bool IsSwinging => _swinging;
 
     void Start()
@@ -93,6 +94,12 @@ public sealed class SwordEffectEmitter : MonoBehaviour
             return false;
         }
         CancelSwing();
+        _effectiveContactLayers = _contactLayers.value;
+        foreach (EnemyHealth enemy in FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None))
+        {
+            if (enemy.gameObject.scene == gameObject.scene && enemy.IsAlive)
+                _effectiveContactLayers |= 1 << enemy.CreateCombatTarget().HitCollider.gameObject.layer;
+        }
         _previousBase = _bladeBase.position;
         _previousTip = _bladeTip.position;
         _reportedCapacity = false;
@@ -144,7 +151,7 @@ public sealed class SwordEffectEmitter : MonoBehaviour
         if (distance <= 0.0001f)
             return;
         int count = Physics.SphereCastNonAlloc(from, _contactRadius, movement / distance,
-            _castHits, distance, _contactLayers, QueryTriggerInteraction.Collide);
+            _castHits, distance, _effectiveContactLayers, QueryTriggerInteraction.Collide);
         ReportCapacity(count);
         float nearestDistance = float.PositiveInfinity;
         int nearest = -1;
@@ -167,7 +174,7 @@ public sealed class SwordEffectEmitter : MonoBehaviour
     private void DetectOverlaps(Vector3 bladeBase, Vector3 bladeTip)
     {
         int count = Physics.OverlapCapsuleNonAlloc(bladeBase, bladeTip, _contactRadius,
-            _overlaps, _contactLayers, QueryTriggerInteraction.Collide);
+            _overlaps, _effectiveContactLayers, QueryTriggerInteraction.Collide);
         ReportCapacity(count);
         for (int i = 0; i < count; i++)
         {

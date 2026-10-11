@@ -38,6 +38,9 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     public virtual bool AllowsMovement => false;
     public EnemyAttackContext Context => _context;
     public float ExecutionDuration => ActiveDuration;
+    public float RecoveryRemaining => _phase == EnemyAttackPhase.Recovery ? Mathf.Max(0f, _phaseEndTime - Time.time) : 0f;
+    public float TelegraphProgress => _phase == EnemyAttackPhase.Telegraph
+        ? Mathf.Clamp01(1f - (_phaseEndTime - Time.time) / Mathf.Max(0.1f, _context.TelegraphDuration)) : 1f;
     public event Action<Transform> AttackPerformed;
     public event Action<EnemyAttackContext> TelegraphStarted;
     public event Action<EnemyAttackContext> AttackCommitted;
@@ -121,6 +124,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phaseEndTime = Time.time + telegraphDuration;
         _nextAttackTime = Time.time + _cooldown;
         EnemyAttackContext context = _context;
+        PrepareTelegraph(context);
         PlayActionSound(EnemySoundStage.Telegraph);
         TelegraphStarted?.Invoke(context);
         return true;
@@ -164,13 +168,13 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// 현재 공격 문맥의 실행 종료를 파생 클래스에 알리고 후딜 종료 시간을 예약한다.
+    /// 현재 공격 문맥의 실행 종료를 알리고 설정 후딜과 minimumDuration 중 큰 값으로 종료 시간을 예약한다.
     /// 공격 상태를 Recovery로 변경하여 다른 패턴과 동시에 실행되지 않게 한다.
     /// </summary>
-    private void BeginRecovery()
+    protected void BeginRecovery(float minimumDuration = 0f)
     {
         _phase = EnemyAttackPhase.Recovery;
-        _phaseEndTime = Time.time + _recoveryDuration;
+        _phaseEndTime = Time.time + Mathf.Max(_recoveryDuration, minimumDuration);
         EnemyAttackContext context = _context;
         OnAttackEnded(context, false);
         AttackEnded?.Invoke(context);
@@ -192,6 +196,11 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     /// 피해 영역이나 투사체는 context.AimPosition과 Direction을 기준으로 생성한다.
     /// </summary>
     protected abstract void PerformAttack(EnemyAttackContext context);
+
+    /// <summary>context의 전조를 표시하기 전에 파생 패턴의 공격 방향을 준비한다. 기본 구현은 상태를 변경하지 않는다.</summary>
+    protected virtual void PrepareTelegraph(EnemyAttackContext context)
+    {
+    }
 
     /// <summary>
     /// 지속 공격 중 매 프레임 context를 파생 패턴에 전달한다.

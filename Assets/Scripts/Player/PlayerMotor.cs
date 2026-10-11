@@ -90,6 +90,39 @@ public sealed class PlayerMotor : MonoBehaviour
     private IPlayerCombatService _combatService;
     private float _lastHorizontalSpeed;
 
+    [Header("전투 카메라 반동")]
+    [SerializeField, Min(0f)] private float _recoilReturnSpeed = 18f;
+    private Vector3 _recoilEuler;
+    private Vector3 _recoilOffset;
+    public Vector3 ViewForward => Quaternion.Euler(0f, _yaw, 0f) * Quaternion.Euler(_pitch, 0f, 0f) * Vector3.forward;
+    public Vector3 ViewOrigin => _cameraPivot.parent.TransformPoint(GetCameraBasePosition());
+
+    /// <summary>direction과 strength로 시각 반동을 누적한다. 논리적인 시점·조준 방향과 캐릭터 위치는 유지한다.</summary>
+    public void AddCombatRecoil(Vector3 direction, float strength)
+    {
+        float side = Vector3.Dot(transform.right, direction) < 0f ? -1f : 1f;
+        _recoilEuler = Vector3.ClampMagnitude(_recoilEuler + new Vector3(strength, 0f, side * strength * 1.5f), 5f);
+        _recoilOffset = Vector3.ClampMagnitude(_recoilOffset + Vector3.back * (0.025f * strength), 0.08f);
+    }
+
+    /// <summary>웅크리기 진행도와 원래 카메라 위치로 반동 없는 로컬 시점 위치를 반환한다.</summary>
+    private Vector3 GetCameraBasePosition()
+    {
+        Vector3 position = _standingCameraLocalPosition;
+        position.y = Mathf.Lerp(_standingCameraLocalPosition.y, _crouchedCameraHeight, Mathf.SmoothStep(0f, 1f, _crouchBlend));
+        return position;
+    }
+
+    void LateUpdate()
+    {
+        if (_cameraPivot == null) return;
+        float decay = Mathf.Exp(-_recoilReturnSpeed * Time.deltaTime);
+        _recoilEuler *= decay;
+        _recoilOffset *= decay;
+        _cameraPivot.localPosition = GetCameraBasePosition() + _recoilOffset;
+        _cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f) * Quaternion.Euler(_recoilEuler);
+    }
+
     public event Action<PlayerFootstepEvent> FootstepEmitted;
     public event Action<PlayerDashEnd> DashEnded;
 

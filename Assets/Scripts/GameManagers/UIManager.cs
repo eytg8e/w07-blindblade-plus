@@ -3,11 +3,16 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
+
 /// <summary>공통 UI를 생성하고 화면 타입별 조회와 표시 및 씬 수명을 관리한다.</summary>
 public sealed class UIManager : MonoBehaviour
 {
     [Header("공통 UI 캔버스")]
     [SerializeField] private Canvas _canvas;
+    [SerializeField] private EventSystem _eventSystem;
+    [SerializeField] private InputSystemUIInputModule _inputModule;
 
     private readonly Dictionary<Type, GameUI> _views = new Dictionary<Type, GameUI>();
 
@@ -23,13 +28,21 @@ public sealed class UIManager : MonoBehaviour
             return;
         }
         _canvas.enabled = true;
-        if (UnityEngine.EventSystems.EventSystem.current == null)
-        {
-            GameObject eventSystem = new GameObject("UI EventSystem");
-            eventSystem.transform.SetParent(transform, false);
-            eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            eventSystem.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>().AssignDefaultActions();
-        }
+        InitializeEventSystem();
+    }
+
+    /// <summary>
+    /// 씬의 활성 EventSystem이 있으면 재사용하고 없으면 UIManager 프리팹의 입력 컴포넌트를 활성화한다.
+    /// 새 오브젝트를 만들지 않으며 중복 UI 입력 처리를 방지한다.
+    /// </summary>
+    private void InitializeEventSystem()
+    {
+        bool hasExternal = false;
+        foreach (EventSystem system in FindObjectsByType<EventSystem>(FindObjectsSortMode.None))
+            if (system != _eventSystem && system.isActiveAndEnabled) hasExternal = true;
+        _inputModule.enabled = !hasExternal;
+        _eventSystem.enabled = !hasExternal;
+        if (!hasExternal) _inputModule.AssignDefaultActions();
     }
 
     /// <summary>T 화면을 최초 조회 시 리소스에서 생성·초기화하고 이후에는 캐싱한 화면을 반환한다.</summary>

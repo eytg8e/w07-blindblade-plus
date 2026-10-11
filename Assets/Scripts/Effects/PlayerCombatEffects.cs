@@ -16,11 +16,6 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     [SerializeField] private SwordEffectEmitter _physicalContacts;
     [SerializeField] private KatanaCombatCoordinator _katana;
 
-    [Header("베기 표시 구간")]
-    [SerializeField, Range(0f, 1f)] private float _normalWindupFraction = 0.45f;
-    [SerializeField, Range(0f, 1f)] private float _iaidoWindupFraction = 0.8f;
-    [SerializeField, Range(0.5f, 1f)] private float _followThroughFraction = 0.85f;
-
     private EffectManager _effects;
     private int _actionId;
     private int _lastContactAction = -1;
@@ -36,7 +31,7 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         _player.ActionEvent += HandleAction;
         if (_contacts != null && _physicalContacts == null)
             _contacts.AttackContactResolved += HandleContact;
-        _katana.ParrySucceeded += HandleParry;
+        _katana.DefenseSucceeded += HandleDefense;
         _lastContactAction = -1;
     }
 
@@ -53,7 +48,7 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         _player.ActionEvent -= HandleAction;
         if (_contacts != null && _physicalContacts == null)
             _contacts.AttackContactResolved -= HandleContact;
-        _katana.ParrySucceeded -= HandleParry;
+        _katana.DefenseSucceeded -= HandleDefense;
         CancelContactDetection();
     }
 
@@ -92,10 +87,8 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         {
             CancelContactDetection();
             _actionId = action.ActionId;
-            _timing.GetPresentationTiming(iaido ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal,
-                out float impactTime, out float duration);
-            _beginTime = impactTime * (iaido ? _iaidoWindupFraction : _normalWindupFraction);
-            _endTime = Mathf.Max(impactTime, duration * _followThroughFraction);
+            _timing.GetStrikeWindow(iaido ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal,
+                out _beginTime, out _endTime);
             _tracking = _physicalContacts != null;
         }
         else if (action.Stage == PlayerActionStage.ActionEnded && action.ActionId == _actionId)
@@ -121,13 +114,13 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     }
 
     /// <summary>
-    /// result의 실제 쳐내기 접촉점에 공용 타격 효과를 요청한다.
-    /// 가드 성공을 표현하며 혈흔이나 피해를 추가하지 않는다.
+    /// result의 검 접촉점에 GuardClash를 요청한다.
+    /// 일반 가드와 정확한 패링을 표현하며 혈흔이나 피해는 추가하지 않는다.
     /// </summary>
-    private void HandleParry(KatanaParryResult result)
+    private void HandleDefense(KatanaDefenseResult result)
     {
         if (_effects != null && _effects.IsReady)
-            _effects.PlayHit(result.Incoming.Point);
+            _effects.Play(EffectId.GuardClash, result.Point);
     }
 
     /// <summary>
