@@ -43,7 +43,6 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
 
             TEXTURE2D_X(_OutlineOpaqueColor);
             TEXTURE2D_X(_OutlineAlwaysVisibleVfxColor);
-            TEXTURE2D_X(_OutlineOverlayVfxColor);
             TEXTURE2D_X(_OutlineTransparentDepth);
 
             #define MAX_SOUND_REGIONS 16
@@ -209,22 +208,7 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                     PerceptionColor(secondUv, secondDepth, second, 0.0));
             }
 
-            // 차폐 예외 검기는 별도 캡처의 RGB만 사용해 벽과 인지 깊이에 관계없이 검출한다.
-            float OverlayCoverage(float2 uv)
-            {
-                float3 color = abs(SAMPLE_TEXTURE2D_X(_OutlineOverlayVfxColor, sampler_LinearClamp, uv).rgb);
-                float brightness = max(color.r, max(color.g, color.b));
-                return smoothstep(_TransparentThreshold, _TransparentThreshold * 2.0, brightness);
-            }
-
-            // 두 화면 위치의 검기 실루엣 차이를 상시 표시되는 선 색상으로 반환한다.
-            float3 OverlayEdgeBetween(float2 firstUv, float2 secondUv)
-            {
-                float edge = saturate(abs(OverlayCoverage(firstUv) - OverlayCoverage(secondUv)) * 1.5);
-                return edge * _LineColor.rgb * _LineColor.a;
-            }
-
-            // 월드·일반 VFX 윤곽선 위에 차폐 예외 검기만 합성한다.
+            // 불투명 경계와 투명 이펙트 경계를 합성하고 모든 면과 배경은 검게 출력한다.
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
@@ -241,9 +225,6 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float3 transparentEdge = max(TransparentEdgeBetween(firstUv, secondUv),
                     TransparentEdgeBetween(thirdUv, fourthUv));
                 edge = max(edge, transparentEdge);
-                edge *= 1.0 - OverlayCoverage(uv);
-                edge = max(edge, max(OverlayEdgeBetween(firstUv, secondUv),
-                    OverlayEdgeBetween(thirdUv, fourthUv)));
                 return half4(edge, 1.0);
             }
             ENDHLSL
