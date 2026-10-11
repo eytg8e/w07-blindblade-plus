@@ -803,7 +803,6 @@ public sealed class PlayerController : MonoBehaviour
             return PlayerLocomotionMode.IaidoDash;
 
         bool canWalk = _state == PlayerActionState.Free
-            || _state == PlayerActionState.NormalAttack
             || _state == PlayerActionState.Guarding
             || (_state == PlayerActionState.Charging && _chargeReady);
         if (_motor != null && _motor.IsCrouching)
@@ -815,15 +814,16 @@ public sealed class PlayerController : MonoBehaviour
             return PlayerLocomotionMode.GuardWalking;
         if (_state == PlayerActionState.Charging)
             return _chargeReady ? PlayerLocomotionMode.ChargingWalking : PlayerLocomotionMode.ChargingStill;
-        if ((_state == PlayerActionState.Free || _state == PlayerActionState.NormalAttack) && _moveInput.sqrMagnitude > 0.0001f)
+        if (_state == PlayerActionState.Free && _moveInput.sqrMagnitude > 0.0001f)
             return PlayerLocomotionMode.Walking;
         return PlayerLocomotionMode.Stopped;
     }
 
-    /// <summary>회복, 일시정지, 사망, 발도 동작, 초기 충전 상태의 이동 제한 여부를 반환합니다.</summary>
+    /// <summary>일반 공격, 회복, 일시정지, 사망, 발도 동작, 초기 충전 상태의 이동 제한 여부를 반환합니다.</summary>
     private bool IsMovementLocked()
     {
-        return _state == PlayerActionState.Recovery
+        return _state == PlayerActionState.NormalAttack
+            || _state == PlayerActionState.Recovery
             || _state == PlayerActionState.Paused
             || _state == PlayerActionState.Dead
             || _state == PlayerActionState.IaidoDash
@@ -915,4 +915,3 @@ public sealed class PlayerController : MonoBehaviour
             worldPosition));
     }
 }
-
