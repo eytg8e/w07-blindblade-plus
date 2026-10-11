@@ -39,6 +39,12 @@ public sealed class BossController : MonoBehaviour
     private bool _hidden;
     private bool _hiddenUpdatePosition;
     private BossState _resumeState;
+    [Header("패턴 사이 대기")]
+    [SerializeField, Min(0f), Tooltip("패턴 사이 최소 대기 시간(초)")]
+    private float _patternWaitMin = 3f;
+    [SerializeField, Min(0f), Tooltip("패턴 사이 최대 대기 시간(초)")]
+    private float _patternWaitMax = 5f;
+    private BossState _nextPattern = BossState.Roaming;
 
     [Header("배회")]
     [SerializeField, Min(0.1f), Tooltip("마지막 피격 이후 돌진까지의 시간(초)")]
@@ -149,17 +155,40 @@ public sealed class BossController : MonoBehaviour
         yield return null;
         while (_health.IsAlive && _playerHealth.IsAlive)
         {
-            if (startingState == BossState.Roaming) yield return Roam();
-            if ((startingState == BossState.Roaming || startingState == BossState.Charging) && TryTeleportAround())
+            if (startingState == BossState.Roaming)
             {
-                ChangeState(BossState.Charging);
-                yield return Charge();
+                yield return WaitForPattern(BossState.Roaming);
+                yield return Roam();
             }
-            if (startingState != BossState.Duel) yield return ChainCharge();
+            if (startingState == BossState.Roaming || startingState == BossState.Charging)
+            {
+                yield return WaitForPattern(BossState.Charging);
+                if (TryTeleportAround())
+                {
+                    ChangeState(BossState.Charging);
+                    yield return Charge();
+                }
+            }
+            if (startingState != BossState.Duel)
+            {
+                yield return WaitForPattern(BossState.ChainCharge);
+                yield return ChainCharge();
+            }
+            yield return WaitForPattern(BossState.Duel);
             yield return Duel();
             startingState = BossState.Roaming;
         }
         _routine = null;
+    }
+
+    /// <summary>nextPattern을 예약하고 이동·소리를 멈춘 대기 상태에서 설정 범위의 랜덤 시간만큼 기다린다.</summary>
+    private IEnumerator WaitForPattern(BossState nextPattern)
+    {
+        _nextPattern = nextPattern;
+        _motor.Stop();
+        ChangeState(BossState.Idle);
+        float maximum = Mathf.Max(_patternWaitMin, _patternWaitMax);
+        yield return new WaitForSeconds(UnityEngine.Random.Range(_patternWaitMin, maximum));
     }
 
     /// <summary>마지막 피격 기준 제한 시간 동안 플레이어 주변의 유효한 경로를 골라 배회한다.</summary>
@@ -362,6 +391,7 @@ public sealed class BossController : MonoBehaviour
         if (!_health.IsAlive) return;
         switch (_state)
         {
+            case BossState.Idle: _resumeState = _nextPattern; break;
             case BossState.Roaming: _resumeState = BossState.Charging; break;
             case BossState.Charging: _resumeState = BossState.ChainCharge; break;
             case BossState.ChainCharge: _resumeState = BossState.Duel; break;
@@ -390,7 +420,7 @@ public sealed class BossController : MonoBehaviour
         _routine = StartCoroutine(RecoverFromHit());
     }
 
-    /// <summary>피격 후 숨는 시간이 지나면 위치·피해 수신을 복구하고 중단했던 패턴부터 재개한다.</summary>
+    /// <summary>피격 후 숨는 시간이 지나면 위치·피해 수신을 복구하고 예약된 다음 패턴부터 재개한다.</summary>
     private IEnumerator RecoverFromHit()
     {
         yield return new WaitForSeconds(_hitRecoveryDuration);
