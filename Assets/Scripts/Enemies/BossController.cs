@@ -52,6 +52,12 @@ public sealed class BossController : MonoBehaviour
     private readonly Collider[] _chargeContacts = new Collider[16];
 
     public event Action ChargePreparing;
+    public event Action Teleported;
+
+    [Header("연속 돌진")]
+    [SerializeField, Min(1f)] private float _teleportRadius = 6f;
+    [SerializeField, Min(0.1f)] private float _chargeInterval = 0.7f;
+    private readonly Collider[] _placementContacts = new Collider[16];
 
     public BossState State => _state;
     public event Action<BossState> StateChanged;
@@ -118,6 +124,7 @@ public sealed class BossController : MonoBehaviour
             yield return Roam();
             ChangeState(BossState.Charging);
             yield return Charge();
+            yield return ChainCharge();
         }
         _routine = null;
     }
@@ -200,6 +207,49 @@ public sealed class BossController : MonoBehaviour
         bool found = NavMesh.SamplePosition(desired, out NavMeshHit hit, 0.5f, filter);
         position = hit.position;
         return found;
+    }
+
+    /// <summary>주변 유효 위치로 순간이동하고 각 위치에서 준비·돌진을 총 세 번 반복한다.</summary>
+    private IEnumerator ChainCharge()
+    {
+        ChangeState(BossState.ChainCharge);
+        for (int i = 0; i < 3; i++)
+        {
+            if (!TryTeleportAround()) yield break;
+            yield return Charge();
+            yield return new WaitForSeconds(_chargeInterval);
+        }
+    }
+
+    /// <summary>플레이어 주변 랜덤 후보 중 유효한 지면과 빈 공간을 골라 순간이동하며 실패하면 false를 반환한다.</summary>
+    private bool TryTeleportAround()
+    {
+        for (int attempt = 0; attempt < 12; attempt++)
+        {
+            float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            Vector3 offset = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * _teleportRadius;
+            if (!TrySamplePosition(_player.transform.position + offset, out Vector3 position)) continue;
+            if (!TryPlace(position)) continue;
+            return true;
+        }
+        _motor.Stop();
+        return false;
+    }
+
+    /// <summary>position의 공간이 비어 있을 때 에이전트를 이동시키고 걸음 초기화를 알린다.</summary>
+    private bool TryPlace(Vector3 position)
+    {
+        float radius = _agent.radius;
+        int count = Physics.OverlapCapsuleNonAlloc(position + Vector3.up * (radius + 0.05f),
+            position + Vector3.up * (_agent.height - radius), radius, _placementContacts,
+            _obstacleMask, QueryTriggerInteraction.Ignore);
+        if (count == _placementContacts.Length) return false;
+        for (int i = 0; i < count; i++)
+            if (!_placementContacts[i].transform.IsChildOf(transform)) return false;
+        _motor.Stop();
+        if (!_agent.Warp(position)) return false;
+        Teleported?.Invoke();
+        return true;
     }
 
     /// <summary>context의 보스 피격을 받는다. 기본 피해 적용에 추가 스턴을 부여하지 않는다.</summary>

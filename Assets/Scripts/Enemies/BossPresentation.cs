@@ -31,6 +31,7 @@ public sealed class BossPresentation : MonoBehaviour
     {
         _boss.StateChanged += HandleState;
         _boss.ChargePreparing += HandleChargePreparing;
+        _boss.Teleported += ResetSteps;
         ResetSteps();
         HandleState(_boss.State);
     }
@@ -39,6 +40,7 @@ public sealed class BossPresentation : MonoBehaviour
     {
         _boss.StateChanged -= HandleState;
         _boss.ChargePreparing -= HandleChargePreparing;
+        _boss.Teleported -= ResetSteps;
         if (Managers.IsInitialized) Managers.Sound.StopFor(gameObject, _chargeCry);
     }
 
