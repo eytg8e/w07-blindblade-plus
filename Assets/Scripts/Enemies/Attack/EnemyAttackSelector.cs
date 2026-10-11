@@ -15,12 +15,14 @@ public sealed class EnemyAttackSelector : MonoBehaviour
     public EnemyAttackBehaviour CurrentAttack => _currentAttack;
     public bool IsBusy => _currentAttack != null && _currentAttack.IsBusy;
     public bool IsStaggered => Time.time < _staggerUntil;
+    public float StaggerRemaining => Mathf.Max(0f, _staggerUntil - Time.time);
     public bool MeleeOnly => _meleeOnly;
 
     void OnDisable()
     {
         CancelCurrentAttack();
         _lastSelectedIndex = -1;
+        _staggerUntil = 0f;
     }
 
     /// <summary>

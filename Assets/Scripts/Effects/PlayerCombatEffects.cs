@@ -16,6 +16,10 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     [SerializeField] private SwordEffectEmitter _physicalContacts;
     [SerializeField] private KatanaCombatCoordinator _katana;
 
+    [Header("적중 반동")]
+    [SerializeField, Min(0f)] private float _hitRecoilStrength = 0.25f;
+    private PlayerMotor _motor;
+
     private EffectManager _effects;
     private int _actionId;
     private int _lastContactAction = -1;
@@ -28,6 +32,8 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     {
         EnemyCombatService playerContacts = _player.GetComponent<EnemyCombatService>();
         if (playerContacts != null) _contacts = playerContacts;
+        _motor = _player.GetComponent<PlayerMotor>();
+        if (_contacts != null) _contacts.AttackContactResolved += HandleHitFeedback;
         _player.ActionEvent += HandleAction;
         if (_contacts != null && _physicalContacts == null)
             _contacts.AttackContactResolved += HandleContact;
@@ -46,6 +52,7 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     void OnDisable()
     {
         _player.ActionEvent -= HandleAction;
+        if (_contacts != null) _contacts.AttackContactResolved -= HandleHitFeedback;
         if (_contacts != null && _physicalContacts == null)
             _contacts.AttackContactResolved -= HandleContact;
         _katana.DefenseSucceeded -= HandleDefense;
@@ -95,6 +102,13 @@ public sealed class PlayerCombatEffects : MonoBehaviour
             EndContactDetection();
         else if (action.Stage == PlayerActionStage.StateChanged && action.State == PlayerActionState.Dead)
             CancelContactDetection();
+    }
+
+    /// <summary>request의 적 피해 확정에만 동일한 시각 반동을 한 번 적용한다. 물리 접촉 이펙트와 피해·논리 조준은 변경하지 않는다.</summary>
+    private void HandleHitFeedback(PlayerAttackRequest request, Collider collider, Vector3 point, bool enemyDamaged)
+    {
+        if (!enemyDamaged || request.ActionId != _player.CurrentActionId) return;
+        _motor.AddCombatRecoil(request.Direction, _hitRecoilStrength);
     }
 
     /// <summary>

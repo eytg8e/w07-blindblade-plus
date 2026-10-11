@@ -408,7 +408,10 @@ MonoBehaviour:
   _dieOnAnyHit: 0
   _hitCollider: {fileID: 8865722896377662893}
   _cancelAttackOnHit: 1
-  _hitRecovery: 0.12
+  _hitRecovery: 0.16
+  _hitInterruptCooldown: 0.45
+  _hitPushDistance: 0.12
+  _hitPushDuration: 0.12
 --- !u!114 &8458242495988066737
 MonoBehaviour:
   m_ObjectHideFlags: 0

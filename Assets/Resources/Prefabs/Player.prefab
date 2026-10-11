@@ -406,7 +406,7 @@ MonoBehaviour:
   _player: {fileID: 6616511219798166873}
   _normalSheatheDelay: 0.8
   _comboBufferWindow: 0.2
-  _comboFollowThrough: 0.06
+  _comboFollowThrough: 0.12
   _comboResetDelay: 0.65
   _parryWindow: 0.18
   _blockInputRecovery: 0.18
@@ -518,6 +518,7 @@ MonoBehaviour:
   _contacts: {fileID: 0}
   _physicalContacts: {fileID: 3796482945788141926}
   _katana: {fileID: 5663976393034796336}
+  _hitRecoilStrength: 0.25
 --- !u!114 &1080894898460965423
 MonoBehaviour:
   m_ObjectHideFlags: 0
