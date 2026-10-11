@@ -29,21 +29,14 @@ public sealed class BossController : MonoBehaviour
     private bool _playerHit;
     private BossState _state;
     private bool _started;
-    [SerializeField, Min(0f), Tooltip("피격으로 행동을 취소한 뒤 사라지는 시간(초)")]
+    [SerializeField, Min(0f), Tooltip("피격 후 다음 패턴으로 넘어가기 전 회복 시간(초)")]
     private float _hitRecoveryDuration = 0.5f;
-    [SerializeField, Tooltip("피격 후 잠시 숨을 전투 공간 밖의 월드 위치")]
-    private Vector3 _disappearPosition = new Vector3(0f, -100f, 0f);
-    private Collider[] _bodyColliders;
-    private bool[] _colliderEnabled;
-    private Vector3 _returnPosition;
-    private bool _hidden;
-    private bool _hiddenUpdatePosition;
     private BossState _resumeState;
     [Header("패턴 사이 대기")]
     [SerializeField, Min(0f), Tooltip("패턴 사이 최소 대기 시간(초)")]
-    private float _patternWaitMin = 3f;
+    private float _patternWaitMin = 1f;
     [SerializeField, Min(0f), Tooltip("패턴 사이 최대 대기 시간(초)")]
-    private float _patternWaitMax = 5f;
+    private float _patternWaitMax = 2f;
     private BossState _nextPattern = BossState.Roaming;
 
     [Header("배회")]
@@ -70,6 +63,12 @@ public sealed class BossController : MonoBehaviour
 
     public event Action ChargePreparing;
     public event Action Teleported;
+
+    [Header("빠른 재배치")]
+    [SerializeField, Min(0.1f), Tooltip("패턴 위치로 이동하는 속도(미터/초)")]
+    private float _repositionSpeed = 25f;
+    private bool _repositionReached;
+    public bool IsRepositioning { get; private set; }
 
     [Header("연속 돌진")]
     [SerializeField, Min(1f)] private float _teleportRadius = 6f;
@@ -99,8 +98,6 @@ public sealed class BossController : MonoBehaviour
         _sensor = GetComponent<EnemySensor>();
         _agent = GetComponent<NavMeshAgent>();
         _path = new NavMeshPath();
-        _bodyColliders = GetComponentsInChildren<Collider>(true);
-        _colliderEnabled = new bool[_bodyColliders.Length];
     }
 
     void Start()
@@ -163,10 +160,11 @@ public sealed class BossController : MonoBehaviour
             if (startingState == BossState.Roaming || startingState == BossState.Charging)
             {
                 yield return WaitForPattern(BossState.Charging);
-                if (TryTeleportAround())
+                if (TryTeleportAround(out Vector3 position))
                 {
                     ChangeState(BossState.Charging);
-                    yield return Charge();
+                    yield return MoveQuickly(position);
+                    if (_repositionReached) yield return Charge();
                 }
             }
             if (startingState != BossState.Duel)
@@ -186,7 +184,7 @@ public sealed class BossController : MonoBehaviour
     {
         _nextPattern = nextPattern;
         _motor.Stop();
-        if (!_hidden) ChangeState(BossState.Idle);
+        ChangeState(BossState.Idle);
         float maximum = Mathf.Max(_patternWaitMin, _patternWaitMax);
         yield return new WaitForSeconds(UnityEngine.Random.Range(_patternWaitMin, maximum));
         RestoreAfterDisappearance();
@@ -273,21 +271,24 @@ public sealed class BossController : MonoBehaviour
         return found;
     }
 
-    /// <summary>주변 유효 위치로 순간이동하고 각 위치에서 준비·돌진을 총 세 번 반복한다.</summary>
+    /// <summary>주변 유효 위치로 빠르게 이동하고 각 위치에서 준비·돌진을 총 세 번 반복한다.</summary>
     private IEnumerator ChainCharge()
     {
         for (int i = 0; i < 3; i++)
         {
-            if (!TryTeleportAround()) yield break;
+            if (!TryTeleportAround(out Vector3 position)) yield break;
             ChangeState(BossState.ChainCharge);
+            yield return MoveQuickly(position);
+            if (!_repositionReached) yield break;
             yield return Charge();
             yield return new WaitForSeconds(_chargeInterval);
         }
     }
 
-    /// <summary>플레이어 전방 부채꼴의 랜덤 후보 중 유효한 지면과 빈 공간으로 순간이동하며 실패하면 false를 반환한다.</summary>
-    private bool TryTeleportAround()
+    /// <summary>플레이어 전방 부채꼴의 랜덤 후보 중 이동 가능한 빈 지면을 destination으로 반환한다.</summary>
+    private bool TryTeleportAround(out Vector3 destination)
     {
+        destination = transform.position;
         Vector3 forward = _playerMotor.ViewForward;
         for (int attempt = 0; attempt < 12; attempt++)
         {
@@ -295,14 +296,16 @@ public sealed class BossController : MonoBehaviour
             Vector3 offset = Quaternion.Euler(0f, angle, 0f) * forward * _teleportRadius;
             if (!TrySamplePosition(_player.transform.position + offset, out Vector3 position)) continue;
             if (Vector3.Dot(position - _player.transform.position, forward) < 0f) continue;
-            if (!TryPlace(position)) continue;
+            if (!TryPlace(position) || !_agent.CalculatePath(position, _path)
+                || _path.status != NavMeshPathStatus.PathComplete) continue;
+            destination = position;
             return true;
         }
         _motor.Stop();
         return false;
     }
 
-    /// <summary>position의 공간이 비어 있을 때 에이전트를 이동시키고 걸음 초기화를 알린다.</summary>
+    /// <summary>position의 공간이 비어 있으면 true를 반환하며 현재 위치는 변경하지 않는다.</summary>
     private bool TryPlace(Vector3 position)
     {
         float radius = _agent.radius;
@@ -312,15 +315,52 @@ public sealed class BossController : MonoBehaviour
         if (count == _placementContacts.Length) return false;
         for (int i = 0; i < count; i++)
             if (!_placementContacts[i].transform.IsChildOf(transform)) return false;
-        _motor.Stop();
-        if (!_agent.Warp(position)) return false;
-        Teleported?.Invoke();
         return true;
+    }
+
+    /// <summary>destination까지 NavMesh 경로를 따라 빠르게 이동하고 도착 여부와 재배치 상태를 갱신한다.</summary>
+    private IEnumerator MoveQuickly(Vector3 destination)
+    {
+        _repositionReached = false;
+        _motor.Stop();
+        if (!_agent.CalculatePath(destination, _path) || _path.status != NavMeshPathStatus.PathComplete)
+            yield break;
+        Vector3[] corners = _path.corners;
+        IsRepositioning = true;
+        try
+        {
+            for (int i = 1; i < corners.Length; i++)
+            {
+                while (Vector3.Distance(transform.position, corners[i]) > 0.05f)
+                {
+                    Vector3 previous = transform.position;
+                    Vector3 next = Vector3.MoveTowards(previous, corners[i], _repositionSpeed * Time.deltaTime);
+                    _agent.Move(next - previous);
+                    Vector3 direction = Vector3.ProjectOnPlane(next - previous, Vector3.up);
+                    if (direction.sqrMagnitude > 0.000001f)
+                        transform.rotation = Quaternion.LookRotation(direction);
+                    if (Time.deltaTime > 0f && (transform.position - previous).sqrMagnitude < 0.000001f)
+                        yield break;
+                    yield return null;
+                }
+            }
+            _repositionReached = Vector3.Distance(transform.position, destination) <= 0.1f;
+        }
+        finally
+        {
+            IsRepositioning = false;
+            _motor.Stop();
+        }
     }
 
     /// <summary>정면 준비 뒤 칼날 공격을 세 번 실행하고 유효타는 중단하며 세 번의 패링만 스턴으로 보상한다.</summary>
     private IEnumerator Duel()
     {
+        ChangeState(BossState.Duel);
+        if (!TrySamplePosition(_player.transform.position + _playerMotor.ViewForward * _duelDistance,
+            out Vector3 position)) yield break;
+        yield return MoveQuickly(position);
+        if (!_repositionReached) yield break;
         _motor.Stop();
         _duelNavigationPosition = _agent.nextPosition;
         _previousUpdatePosition = _agent.updatePosition;
@@ -364,7 +404,8 @@ public sealed class BossController : MonoBehaviour
     private void PlaceInFront()
     {
         Vector3 forward = _playerMotor.ViewForward;
-        transform.SetPositionAndRotation(_player.transform.position + forward * _duelDistance,
+        transform.SetPositionAndRotation(Vector3.MoveTowards(transform.position,
+            _player.transform.position + forward * _duelDistance, _repositionSpeed * Time.deltaTime),
             Quaternion.LookRotation(-forward));
     }
 
@@ -386,7 +427,7 @@ public sealed class BossController : MonoBehaviour
         Teleported?.Invoke();
     }
 
-    /// <summary>context의 실제 피격 시 현재 행동을 취소하고 공격할 수 없는 위치로 잠시 이동한다.</summary>
+    /// <summary>context의 실제 피격 시 행동을 취소하고 외형을 유지한 채 무적으로 다음 패턴을 준비한다.</summary>
     private void HandleBossDamaged(DamageContext context)
     {
         if (!_health.IsAlive) return;
@@ -406,40 +447,25 @@ public sealed class BossController : MonoBehaviour
         _strike = 0;
         _strikeResolved = false;
         _parriedStrikes = 0;
-        ChangeState(BossState.Disappeared);
-        _returnPosition = transform.position;
-        _hiddenUpdatePosition = _agent.updatePosition;
-        _agent.updatePosition = false;
-        _hidden = true;
+        IsRepositioning = false;
+        ChangeState(BossState.Idle);
         _health.SetInvulnerable(true);
-        for (int i = 0; i < _bodyColliders.Length; i++)
-        {
-            _colliderEnabled[i] = _bodyColliders[i].enabled;
-            _bodyColliders[i].enabled = false;
-        }
-        transform.position = _disappearPosition;
         _routine = StartCoroutine(RecoverFromHit());
     }
 
-    /// <summary>피격 후 숨는 시간이 지나면 위치·피해 수신을 복구하고 예약된 다음 패턴부터 재개한다.</summary>
+    /// <summary>피격 후 빠르게 재배치하고 회복 시간이 지나면 예약된 다음 패턴부터 재개한다.</summary>
     private IEnumerator RecoverFromHit()
     {
+        if (TryTeleportAround(out Vector3 position)) yield return MoveQuickly(position);
         yield return new WaitForSeconds(_hitRecoveryDuration);
         if (_health.IsAlive && _playerHealth.IsAlive) yield return RunBattle(_resumeState);
         _routine = null;
     }
 
-    /// <summary>숨기 전 위치·에이전트·충돌체와 피해 수신을 복구한다. 종료 시에도 숨김 상태를 남기지 않는다.</summary>
+    /// <summary>패턴 대기 종료 또는 전투 중단 시 피격 후 무적을 해제한다. 위치와 외형은 유지한다.</summary>
     private void RestoreAfterDisappearance()
     {
-        if (!_hidden) return;
-        _hidden = false;
-        transform.position = _returnPosition;
-        _agent.updatePosition = _hiddenUpdatePosition;
-        if (_agent.isActiveAndEnabled) _agent.Warp(_returnPosition);
-        for (int i = 0; i < _bodyColliders.Length; i++) _bodyColliders[i].enabled = _colliderEnabled[i];
         _health.SetInvulnerable(false);
-        Teleported?.Invoke();
     }
 
     /// <summary>context가 현재 보스 3연격의 피해이면 남은 공격을 중단하도록 적중을 기록한다.</summary>
@@ -483,6 +509,7 @@ public sealed class BossController : MonoBehaviour
     {
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
+        IsRepositioning = false;
         RestoreAfterDisappearance();
         RestoreNavigation();
         if (_melee != null) _melee.CancelAttack();

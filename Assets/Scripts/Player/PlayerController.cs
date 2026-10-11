@@ -620,8 +620,6 @@ public sealed class PlayerController : MonoBehaviour
             Publish(PlayerActionStage.HitConfirmed, _currentAttackOutcome, resolution.HitTargetId);
             if (resolution.DeathConfirmed)
                 Publish(PlayerActionStage.DeathConfirmed, _currentAttackOutcome, resolution.HitTargetId);
-            else if (_state == PlayerActionState.IaidoSlash)
-                Debug.LogError("Enemy combat service confirmed an iaido hit without confirming the required death.", this);
         }
         else
         {

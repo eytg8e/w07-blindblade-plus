@@ -610,7 +610,7 @@ MonoBehaviour:
     m_Bits: 4294967295
   _obstacleMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 51
   _swingDuration: 0.24
   _startAngle: -70
   _endAngle: 70
@@ -678,6 +678,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _damageSound: 4
   _volume: 0.8
+  _pitch: 1
 --- !u!1001 &3546448622811517368
 PrefabInstance:
   m_ObjectHideFlags: 0

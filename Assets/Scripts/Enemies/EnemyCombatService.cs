@@ -10,6 +10,8 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
     [Header("플레이어 공격 판정")]
     [SerializeField] private Transform _playerRoot;
     [SerializeField, Min(0f)] private float _normalDamage = 10f;
+    [SerializeField, Tooltip("켜면 발도 베기가 남은 체력 전체를 피해로 적용합니다. 끄면 일반 공격 피해량을 적용합니다.")]
+    private bool _iaidoInstantKill = true;
     [SerializeField, Min(0.01f)] private float _hitRadius = 0.2f;
     [SerializeField] private LayerMask _attackMask = ~0;
     [SerializeField, Tooltip("칼날 길이 대신 시점 방향으로 거리 제한 없이 공격 판정합니다. 벽에 막히는 규칙은 유지합니다.")]
@@ -116,7 +118,7 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
 
     /// <summary>
     /// request의 원점·방향·사거리로 가장 가까운 적 또는 장애물을 검사하여 피해·사망 결과를 반환한다.
-    /// IaidoFinisher는 대상의 남은 체력을 모두 피해로 적용하며 일반 공격은 설정 피해를 적용한다.
+    /// 즉사 설정이 켜진 일반 적의 IaidoFinisher는 남은 체력 전체를, 보스와 그 외 공격은 설정 피해를 적용한다.
     /// 같은 ActionId는 중복 적용하지 않는다.
     /// 새 판정의 접촉체·위치·적 피해 여부는 AttackContactResolved로 구독자에게 알린다.
     /// </summary>
@@ -142,7 +144,8 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
                 (string.IsNullOrEmpty(request.PreferredTargetId) || request.PreferredTargetId == health.TargetId))
             {
                 string id = health.TargetId;
-                float damage = request.Kind == PlayerAttackKind.IaidoFinisher
+                float damage = _iaidoInstantKill && request.Kind == PlayerAttackKind.IaidoFinisher
+                    && health.GetComponent<BossController>() == null
                     ? health.CurrentHealth
                     : _normalDamage;
                 health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
@@ -342,7 +345,8 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         string id = hit ? health.TargetId : null;
         if (hit)
         {
-            float damage = request.Kind == PlayerAttackKind.IaidoFinisher
+            float damage = _iaidoInstantKill && request.Kind == PlayerAttackKind.IaidoFinisher
+                && health.GetComponent<BossController>() == null
                 ? health.CurrentHealth
                 : _normalDamage;
             health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));

@@ -278,6 +278,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _melee: {fileID: 4283722663164136279}
+  _patternWaitMin: 1
+  _patternWaitMax: 2
   _roamDuration: 7
   _roamRadius: 7
   _roamDestinationInterval: 2.5
@@ -316,13 +318,13 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   _footstepSound: 7
-  _chargeCry: 13
+  _chargeCry: 18
   _chargeCryPitch: 0.85
   _melee: {fileID: 4283722663164136279}
-  _duelCry: 14
+  _duelCry: 19
   _duelCryPitch: 1.25
   _strikeCue: 9
-  _stunCry: 15
+  _stunCry: 20
   _stunCryPitch: 0.55
 --- !u!1 &3117573445288783337
 GameObject:
@@ -373,7 +375,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3117573445288783337}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -389,7 +391,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 26c52be4ee8fc4df998bba95d4d2f229, type: 2}
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -418,9 +420,9 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3117573445288783337}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: db16b22a0bc65e848923ce4a72f46787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _ignorePerception: 1
+  _ignorePerception: 0

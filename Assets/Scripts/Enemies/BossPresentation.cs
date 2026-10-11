@@ -19,6 +19,12 @@ public sealed class BossPresentation : MonoBehaviour
     private bool _debugOverlayWasEnabled;
     private Coroutine _overlayRoutine;
 
+    [Header("보스전 소리 인지")]
+    [SerializeField, Min(0f), Tooltip("소리 주변 배경을 공개하는 반경(미터)")]
+    private float _soundRevealRadius = 2f;
+    private SensoryPerceptionMask _perceptionMask;
+    private float _previousSoundRadius;
+
     [Header("보행")]
     [SerializeField, Min(0.1f), Tooltip("걸음 사이 이동 거리(미터)")]
     private float _stepDistance = 0.8f;
@@ -44,6 +50,19 @@ public sealed class BossPresentation : MonoBehaviour
         _boss = GetComponent<BossController>();
     }
 
+    void Start()
+    {
+        ApplySoundRadius();
+    }
+
+    /// <summary>보스전의 소리 인지 반경을 적용하고 씬 종료 시 복원할 이전 값을 저장한다.</summary>
+    private void ApplySoundRadius()
+    {
+        if (_perceptionMask != null || !Game.IsInitialized) return;
+        _perceptionMask = Game.Instance.SensoryManager.GetComponent<SensoryPerceptionMask>();
+        _previousSoundRadius = _perceptionMask.SetSoundRadius(_soundRevealRadius);
+    }
+
     void OnEnable()
     {
         _boss.StateChanged += HandleState;
@@ -57,6 +76,8 @@ public sealed class BossPresentation : MonoBehaviour
 
     void OnDisable()
     {
+        if (_perceptionMask != null) _perceptionMask.SetSoundRadius(_previousSoundRadius);
+        _perceptionMask = null;
         if (_overlayRoutine != null) StopCoroutine(_overlayRoutine);
         _overlayRoutine = null;
         _boss.StateChanged -= HandleState;
@@ -79,9 +100,10 @@ public sealed class BossPresentation : MonoBehaviour
 
     void LateUpdate()
     {
+        ApplySoundRadius();
         Vector3 movement = Vector3.ProjectOnPlane(transform.position - _previousPosition, Vector3.up);
         _previousPosition = transform.position;
-        bool walking = _boss.State == BossState.Roaming || IsChargeState() || _boss.State == BossState.Duel;
+        bool walking = _boss.IsRepositioning || _boss.State == BossState.Roaming || IsChargeState() || _boss.State == BossState.Duel;
         if (!walking || movement.sqrMagnitude < 0.000001f) return;
         _stepDistanceAccumulated += movement.magnitude;
         if (_stepDistanceAccumulated < _stepDistance) return;
@@ -102,10 +124,11 @@ public sealed class BossPresentation : MonoBehaviour
             Game.Instance.SensoryManager.EmitFootstep(new SensoryEvent(hit.point, hit.normal, direction), _leftStep, true);
     }
 
-    /// <summary>모든 state에서 보스 외형을 숨기고 걸음 누적과 상태별 소리를 갱신한다.</summary>
+    /// <summary>퇴장·사망 외의 state에서 보스 외형을 활성화하고 걸음 누적과 상태별 소리를 갱신한다.</summary>
     private void HandleState(BossState state)
     {
-        foreach (Renderer body in _bodyRenderers) body.enabled = false;
+        foreach (Renderer body in _bodyRenderers)
+            body.enabled = state != BossState.Disappeared && state != BossState.Dead;
         ResetSteps();
         if (Managers.IsInitialized)
         {
