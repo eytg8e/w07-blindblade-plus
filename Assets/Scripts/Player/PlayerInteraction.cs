@@ -16,17 +16,12 @@ public sealed class PlayerInteraction : MonoBehaviour
         _player = GetComponent<PlayerController>();
     }
 
-    void Start()
-    {
-        _promptUI = Game.Instance.UIManager.Get<OpenDoorPromptUI>();
-    }
-
     void Update()
     {
         if (_player.IsPaused ||
             _player.CurrentState == PlayerActionState.Dead)
         {
-            _promptUI.HideFor(this);
+            HidePrompt();
             return;
         }
 
@@ -34,12 +29,16 @@ public sealed class PlayerInteraction : MonoBehaviour
 
         if (target == null)
         {
-            _promptUI.HideFor(this);
+            HidePrompt();
             return;
         }
 
-        _promptUI.ShowFor(
-            this, target.CanInteract, target.InteractionPrompt);
+        if (_promptUI == null)
+            _promptUI = Game.Instance.UIManager.Get<OpenDoorPromptUI>();
+
+        if (_promptUI != null)
+            _promptUI.ShowFor(
+                this, target.CanInteract, target.InteractionPrompt);
 
         if (target.CanInteract &&
             Keyboard.current != null &&
@@ -50,6 +49,13 @@ public sealed class PlayerInteraction : MonoBehaviour
     }
 
     void OnDisable()
+    {
+        HidePrompt();
+        _promptUI = null;
+    }
+
+    /// <summary>Hides this player's cached prompt when its UI object still exists; never creates UI while hiding.</summary>
+    private void HidePrompt()
     {
         if (_promptUI != null)
             _promptUI.HideFor(this);
