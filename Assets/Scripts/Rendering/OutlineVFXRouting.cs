@@ -9,8 +9,10 @@ internal sealed class OutlineVFXRouting
 {
     internal const uint SELECTED_MASK = 1u << 31;
     internal const uint ALWAYS_VISIBLE_MASK = 1u << 30;
+    internal const uint OVERLAY_MASK = 1u << 29;
     private readonly HashSet<Renderer> _selected = new HashSet<Renderer>();
     private readonly HashSet<Renderer> _alwaysVisible = new HashSet<Renderer>();
+    private readonly HashSet<Renderer> _overlay = new HashSet<Renderer>();
     private readonly Dictionary<Renderer, Route> _cache = new Dictionary<Renderer, Route>();
     private readonly List<Route> _changed = new List<Route>();
     private readonly List<Renderer> _removed = new List<Renderer>();
@@ -31,7 +33,7 @@ internal sealed class OutlineVFXRouting
     public void Prepare()
     {
         Restore();
-        OutlineVFX.Collect(_selected, _alwaysVisible);
+        OutlineVFX.Collect(_selected, _alwaysVisible, _overlay);
         foreach (Renderer renderer in _selected)
             Apply(renderer, true);
         foreach (ParticleSystemRenderer renderer in Object.FindObjectsByType<ParticleSystemRenderer>(FindObjectsSortMode.None))
@@ -58,7 +60,7 @@ internal sealed class OutlineVFXRouting
 
     /// <summary>
     /// renderer의 머티리얼과 마스크를 기억하고 selected 여부에 맞춰 임시 표시한다.
-    /// 투명 셰이더의 합성 설정은 유지하며 큐만 윤곽선 처리 이전으로 옮긴다.
+    /// 큐를 윤곽선 이전으로 옮기고 차폐 예외 렌더러만 깊이 검사·기록과 배경 의존 색상을 바꾼다.
     /// </summary>
     private void Apply(Renderer renderer, bool selected)
     {
@@ -92,6 +94,13 @@ internal sealed class OutlineVFXRouting
                 route.Copies[i].CopyPropertiesFromMaterial(original);
                 route.Copies[i].renderQueue = selected ? 2500
                     : (original.renderQueue <= 2500 ? 3000 : original.renderQueue);
+                if (selected && _overlay.Contains(renderer))
+                {
+                    route.Copies[i].SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
+                    route.Copies[i].SetFloat("_ZWrite", 0f);
+                    if (route.Copies[i].HasProperty("_Emission"))
+                        route.Copies[i].SetFloat("_Emission", 1f);
+                }
                 if (selected && original.renderQueue > 2500)
                 {
                     // 원래 투명 재질은 불투명 깊이·노멀 프리패스에서 제외한다.
@@ -103,7 +112,9 @@ internal sealed class OutlineVFXRouting
             renderer.sharedMaterials = route.Copies;
         }
         renderer.renderingLayerMask = selected ? route.Mask | SELECTED_MASK : route.Mask;
-        if (selected && _alwaysVisible.Contains(renderer))
+        if (selected && _overlay.Contains(renderer))
+            renderer.renderingLayerMask = (route.Mask & ~(SELECTED_MASK | ALWAYS_VISIBLE_MASK)) | OVERLAY_MASK;
+        else if (selected && _alwaysVisible.Contains(renderer))
             renderer.renderingLayerMask |= ALWAYS_VISIBLE_MASK;
         _changed.Add(route);
     }
