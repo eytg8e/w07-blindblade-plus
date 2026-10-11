@@ -24,8 +24,8 @@ public sealed class EnemySoundSettings : ScriptableObject
     private static bool _loaded;
 
     [Header("근접 공격")]
-    [SerializeField] private SoundId _meleeTelegraph = SoundId.Footstep;
-    [SerializeField] private SoundId _meleeAction = SoundId.Footstep;
+    [SerializeField] private SoundId _meleeTelegraph = SoundId.EnemyAttackPrepare;
+    [SerializeField] private SoundId _meleeAction = SoundId.EnemySwordSwing;
 
     [Header("원거리 공격")]
     [SerializeField] private SoundId _rangedTelegraph = SoundId.Footstep;

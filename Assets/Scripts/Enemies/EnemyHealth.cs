@@ -12,10 +12,17 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
     [Header("적 체력")]
     [SerializeField, Min(1f)] private float _maxHealth = 30f;
     [SerializeField, Tooltip("켜면 양수 피해를 주는 유효한 공격 한 번에 사망합니다.")]
-    private bool _dieOnAnyHit = true;
+    private bool _dieOnAnyHit;
     [SerializeField] private Collider _hitCollider;
     [SerializeField] private bool _cancelAttackOnHit;
+    [Header("피격 반응")]
+    [SerializeField, Min(0f)] private float _hitRecovery = 0.16f;
+    [SerializeField, Min(0f)] private float _hitInterruptCooldown = 0.45f;
+    [SerializeField, Min(0f)] private float _hitPushDistance = 0.12f;
+    [SerializeField, Min(0.01f)] private float _hitPushDuration = 0.12f;
     private EnemyAttackSelector _attackSelector;
+    private EnemyMotor _motor;
+    private float _nextHitInterruptTime;
     private float _currentHealth;
 
     public float CurrentHealth => _currentHealth;
@@ -29,11 +36,13 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
     void Awake()
     {
         _attackSelector = GetComponent<EnemyAttackSelector>();
+        _motor = GetComponent<EnemyMotor>();
     }
 
     void OnEnable()
     {
         _currentHealth = _maxHealth;
+        _nextHitInterruptTime = 0f;
         _targets[TargetId] = this;
     }
 
@@ -52,8 +61,7 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
             return;
 
         _currentHealth = _dieOnAnyHit ? 0f : Mathf.Max(0f, _currentHealth - context.Amount);
-        if (_cancelAttackOnHit && _attackSelector != null)
-            _attackSelector.CancelCurrentAttack();
+        if (_currentHealth > 0f && _cancelAttackOnHit) ApplyHitReaction(context);
         Damaged?.Invoke(context);
         HealthChanged?.Invoke(_currentHealth, _maxHealth);
         if (_currentHealth <= 0f)
@@ -61,6 +69,20 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
             Died?.Invoke(this);
             gameObject.SetActive(false);
         }
+    }
+
+    /// <summary>context의 공격 방향으로 동일한 경직·밀림을 적용한다. 연속 중단을 제한하고 패링 회복 시간은 보존한다.</summary>
+    private void ApplyHitReaction(DamageContext context)
+    {
+        if (_attackSelector != null && !_attackSelector.IsStaggered && Time.time >= _nextHitInterruptTime)
+        {
+            _attackSelector.Stagger(_hitRecovery);
+            _nextHitInterruptTime = Time.time + _attackSelector.StaggerRemaining + _hitInterruptCooldown;
+        }
+        if (_motor == null) return;
+        Vector3 direction = context.Instigator != null
+            ? transform.position - context.Instigator.transform.position : context.Direction;
+        _motor.ApplyHitPush(direction, _hitPushDistance, _hitPushDuration);
     }
 
     /// <summary>

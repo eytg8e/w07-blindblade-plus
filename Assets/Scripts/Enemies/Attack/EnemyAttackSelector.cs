@@ -6,16 +6,23 @@ public sealed class EnemyAttackSelector : MonoBehaviour
     [Header("공격 패턴 목록")]
     [SerializeField, Tooltip("등록한 같은 루트의 공격만 사용합니다. 비어 있으면 공격하지 않습니다.")]
     private EnemyAttackBehaviour[] _patterns = new EnemyAttackBehaviour[0];
+    [Header("근접 프로토타입")]
+    [SerializeField] private bool _meleeOnly;
     private EnemyAttackBehaviour _currentAttack;
     private int _lastSelectedIndex = -1;
+    private float _staggerUntil;
 
     public EnemyAttackBehaviour CurrentAttack => _currentAttack;
     public bool IsBusy => _currentAttack != null && _currentAttack.IsBusy;
+    public bool IsStaggered => Time.time < _staggerUntil;
+    public float StaggerRemaining => Mathf.Max(0f, _staggerUntil - Time.time);
+    public bool MeleeOnly => _meleeOnly;
 
     void OnDisable()
     {
         CancelCurrentAttack();
         _lastSelectedIndex = -1;
+        _staggerUntil = 0f;
     }
 
     /// <summary>
@@ -26,7 +33,7 @@ public sealed class EnemyAttackSelector : MonoBehaviour
     {
         foreach (EnemyAttackBehaviour pattern in _patterns)
         {
-            if (pattern != null && pattern.gameObject == gameObject && pattern.CanAttack(target))
+            if (pattern != null && (!_meleeOnly || pattern is EnemyMeleeAttack) && pattern.gameObject == gameObject && pattern.CanAttack(target))
                 return true;
         }
 
@@ -39,7 +46,7 @@ public sealed class EnemyAttackSelector : MonoBehaviour
     /// </summary>
     public bool TryAttack(Transform target)
     {
-        if (!isActiveAndEnabled || IsBusy)
+        if (!isActiveAndEnabled || IsBusy || Time.time < _staggerUntil)
             return false;
 
         int selectedIndex = -1;
@@ -48,7 +55,7 @@ public sealed class EnemyAttackSelector : MonoBehaviour
         {
             int index = (_lastSelectedIndex + offset) % _patterns.Length;
             EnemyAttackBehaviour pattern = _patterns[index];
-            if (pattern == null || pattern.gameObject != gameObject || !pattern.IsAvailable ||
+            if (pattern == null || (_meleeOnly && !(pattern is EnemyMeleeAttack)) || pattern.gameObject != gameObject || !pattern.IsAvailable ||
                 !pattern.CanAttack(target) || (selectedIndex >= 0 && pattern.Priority <= highestPriority))
                 continue;
 
@@ -77,7 +84,7 @@ public sealed class EnemyAttackSelector : MonoBehaviour
         float? range = null;
         foreach (EnemyAttackBehaviour pattern in _patterns)
         {
-            if (pattern == null || pattern.gameObject != gameObject || !pattern.isActiveAndEnabled || distance <= pattern.Range)
+            if (pattern == null || (_meleeOnly && !(pattern is EnemyMeleeAttack)) || pattern.gameObject != gameObject || !pattern.isActiveAndEnabled || distance <= pattern.Range)
                 continue;
 
             if (!range.HasValue || pattern.Range > range.Value)
@@ -97,5 +104,13 @@ public sealed class EnemyAttackSelector : MonoBehaviour
         _currentAttack = null;
         if (attack != null)
             attack.CancelAttack();
+    }
+
+    /// <summary>duration 동안 새 공격을 제한하고 현재 공격을 취소한다. 피격 후 연속 공격을 잠시 중단한다.</summary>
+    public void Stagger(float duration)
+    {
+        float remaining = _currentAttack != null ? _currentAttack.RecoveryRemaining : 0f;
+        CancelCurrentAttack();
+        _staggerUntil = Mathf.Max(_staggerUntil, Time.time + Mathf.Max(duration, remaining));
     }
 }

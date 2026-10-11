@@ -10,6 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1006172695812582965}
   - component: {fileID: 4364763688821012378}
+  - component: {fileID: 775909485436668562}
+  - component: {fileID: 27634349527860858}
   m_Layer: 0
   m_Name: GameSceneInitializer
   m_TagString: Untagged
@@ -48,8 +50,31 @@ MonoBehaviour:
   _useTerrainMemory: 1
   _memoryMinimum: {x: -24, y: -6}
   _memorySize: {x: 48, y: 76}
-  _useCorridorRule: 1
   _showGameplayControls: 1
   _useSwordNoise: 1
   _swordHearingDistance: 40
   _swordAlertDuration: 15
+--- !u!114 &775909485436668562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5477092273469113479}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c40bfa05db8e4e44e9c987a2725f435a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &27634349527860858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5477092273469113479}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cecdde535af3fc5438d43bb2003c6eeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

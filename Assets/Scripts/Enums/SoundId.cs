@@ -8,4 +8,9 @@ public enum SoundId
     WarCry = 5,
     SwordUnsheath = 6,
     EnemyFootstep = 7,
+    EnemyAttackPrepare = 8,
+    EnemySwordSwing = 9,
+    SwordClash = 10,
+    ParryClash = 11,
+    PlayerDamaged = 12,
 }

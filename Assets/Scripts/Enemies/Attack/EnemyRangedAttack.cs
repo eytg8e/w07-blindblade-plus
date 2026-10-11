@@ -48,7 +48,7 @@ public class EnemyRangedAttack : EnemyAttackBehaviour
             if (direction.sqrMagnitude > 0f)
             {
                 EnemyProjectile projectile = CreateProjectile(origin, Quaternion.LookRotation(direction));
-                projectile.Initialize(new DamageContext(_damage, gameObject, origin, direction, context.PatternId), direction);
+                projectile.Initialize(new DamageContext(_damage, gameObject, origin, direction, context.PatternId), direction, context.Target);
             }
         }
 

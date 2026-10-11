@@ -15,12 +15,35 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     [SerializeField] private PlayerActionDriver _actionDriver;
     [SerializeField] private Animator _animator;
 
+    [Header("2·3타 애니메이션 교체")]
+    [SerializeField, InspectorName("2타 AnimationClip")]
+    [Tooltip("Normal1 상태의 클립을 교체합니다. Sword·Saya 경로가 현재 카타나 리그와 같아야 합니다.")]
+    private AnimationClip _secondAttackClip;
+    [SerializeField, InspectorName("3타 AnimationClip")]
+    [Tooltip("Normal2 상태의 일반 공격 클립을 교체합니다. 패링 반격은 원래 Normal2 클립을 유지합니다.")]
+    private AnimationClip _thirdAttackClip;
+    private RuntimeAnimatorController _baseAnimatorController;
+    private AnimatorOverrideController _attackController;
+    private readonly List<KeyValuePair<AnimationClip, AnimationClip>> _attackOverrides = new List<KeyValuePair<AnimationClip, AnimationClip>>();
+    private AnimationClip _secondSourceClip;
+    private AnimationClip _thirdSourceClip;
+    private AnimationClip _secondDefaultClip;
+    private AnimationClip _thirdDefaultClip;
+
     [Header("Presentation")]
     [SerializeField] private bool _showWeapon = true;
     [SerializeField, Min(0f)] private float _blendTime = 0.025f;
     [SerializeField, Range(0.01f, 0.99f)] private float _iaidoImpactProgress = 0.88461536f;
+    [SerializeField, Range(0.01f, 0.99f), InspectorName("2타 적중 진행도")] private float _normal1ImpactProgress = 0.75f;
+    [SerializeField, Range(0.01f, 0.99f), InspectorName("3타 적중 진행도")] private float _normal2ImpactProgress = 0.4f;
+    [SerializeField, Range(0.01f, 0.99f), InspectorName("반격 적중 진행도")] private float _counterImpactProgress = 0.4f;
     [SerializeField, Range(0.01f, 0.99f)] private float _drawnSheatheProgress = 0.2f;
     [SerializeField, Min(0.01f)] private float _minimumCancelSheatheDuration = 0.12f;
+
+    [Header("1타 발도와 연계 보간")]
+    [SerializeField, Range(0.01f, 0.99f)] private float _openingImpactProgress = 0.5f;
+    [SerializeField, Range(0.01f, 1f)] private float _openingEndProgress = 0.65f;
+    [SerializeField, Min(0f)] private float _comboBlendTime = 0.08f;
 
     private readonly Dictionary<string, float> _lengths = new Dictionary<string, float>();
     private readonly Dictionary<int, string> _stateNames = new Dictionary<int, string>();
@@ -30,6 +53,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     private float _impactTime;
     private float _impactProgress;
     private float _entryProgress;
+    private float _endProgress;
+    private bool _openingSheathing;
     private float _flash;
     private float _lastCharge;
     private int _actionId;
@@ -78,6 +103,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
             _lengths[clip.name] = clip.length;
             _stateNames[Animator.StringToHash(clip.name)] = clip.name;
         }
+        InitializeAttackClips();
         _animator.applyRootMotion = false;
         _animator.fireEvents = false;
         _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -106,6 +132,59 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         if (_combat != null) _combat.EventRaised -= HandleKatana;
     }
 
+    void OnDestroy()
+    {
+        if (_attackController == null) return;
+        if (_animator != null && _animator.runtimeAnimatorController == _attackController)
+            _animator.runtimeAnimatorController = _baseAnimatorController;
+        Destroy(_attackController);
+    }
+
+    /// <summary>
+    /// 연결된 Animator의 원본 Controller와 Normal1·Normal2 클립을 보관한다.
+    /// 플레이어 전용 Override Controller를 생성하여 공유 에셋 수정 없이 Inspector의 교체 클립을 적용한다.
+    /// </summary>
+    private void InitializeAttackClips()
+    {
+        _baseAnimatorController = _animator.runtimeAnimatorController;
+        _attackController = new AnimatorOverrideController(_baseAnimatorController);
+        _attackController.GetOverrides(_attackOverrides);
+        foreach (KeyValuePair<AnimationClip, AnimationClip> pair in _attackOverrides)
+        {
+            if (pair.Key.name == "Normal1")
+            {
+                _secondSourceClip = pair.Key;
+                _secondDefaultClip = pair.Value != null ? pair.Value : pair.Key;
+            }
+            else if (pair.Key.name == "Normal2")
+            {
+                _thirdSourceClip = pair.Key;
+                _thirdDefaultClip = pair.Value != null ? pair.Value : pair.Key;
+            }
+        }
+        _animator.runtimeAnimatorController = _attackController;
+        ApplyAttackClips(false);
+    }
+
+    /// <summary>
+    /// Inspector의 2·3타 클립을 해당 원본 클립에 대응시킨다.
+    /// counter이면 3타 교체 대신 원래 Normal2를 사용하며 빈 슬롯은 기존 클립으로 복원한다.
+    /// </summary>
+    private void ApplyAttackClips(bool counter)
+    {
+        for (int i = 0; i < _attackOverrides.Count; i++)
+        {
+            KeyValuePair<AnimationClip, AnimationClip> pair = _attackOverrides[i];
+            AnimationClip clip = pair.Value;
+            if (pair.Key == _secondSourceClip)
+                clip = _secondAttackClip != null ? _secondAttackClip : _secondDefaultClip;
+            else if (pair.Key == _thirdSourceClip)
+                clip = !counter && _thirdAttackClip != null ? _thirdAttackClip : _thirdDefaultClip;
+            _attackOverrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(pair.Key, clip);
+        }
+        _attackController.ApplyOverrides(_attackOverrides);
+    }
+
     void Update()
     {
         if (_wasVisible != _showWeapon)
@@ -118,7 +197,19 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         float dt = Time.deltaTime;
         _elapsed += dt;
         _flash = Mathf.Max(0f, _flash - dt * 5f);
-        if (_finishingInsertion)
+        if (_combat.Player.IsGuarding)
+        {
+            if (_motion == "GuardEnter" || _motion == "GuardDeflect")
+            {
+                _animator.SetFloat(ActionProgressId, Mathf.Clamp01(_elapsed / Mathf.Max(0.01f, _duration)));
+                if (_elapsed >= _duration) Play("GuardHold", _blendTime);
+            }
+            else _animator.SetFloat(ActionProgressId, 1f);
+        }
+        else if (_openingSheathing)
+            _animator.SetFloat(ActionProgressId, Mathf.Lerp(_entryProgress, 1f,
+                Mathf.Clamp01(_elapsed / _combat.SheatheDuration)));
+        else if (_finishingInsertion)
         {
             float progress = Mathf.SmoothStep(_insertionStart, _drawnSheatheProgress,
                 Mathf.Clamp01(_elapsed / _insertionDuration));
@@ -136,7 +227,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 ? _actionDriver.GetPresentationElapsed(_actionId) : _elapsed;
             float progress = elapsed < _impactTime
                 ? Mathf.Lerp(_entryProgress, _impactProgress, elapsed / Mathf.Max(0.001f, _impactTime))
-                : Mathf.Lerp(_impactProgress, 1f, (elapsed - _impactTime) / Mathf.Max(0.001f, _duration - _impactTime));
+                : Mathf.Lerp(_impactProgress, _endProgress, (elapsed - _impactTime) / Mathf.Max(0.001f, _duration - _impactTime));
             _animator.SetFloat(ActionProgressId, progress);
         }
         else if (_motion.StartsWith("Sheathe") && _motion != "SheathedHold")
@@ -172,32 +263,60 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         switch (e.Stage)
         {
             case KatanaStage.NormalStarted:
-                BeginStrike("IaidoDoubleSlash", e);
+                string normal = _combat.IsCounterAttack ? "Normal2"
+                    : e.Strike == 1 ? "IaidoDoubleSlash" : e.Strike == 2 ? "Normal1" : "Normal2";
+                BeginStrike(normal, e, PlayerAttackKind.Normal);
                 break;
             case KatanaStage.ParrySucceeded:
                 _flash = 1f;
-                if (_attack)
-                    _parry = true;
+                Play("GuardDeflect", _blendTime);
+                _duration = 0.16f;
+                break;
+            case KatanaStage.GuardStarted:
+                _attack = false;
+                _parry = false;
+                _finishingInsertion = false;
+                Play("GuardEnter", _blendTime);
+                _duration = 0.12f;
+                break;
+            case KatanaStage.GuardSucceeded:
+                _flash = 0.6f;
+                Play("GuardDeflect", _blendTime);
+                _duration = 0.16f;
+                break;
+            case KatanaStage.GuardEnded:
+                Play("GuardHold", _blendTime);
+                _animator.SetFloat(ActionProgressId, 1f);
                 break;
             case KatanaStage.ParryMotionEnded:
             case KatanaStage.DrawnWaiting:
                 _attack = false;
-                _animator.SetFloat(ActionProgressId, 1f);
+                _animator.SetFloat(ActionProgressId, _motion == "IaidoDoubleSlash" ? _endProgress : 1f);
                 break;
             case KatanaStage.StrikeEnded:
                 if (!_parry)
                 {
                     _attack = false;
-                    _animator.SetFloat(ActionProgressId, 1f);
+                    _animator.SetFloat(ActionProgressId, _endProgress);
                 }
                 break;
             case KatanaStage.SheatheStarted:
+                if (_motion == "IaidoDoubleSlash" && _endProgress < 1f)
+                {
+                    float start = _animator.GetFloat(ActionProgressId);
+                    Play("IaidoDoubleSlash", _blendTime);
+                    _entryProgress = start;
+                    _elapsed = 0f;
+                    _openingSheathing = true;
+                    _animator.SetFloat(ActionProgressId, start);
+                    break;
+                }
                 string sheath = _motion == "IaidoDoubleSlash" ? "SheatheIaido" : _motion == "Normal2" ? "Sheathe2" : "Sheathe1";
                 Play(sheath, _blendTime);
                 _animator.SetFloat(ActionProgressId, 0f);
                 break;
             case KatanaStage.SheatheEnded:
-                if (!_combat.Player.IsCharging) Play("Rest", _blendTime);
+                if (!_combat.Player.IsCharging) Play("Rest", Mathf.Max(_blendTime, _comboBlendTime));
                 break;
             case KatanaStage.ChargeStarted:
                 _lastCharge = 0f;
@@ -219,17 +338,24 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         }
     }
 
-    /// <summary>발도 클립 name을 기존 Iaido 적중·종료 시간에 맞추고 진행도를 초기화한다.</summary>
-    private void BeginStrike(string name, KatanaEvent e)
+    /// <summary>name과 e의 타수·행동 ID 및 kind로 베기 모션을 선택한다. 공통 타격 시간과 해당 클립의 적중 진행도를 설정한다.</summary>
+    private void BeginStrike(string name, KatanaEvent e, PlayerAttackKind kind = PlayerAttackKind.IaidoFinisher)
     {
-        Play(name, _blendTime);
+        if (kind == PlayerAttackKind.Normal) ApplyAttackClips(_combat.IsCounterAttack);
+        bool opening = kind == PlayerAttackKind.Normal && _combat.IsOpeningAttack;
+        float blend = kind == PlayerAttackKind.Normal && !opening && !_combat.IsCounterAttack
+            ? Mathf.Max(_blendTime, _comboBlendTime) : _blendTime;
+        Play(name, blend);
         _attack = true;
         _parry = false;
         _actionId = e.ActionId;
-        _impactProgress = _iaidoImpactProgress;
+        _impactProgress = _combat.IsCounterAttack ? _counterImpactProgress
+            : opening ? _openingImpactProgress : name == "IaidoDoubleSlash" ? _iaidoImpactProgress
+            : name == "Normal2" ? _normal2ImpactProgress : _normal1ImpactProgress;
+        _endProgress = opening ? Mathf.Max(_impactProgress, _openingEndProgress) : 1f;
         _entryProgress = 0f;
         if (_actionDriver != null)
-            _actionDriver.GetPresentationTiming(PlayerAttackKind.IaidoFinisher, out _impactTime, out _duration);
+            _actionDriver.GetPresentationTiming(kind, out _impactTime, out _duration);
         else
             _impactTime = _duration * _impactProgress;
         _animator.SetFloat(ActionProgressId, _entryProgress);
@@ -264,6 +390,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         _poseBlendDuration = blend;
         _poseBlendElapsed = 0f;
         _finishingInsertion = false;
+        _openingSheathing = false;
         _motion = name;
         _attack = false;
         _duration = _lengths.TryGetValue(name, out float length) ? Mathf.Max(length, 0.001f) : 0.1f;

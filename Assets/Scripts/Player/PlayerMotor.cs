@@ -63,6 +63,16 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0f)] private float _iaidoMaxDistance = 7f;
     [SerializeField] private LayerMask _dashCollisionMask = ~0;
 
+    [Header("짧은 회피")]
+    [SerializeField, Min(0.1f)] private float _dodgeDistance = 1.2f;
+    [SerializeField, Min(0.05f)] private float _dodgeDuration = 0.18f;
+    [SerializeField, Min(0f)] private float _dodgeCooldown = 0.6f;
+    private bool _isDodging;
+    private Vector3 _dodgeDirection;
+    private float _dodgeElapsed;
+    private float _dodgeProgress;
+    private float _nextDodgeTime;
+
     private Vector2 _moveInput;
     private Vector2 _pendingLookDelta;
     private Vector3 _planarVelocity;
@@ -90,6 +100,39 @@ public sealed class PlayerMotor : MonoBehaviour
     private IPlayerCombatService _combatService;
     private float _lastHorizontalSpeed;
 
+    [Header("전투 카메라 반동")]
+    [SerializeField, Min(0f)] private float _recoilReturnSpeed = 18f;
+    private Vector3 _recoilEuler;
+    private Vector3 _recoilOffset;
+    public Vector3 ViewForward => Quaternion.Euler(0f, _yaw, 0f) * Quaternion.Euler(_pitch, 0f, 0f) * Vector3.forward;
+    public Vector3 ViewOrigin => _cameraPivot.parent.TransformPoint(GetCameraBasePosition());
+
+    /// <summary>direction과 strength로 시각 반동을 누적한다. 논리적인 시점·조준 방향과 캐릭터 위치는 유지한다.</summary>
+    public void AddCombatRecoil(Vector3 direction, float strength)
+    {
+        float side = Vector3.Dot(transform.right, direction) < 0f ? -1f : 1f;
+        _recoilEuler = Vector3.ClampMagnitude(_recoilEuler + new Vector3(strength, 0f, side * strength * 1.5f), 5f);
+        _recoilOffset = Vector3.ClampMagnitude(_recoilOffset + Vector3.back * (0.025f * strength), 0.08f);
+    }
+
+    /// <summary>웅크리기 진행도와 원래 카메라 위치로 반동 없는 로컬 시점 위치를 반환한다.</summary>
+    private Vector3 GetCameraBasePosition()
+    {
+        Vector3 position = _standingCameraLocalPosition;
+        position.y = Mathf.Lerp(_standingCameraLocalPosition.y, _crouchedCameraHeight, Mathf.SmoothStep(0f, 1f, _crouchBlend));
+        return position;
+    }
+
+    void LateUpdate()
+    {
+        if (_cameraPivot == null) return;
+        float decay = Mathf.Exp(-_recoilReturnSpeed * Time.deltaTime);
+        _recoilEuler *= decay;
+        _recoilOffset *= decay;
+        _cameraPivot.localPosition = GetCameraBasePosition() + _recoilOffset;
+        _cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f) * Quaternion.Euler(_recoilEuler);
+    }
+
     public event Action<PlayerFootstepEvent> FootstepEmitted;
     public event Action<PlayerDashEnd> DashEnded;
 
@@ -101,6 +144,8 @@ public sealed class PlayerMotor : MonoBehaviour
     public float Deceleration => _deceleration;
     public bool IsCrouching => _crouchBlend > 0.001f;
     public bool IsDashing => _isDashing;
+    public bool IsDodging => _isDodging;
+    public float DodgeCooldownRemaining => Mathf.Max(0f, _nextDodgeTime - Time.time);
 
     private void Awake()
     {
@@ -161,6 +206,7 @@ public sealed class PlayerMotor : MonoBehaviour
     /// <summary>이동과 시점 입력, 현재 평면 속도를 초기화합니다.</summary>
     public void ClearInput()
     {
+        CancelDodge();
         _moveInput = Vector2.zero;
         _pendingLookDelta = Vector2.zero;
         _planarVelocity = Vector3.zero;
@@ -180,6 +226,8 @@ public sealed class PlayerMotor : MonoBehaviour
         else
             _pendingLookDelta = Vector2.zero;
 
+        if (movementLocked && _isDodging) CancelDodge();
+
         if (_isDashing)
         {
             TickDash(deltaTime);
@@ -192,6 +240,12 @@ public sealed class PlayerMotor : MonoBehaviour
             _verticalVelocity = -2f;
         else
             _verticalVelocity -= _gravity * deltaTime;
+
+        if (_isDodging)
+        {
+            TickDodge(deltaTime);
+            return;
+        }
 
         Vector3 before = transform.position;
         if (movementLocked)
@@ -266,6 +320,47 @@ public sealed class PlayerMotor : MonoBehaviour
         }
 
         return count < _crouchOverlapBuffer.Length;
+    }
+
+    /// <summary>input의 전후·좌우 방향을 시작 시점의 수평 방향으로 고정하고 짧은 회피를 시작한다. 접지·재사용 조건을 충족하면 true를 반환한다.</summary>
+    public bool TryBeginDodge(Vector2 input)
+    {
+        if (_isDodging || _isDashing || !_characterController.enabled || !_characterController.isGrounded
+            || Time.time < _nextDodgeTime) return false;
+        Vector2 direction = input;
+        if (direction.sqrMagnitude < 0.001f) direction = Vector2.down;
+        direction.Normalize();
+        _dodgeDirection = (transform.right * direction.x + transform.forward * direction.y).normalized;
+        _dodgeElapsed = 0f;
+        _dodgeProgress = 0f;
+        _nextDodgeTime = Time.time + _dodgeCooldown;
+        _isDodging = true;
+        _planarVelocity = Vector3.zero;
+        ResetWalkStep();
+        AddCombatRecoil(_dodgeDirection, 0.15f);
+        return true;
+    }
+
+    /// <summary>진행 중인 회피와 평면 속도를 정리한다. 이미 사용한 재사용 시간은 유지한다.</summary>
+    public void CancelDodge()
+    {
+        _isDodging = false;
+        _planarVelocity = Vector3.zero;
+    }
+
+    /// <summary>deltaTime으로 회피 거리를 감속 곡선에 따라 이동한다. CharacterController 충돌·중력을 유지하고 벽·낙하·시간 종료 시 회피를 마친다.</summary>
+    private void TickDodge(float deltaTime)
+    {
+        if (deltaTime <= 0f) return;
+        _dodgeElapsed = Mathf.Min(_dodgeDuration, _dodgeElapsed + deltaTime);
+        float normalized = _dodgeElapsed / _dodgeDuration;
+        float progress = 1f - (1f - normalized) * (1f - normalized);
+        Vector3 before = transform.position;
+        CollisionFlags flags = _characterController.Move(_dodgeDirection * (_dodgeDistance * (progress - _dodgeProgress))
+            + Vector3.up * (_verticalVelocity * deltaTime));
+        _lastHorizontalSpeed = Vector3.ProjectOnPlane(transform.position - before, Vector3.up).magnitude / deltaTime;
+        _dodgeProgress = progress;
+        if ((flags & CollisionFlags.Sides) != 0 || !_characterController.isGrounded || normalized >= 1f) CancelDodge();
     }
 
     /// <summary>대상 위치 또는 전방 방향으로 목표 거리를 계산하고 대시를 시작합니다. 시작 가능 여부를 반환합니다.</summary>
@@ -618,6 +713,7 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
     private void OnDisable()
     {
         _isDashing = false;
+        _isDodging = false;
         _moveInput = Vector2.zero;
         _pendingLookDelta = Vector2.zero;
         _planarVelocity = Vector3.zero;

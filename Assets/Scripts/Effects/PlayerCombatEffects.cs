@@ -2,7 +2,7 @@ using UnityEngine;
 
 
 /// <summary>
-/// 기존 플레이어 행동·접촉 이벤트를 구독해 검기·타격·적 접촉 혈흔을 요청한다.
+/// 기존 플레이어 행동·접촉 이벤트를 구독해 검 접촉 감지·타격·혈흔을 요청한다.
 /// 전투 판정과 사운드는 변경하지 않는다.
 /// </summary>
 [DisallowMultipleComponent]
@@ -15,19 +15,17 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     [SerializeField] private EnemyCombatService _contacts;
     [SerializeField] private SwordEffectEmitter _physicalContacts;
     [SerializeField] private KatanaCombatCoordinator _katana;
-    [SerializeField] private Transform _bladeBase;
-    [SerializeField] private Transform _bladeTip;
 
-    [Header("베기 표시 구간")]
-    [SerializeField, Range(0f, 1f)] private float _normalWindupFraction = 0.45f;
-    [SerializeField, Range(0f, 1f)] private float _iaidoWindupFraction = 0.8f;
-    [SerializeField, Range(0.5f, 1f)] private float _followThroughFraction = 0.85f;
+    [Header("적중 반동")]
+    [SerializeField, Min(0f)] private float _hitRecoilStrength = 0.25f;
+    private PlayerMotor _motor;
 
-    [Header("플레이어 검기 표시")]
-    [SerializeField] private bool _useOutlineVfx;
+    [Header("방어 섬광 표시")]
+    [SerializeField, Min(0.1f)] private float _defenseEffectDistance = 0.6f;
+    [SerializeField, Min(0f)] private float _defenseEffectScreenOffset = 0.12f;
+
     private EffectManager _effects;
     private int _actionId;
-    private int _trailHandle;
     private int _lastContactAction = -1;
     private float _beginTime;
     private float _endTime;
@@ -38,10 +36,12 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     {
         EnemyCombatService playerContacts = _player.GetComponent<EnemyCombatService>();
         if (playerContacts != null) _contacts = playerContacts;
+        _motor = _player.GetComponent<PlayerMotor>();
+        if (_contacts != null) _contacts.AttackContactResolved += HandleHitFeedback;
         _player.ActionEvent += HandleAction;
         if (_contacts != null && _physicalContacts == null)
             _contacts.AttackContactResolved += HandleContact;
-        _katana.ParrySucceeded += HandleParry;
+        _katana.DefenseSucceeded += HandleDefense;
         _lastContactAction = -1;
     }
 
@@ -50,17 +50,16 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         _effects = Game.Instance.EffectManager;
         if (!_effects.IsReady)
             _effects.Initialize();
-        _effects.SetOutlineVfxEnabled(false);
-        _effects.SetPlayerTrailOutlineEnabled(_useOutlineVfx);
     }
 
     void OnDisable()
     {
         _player.ActionEvent -= HandleAction;
+        if (_contacts != null) _contacts.AttackContactResolved -= HandleHitFeedback;
         if (_contacts != null && _physicalContacts == null)
             _contacts.AttackContactResolved -= HandleContact;
-        _katana.ParrySucceeded -= HandleParry;
-        CancelTrail();
+        _katana.DefenseSucceeded -= HandleDefense;
+        CancelContactDetection();
     }
 
     void LateUpdate()
@@ -69,30 +68,25 @@ public sealed class PlayerCombatEffects : MonoBehaviour
             return;
         if (_effects == null || !_effects.IsReady || _player.CurrentActionId != _actionId)
         {
-            CancelTrail();
+            CancelContactDetection();
             return;
         }
         float elapsed = _timing.GetPresentationElapsed(_actionId);
         if (elapsed >= _endTime)
         {
-            EndTrail();
+            EndContactDetection();
             return;
         }
         if (!_started && elapsed >= _beginTime)
         {
             if (_physicalContacts != null)
                 _started = _physicalContacts.BeginSwing();
-            else
-            {
-                _trailHandle = _effects.BeginTrail(_bladeBase, _bladeTip);
-                _started = _trailHandle != 0;
-            }
         }
     }
 
     /// <summary>
     /// action의 일반·발도 베기 시작과 종료·사망을 관찰한다.
-    /// 기존 표현 타이밍에서 기록 구간을 예약하고 정상 종료 또는 취소한다.
+    /// action의 표현 타이밍으로 접촉 감지 구간을 예약하고 정상 종료 또는 취소한다.
     /// </summary>
     private void HandleAction(PlayerActionEvent action)
     {
@@ -101,18 +95,23 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         bool iaido = action.Stage == PlayerActionStage.SlashStarted;
         if (normal || iaido)
         {
-            CancelTrail();
+            CancelContactDetection();
             _actionId = action.ActionId;
-            _timing.GetPresentationTiming(iaido ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal,
-                out float impactTime, out float duration);
-            _beginTime = impactTime * (iaido ? _iaidoWindupFraction : _normalWindupFraction);
-            _endTime = Mathf.Max(impactTime, duration * _followThroughFraction);
-            _tracking = true;
+            _timing.GetStrikeWindow(iaido ? PlayerAttackKind.IaidoFinisher : PlayerAttackKind.Normal,
+                out _beginTime, out _endTime);
+            _tracking = _physicalContacts != null;
         }
         else if (action.Stage == PlayerActionStage.ActionEnded && action.ActionId == _actionId)
-            EndTrail();
+            EndContactDetection();
         else if (action.Stage == PlayerActionStage.StateChanged && action.State == PlayerActionState.Dead)
-            CancelTrail();
+            CancelContactDetection();
+    }
+
+    /// <summary>request의 적 피해 확정에만 동일한 시각 반동을 한 번 적용한다. 물리 접촉 이펙트와 피해·논리 조준은 변경하지 않는다.</summary>
+    private void HandleHitFeedback(PlayerAttackRequest request, Collider collider, Vector3 point, bool enemyDamaged)
+    {
+        if (!enemyDamaged || request.ActionId != _player.CurrentActionId) return;
+        _motor.AddCombatRecoil(request.Direction, _hitRecoilStrength);
     }
 
     /// <summary>
@@ -132,41 +131,45 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     }
 
     /// <summary>
-    /// result의 실제 쳐내기 접촉점에 공용 타격 효과를 요청한다.
-    /// 가드 성공을 표현하며 혈흔이나 피해를 추가하지 않는다.
+    /// result의 방어 종류로 가드·패링 섬광을 선택한다.
+    /// 접촉 방향을 화면 중앙 근처에 표시하고 최소 거리를 확보하여 섬광이 잘리지 않게 한다.
     /// </summary>
-    private void HandleParry(KatanaParryResult result)
+    private void HandleDefense(KatanaDefenseResult result)
     {
-        if (_effects != null && _effects.IsReady)
-            _effects.PlayHit(result.Incoming.Point);
+        if (_effects == null || !_effects.IsReady) return;
+        Vector3 forward = _motor.ViewForward;
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        if (right.sqrMagnitude < 0.001f) right = _player.transform.right;
+        Vector3 up = Vector3.Cross(forward, right).normalized;
+        Vector3 offset = result.Point - _motor.ViewOrigin;
+        float depth = Mathf.Max(_defenseEffectDistance, Vector3.Dot(offset, forward));
+        Vector3 point = _motor.ViewOrigin + forward * depth
+            + right * Mathf.Clamp(Vector3.Dot(offset, right), -_defenseEffectScreenOffset, _defenseEffectScreenOffset)
+            + up * Mathf.Clamp(Vector3.Dot(offset, up), -_defenseEffectScreenOffset, _defenseEffectScreenOffset);
+        _effects.Play(result.IsParry ? EffectId.ParryClash : EffectId.GuardClash, point,
+            Quaternion.LookRotation(-forward, up));
     }
 
     /// <summary>
-    /// 입력 없이 현재 검기 기록을 종료하고 잔상을 자연 종료하도록 남긴다.
-    /// 보관 핸들과 예약 상태를 해제한다.
+    /// 입력 없이 연결된 검의 접촉 감지를 정상 종료한다.
+    /// 현재 공격의 예약 상태를 해제하며 재생된 타격 효과는 자연 종료한다.
     /// </summary>
-    private void EndTrail()
+    private void EndContactDetection()
     {
         if (_physicalContacts != null)
             _physicalContacts.EndSwing();
-        else if (_effects != null)
-            _effects.EndTrail(_trailHandle);
-        _trailHandle = 0;
         _tracking = false;
         _started = false;
     }
 
     /// <summary>
-    /// 입력 없이 현재 검기와 예약을 즉시 취소한다.
-    /// 비활성화·사망·새 공격 시작 시 이전 기록을 남기지 않는다.
+    /// 입력 없이 연결된 검의 접촉 감지와 예약을 즉시 취소한다.
+    /// 비활성화·사망·새 공격 시작 시 이전 감지 상태를 남기지 않는다.
     /// </summary>
-    private void CancelTrail()
+    private void CancelContactDetection()
     {
         if (_physicalContacts != null)
             _physicalContacts.CancelSwing();
-        else if (_effects != null)
-            _effects.StopTrail(_trailHandle);
-        _trailHandle = 0;
         _tracking = false;
         _started = false;
     }

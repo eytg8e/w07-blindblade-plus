@@ -266,7 +266,7 @@ MonoBehaviour:
   _attackRange: 8
   _damage: 10
   _useBuiltInProjectile: 1
-  _projectilePrefab: {fileID: 2285517556864344112, guid: 394272973fb3e3c4c94ae1cfc0a1f94d, type: 3}
+  _projectilePrefab: {fileID: 2285517556864344112, guid: 6c377b39585c5364eb80b5f8c8fcde63, type: 3}
   _muzzle: {fileID: 4200621979871569288}
   _aimHeight: 1.3
 --- !u!114 &9198606408320082796
@@ -331,7 +331,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _maxHealth: 30
-  _dieOnAnyHit: 1
+  _dieOnAnyHit: 0
   _hitCollider: {fileID: 3463872705100445242}
   _cancelAttackOnHit: 0
 --- !u!1 &7100173192179143851

@@ -335,4 +335,5 @@ public sealed class EffectManager : MonoBehaviour
         if (_initialized && mode == LoadSceneMode.Single)
             BeginSession(scene);
     }
+
 }

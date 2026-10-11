@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-
+/// <summary>EnemySlash와 같은 위치의 칼날 Trigger를 베기 구간에만 활성화한다.</summary>
 public class EnemyMeleeAttack : EnemyAttackBehaviour
 {
     [Header("근접 공격 설정")]
@@ -12,75 +12,268 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
 
     [Header("근접 타격 설정")]
     [SerializeField] private bool _useBuiltInHitDetection = true;
-    [SerializeField, Min(0.01f)] private float _hitRadius = 0.75f;
-    [SerializeField] private float _hitHeight = 1f;
-    [SerializeField] private LayerMask _hitMask = Physics.DefaultRaycastLayers;
+    [SerializeField] private BoxCollider _bladeHitbox;
+    [SerializeField, Min(0.01f)] private float _hitRadius = 0.12f;
+    [SerializeField] private float _hitHeight = 1.6f;
+    [SerializeField] private LayerMask _hitMask = ~0;
     [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
 
-    public override float Range => _attackRange;
-    public event Action<EnemyAttackContext> MeleeAttack;
+    [Header("베기 궤적")]
+    [SerializeField, Min(0.05f)] private float _swingDuration = 0.24f;
+    [SerializeField] private float _startAngle = -70f;
+    [SerializeField] private float _endAngle = 70f;
+    [SerializeField, Min(0f)] private float _bladeBaseOffset = 0.25f;
+    [SerializeField, Min(0f)] private float _blockRecovery = 0.55f;
+    [SerializeField, Min(0f)] private float _parryRecovery = 0.9f;
+    private Vector3 _swingOrigin;
+    private Vector3 _swingForward;
+    private Vector3 _previousTip;
+    private float _startedAt;
+    private bool _contactConsumed;
+    private int _diagonalSign = 1;
 
+    [Header("공격 판정 기즈모")]
+    [SerializeField] private bool _showAttackGizmos = true;
+    [SerializeField] private bool _showBladeTrajectoryGizmos;
+    [SerializeField, Min(0.1f)] private float _gizmoDuration = 2f;
+#if UNITY_EDITOR
+    private readonly List<Vector3> _debugBlades = new List<Vector3>();
+    private float _debugUntil;
+    private Vector3 _debugContactPoint;
+    private bool _debugHadContact;
+#endif
+
+    public override float Range => _attackRange;
+    public float BladeRadius => _hitRadius;
+    public bool IsLeftToRightSlash => _diagonalSign > 0;
+    public Vector3 BladeBase { get; private set; }
+    public Vector3 BladeTip { get; private set; }
+    public event Action<EnemyAttackContext> MeleeAttack;
+    protected override float ActiveDuration => _swingDuration;
     protected override EnemySoundAction SoundAction => EnemySoundAction.Melee;
 
-    protected float Damage => _damage;
-    protected float HitRadius => _hitRadius;
-    protected float HitHeight => _hitHeight;
-    protected LayerMask HitMask => _hitMask;
+    /// <summary>context의 전조 시작마다 두 대각선 내려치기 중 하나를 같은 확률로 선택하고 베기 종료까지 유지한다.</summary>
+    protected override void PrepareTelegraph(EnemyAttackContext context)
+    {
+        _diagonalSign = UnityEngine.Random.value < 0.5f ? 1 : -1;
+    }
 
-    /// <summary>
-    /// 전조 때 고정한 context의 조준 위치에서 근접 타격을 처리하고 공격 이벤트를 전달한다.
-    /// 내장 판정을 끄면 이벤트만 호출하여 외부 무기나 애니메이션 기반 판정으로 교체할 수 있다.
-    /// </summary>
+    /// <summary>context의 수평 방향과 현재 몸 위치로 칼날을 준비하고 베기 시간 및 접촉 기록을 초기화한다.</summary>
     protected override void PerformAttack(EnemyAttackContext context)
     {
-        if (_useBuiltInHitDetection)
-            ApplyHit(context);
+        _swingOrigin = transform.position + Vector3.up * _hitHeight;
+        _swingForward = Vector3.ProjectOnPlane(context.Direction, Vector3.up).normalized;
+        if (_swingForward.sqrMagnitude < 0.001f) _swingForward = transform.forward;
+        _startedAt = Time.time;
+        _contactConsumed = false;
+#if UNITY_EDITOR
+        _debugBlades.Clear();
+        _debugHadContact = false;
+#endif
+        UpdateHitboxPose(0f);
+        _previousTip = BladeTip;
+        _bladeHitbox.enabled = _useBuiltInHitDetection;
         MeleeAttack?.Invoke(context);
     }
 
-    /// <summary>
-    /// context의 고정 조준 위치와 Inspector의 반경·레이어로 Collider를 수집하여 피해를 전달한다.
-    /// 지정 대상 계층만 판정하고 벽 뒤의 수신자를 제외하여 공격 한 번당 한 번만 피해를 적용한다.
-    /// </summary>
-    protected virtual void ApplyHit(EnemyAttackContext context)
+    protected override void Awake()
     {
-        Vector3 center = context.AimPosition + Vector3.up * _hitHeight;
-        HashSet<IDamageable> damaged = new HashSet<IDamageable>();
-        foreach (Collider collider in Physics.OverlapSphere(center, _hitRadius, _hitMask, QueryTriggerInteraction.Ignore))
+        base.Awake();
+        _bladeHitbox.enabled = false;
+    }
+
+    void FixedUpdate()
+    {
+        if (Phase != EnemyAttackPhase.Active || _contactConsumed) return;
+        if (Time.time >= _startedAt + _swingDuration)
         {
-            if (collider.transform.IsChildOf(transform) || context.Target == null ||
-                !collider.transform.IsChildOf(context.Target))
-                continue;
-
-            IDamageable receiver = collider.GetComponentInParent<IDamageable>();
-            if (receiver == null || damaged.Contains(receiver))
-                continue;
-
-            Vector3 point = collider.ClosestPoint(center);
-            if (IsBlocked(context, point, receiver))
-                continue;
-
-            damaged.Add(receiver);
-            receiver.TakeDamage(new DamageContext(_damage, gameObject, point, context.Direction, context.PatternId));
+            BeginRecovery();
+            return;
         }
+        UpdateHitboxPose(Mathf.Clamp01((Time.time - _startedAt) / _swingDuration));
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        TryHit(other);
+    }
+
+    void OnTriggerStay(Collider other)
+    {
+        TryHit(other);
+    }
+
+    /// <summary>progress로 단일 BoxCollider의 위치·회전·크기를 변경한다. 같은 칼날 좌표를 VFX에 공개한다.</summary>
+    private void UpdateHitboxPose(float progress)
+    {
+        _previousTip = BladeTip;
+        GetBladePose(progress, out Vector3 bladeBase, out Vector3 bladeTip);
+        BladeBase = bladeBase;
+        BladeTip = bladeTip;
+        Vector3 blade = bladeTip - bladeBase;
+        _bladeHitbox.transform.SetPositionAndRotation((bladeBase + bladeTip) * 0.5f,
+            Quaternion.LookRotation(blade, Vector3.up));
+        Vector3 scale = _bladeHitbox.transform.lossyScale;
+        _bladeHitbox.center = Vector3.zero;
+        _bladeHitbox.size = new Vector3(_hitRadius * 2f / Mathf.Abs(scale.x),
+            _hitRadius * 2f / Mathf.Abs(scale.y), blade.magnitude / Mathf.Abs(scale.z));
+#if UNITY_EDITOR
+        if (_showBladeTrajectoryGizmos)
+        {
+            _debugBlades.Add(bladeBase);
+            _debugBlades.Add(bladeTip);
+        }
+        _debugUntil = Time.time + _gizmoDuration;
+#endif
     }
 
     /// <summary>
-    /// context의 시작 위치에서 point까지 장애물 레이어를 검사한다.
-    /// 자신과 receiver의 Collider를 제외한 차폐물이 있으면 true를 반환한다.
+    /// progress와 사거리·각도·몸 높이로 월드 칼날의 밑점과 끝점을 반환한다.
+    /// 전조 미리보기와 실제 판정 및 EnemySlash가 동일한 좌표를 사용한다.
     /// </summary>
+    public void GetBladePose(float progress, out Vector3 bladeBase, out Vector3 bladeTip)
+    {
+        GetDiagonalBladePose(progress, _diagonalSign, out bladeBase, out bladeTip);
+    }
+
+    /// <summary>progress와 diagonalSign으로 대상이 보는 좌상단→우하단 또는 우상단→좌하단 칼날 좌표를 반환한다.</summary>
+    private void GetDiagonalBladePose(float progress, int diagonalSign, out Vector3 bladeBase, out Vector3 bladeTip)
+    {
+        Vector3 origin = Phase == EnemyAttackPhase.Active ? _swingOrigin : transform.position + Vector3.up * _hitHeight;
+        Vector3 forward = Phase == EnemyAttackPhase.Active ? _swingForward
+            : Vector3.ProjectOnPlane(Context.Direction, Vector3.up).normalized;
+        if (forward.sqrMagnitude < 0.001f) forward = transform.forward;
+        if (Phase == EnemyAttackPhase.Ready)
+        {
+            EnemySensor sensor = GetComponent<EnemySensor>();
+            if (sensor.Target != null) forward = Vector3.ProjectOnPlane(sensor.Target.position - transform.position, Vector3.up).normalized;
+        }
+        float offset = Mathf.Min(_bladeBaseOffset, _attackRange * 0.5f);
+        bladeBase = origin + forward * offset;
+        float angle = Mathf.Lerp(_startAngle, _endAngle, Mathf.Clamp01(progress));
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        Vector3 swingAxis = (right - Vector3.up * diagonalSign).normalized;
+        bladeTip = bladeBase + Quaternion.AngleAxis(angle, swingAxis) * forward * (_attackRange - offset);
+    }
+
+    /// <summary>other가 베기 중 유효한 대상 또는 장애물인지 검사한다. 최초 Trigger 접촉만 피해 또는 회복으로 확정한다.</summary>
+    private void TryHit(Collider other)
+    {
+        if (Phase != EnemyAttackPhase.Active || !_bladeHitbox.enabled || _contactConsumed
+            || Time.time < _startedAt || Time.time >= _startedAt + _swingDuration
+            || other.isTrigger || other.transform.IsChildOf(transform)) return;
+        EnemyAttackContext context = Context;
+        bool isTarget = context.Target != null && other.transform.IsChildOf(context.Target);
+        int layer = 1 << other.gameObject.layer;
+        if (isTarget ? (_hitMask.value & layer) == 0 : (_obstacleMask.value & layer) == 0) return;
+        if (!isTarget && other.GetComponentInParent<EnemyHealth>() != null) return;
+        Vector3 point = other.ClosestPoint(_bladeHitbox.transform.position);
+#if UNITY_EDITOR
+        _debugContactPoint = point;
+        _debugHadContact = true;
+#endif
+        _contactConsumed = true;
+        if (!isTarget)
+        {
+            BeginRecovery();
+            return;
+        }
+        IDamageable receiver = other.GetComponentInParent<IDamageable>();
+        if (receiver == null || IsBlocked(context, point, receiver)) { BeginRecovery(); return; }
+        Vector3 direction = (BladeTip - _previousTip).normalized;
+        if (direction.sqrMagnitude < 0.001f) direction = _swingForward;
+        receiver.TakeDamage(new DamageContext(_damage, gameObject, point, direction, context.PatternId));
+        if (Phase == EnemyAttackPhase.Active) BeginRecovery();
+    }
+
+    /// <summary>context의 공격 종료 또는 cancelled 취소 시 칼날 Trigger를 비활성화하여 추가 접촉을 막는다.</summary>
+    protected override void OnAttackEnded(EnemyAttackContext context, bool cancelled)
+    {
+        _bladeHitbox.enabled = false;
+    }
+
+    /// <summary>perfect에 따라 방어당한 공격을 중단하고 반격 가능한 최소 회복 시간을 적용한다. point는 방어 접촉 위치다.</summary>
+    public void Deflect(bool perfect, Vector3 point)
+    {
+        if (Phase != EnemyAttackPhase.Active) return;
+        _contactConsumed = true;
+        BladeTip = point;
+        BeginRecovery(perfect ? _parryRecovery : _blockRecovery);
+#if UNITY_EDITOR
+        _debugContactPoint = point;
+        _debugHadContact = true;
+#endif
+    }
+
+    /// <summary>현재 칼날 원점에서 point까지 receiver와 자신을 제외한 차폐물이 있으면 true를 반환한다.</summary>
     protected virtual bool IsBlocked(EnemyAttackContext context, Vector3 point, IDamageable receiver)
     {
-        Vector3 origin = context.Origin + Vector3.up * _hitHeight;
-        RaycastHit[] hits = Physics.RaycastAll(origin, point - origin, Vector3.Distance(origin, point),
-            _obstacleMask, QueryTriggerInteraction.Ignore);
-        foreach (RaycastHit hit in hits)
+        Vector3 delta = point - _swingOrigin;
+        foreach (RaycastHit hit in Physics.RaycastAll(_swingOrigin, delta.normalized, delta.magnitude, _obstacleMask, QueryTriggerInteraction.Ignore))
         {
-            if (hit.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<IDamageable>() == receiver)
-                continue;
+            if (hit.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<IDamageable>() == receiver) continue;
             return true;
         }
-
         return false;
     }
+
+#if UNITY_EDITOR
+    void OnDrawGizmos()
+    {
+        if (!_showAttackGizmos || !isActiveAndEnabled || !Application.isPlaying || Time.time > _debugUntil) return;
+        DrawAttackRangeGizmo(Color.red);
+        if (!_showBladeTrajectoryGizmos) return;
+        for (int i = 0; i + 1 < _debugBlades.Count; i += 2)
+            DrawHitboxGizmo(_debugBlades[i], _debugBlades[i + 1], Color.red);
+        if (_debugHadContact)
+        {
+            Color previous = Gizmos.color;
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawSphere(_debugContactPoint, 0.05f);
+            Gizmos.color = previous;
+        }
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (!_showAttackGizmos || Application.isPlaying) return;
+        DrawAttackRangeGizmo(Color.yellow);
+        if (!_showBladeTrajectoryGizmos) return;
+        for (int i = 0; i <= 12; i++)
+        {
+            GetDiagonalBladePose(i / 12f, 1, out Vector3 bladeBase, out Vector3 bladeTip);
+            DrawHitboxGizmo(bladeBase, bladeTip, Color.yellow);
+            GetDiagonalBladePose(i / 12f, -1, out bladeBase, out bladeTip);
+            DrawHitboxGizmo(bladeBase, bladeTip, Color.cyan);
+        }
+    }
+    /// <summary>현재 사거리와 대각선 베기의 수평 투영 각도로 color의 부채꼴을 그린다. 실제 Trigger 부피를 대신하는 판정은 아니다.</summary>
+    private void DrawAttackRangeGizmo(Color color)
+    {
+        GetBladePose(0f, out Vector3 startBase, out Vector3 startTip);
+        GetBladePose(0.5f, out Vector3 middleBase, out Vector3 middleTip);
+        GetBladePose(1f, out Vector3 endBase, out Vector3 endTip);
+        Vector3 origin = Phase == EnemyAttackPhase.Active ? _swingOrigin : transform.position + Vector3.up * _hitHeight;
+        Vector3 forward = Vector3.ProjectOnPlane(middleTip - origin, Vector3.up).normalized;
+        float halfAngle = Mathf.Max(Vector3.Angle(forward, Vector3.ProjectOnPlane(startTip - origin, Vector3.up)),
+            Vector3.Angle(forward, Vector3.ProjectOnPlane(endTip - origin, Vector3.up)));
+        float thicknessAngle = Mathf.Atan2(_hitRadius, _attackRange) * Mathf.Rad2Deg;
+        Vector3 fanOrigin = new Vector3(origin.x, transform.position.y + 0.02f, origin.z);
+        EnemyCombatService.DrawAttackFanGizmo(fanOrigin, forward, _attackRange, (halfAngle + thicknessAngle) * 2f, color);
+    }
+
+    /// <summary>bladeBase·bladeTip과 판정 두께로 color의 박스 기즈모를 그린 뒤 Gizmos 상태를 복원한다.</summary>
+    private void DrawHitboxGizmo(Vector3 bladeBase, Vector3 bladeTip, Color color)
+    {
+        Matrix4x4 previousMatrix = Gizmos.matrix;
+        Color previousColor = Gizmos.color;
+        Vector3 blade = bladeTip - bladeBase;
+        Gizmos.matrix = Matrix4x4.TRS((bladeBase + bladeTip) * 0.5f,
+            Quaternion.LookRotation(blade, Vector3.up), Vector3.one);
+        Gizmos.color = color;
+        Gizmos.DrawWireCube(Vector3.zero, new Vector3(_hitRadius * 2f, _hitRadius * 2f, blade.magnitude));
+        Gizmos.matrix = previousMatrix;
+        Gizmos.color = previousColor;
+    }
+#endif
 }
