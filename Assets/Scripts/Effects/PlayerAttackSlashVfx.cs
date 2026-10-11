@@ -85,11 +85,12 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
 
     /// <summary>
     /// kind와 현재 연계 타수로 연결된 자식 VFX를 반환한다.
-    /// 충전 발도·패링 단발 반격은 기존 1타 VFX를 사용하며 빈 슬롯은 해당 공격의 검기를 생략한다.
+    /// 돌진 연계도 타수별 VFX를 사용하고 충전 발도·패링 단발 반격은 1타 VFX를 사용한다. 빈 슬롯은 검기를 생략한다.
     /// </summary>
     private ParticleSystem GetSlashForAttack(PlayerAttackKind kind)
     {
-        if (kind == PlayerAttackKind.IaidoFinisher || _combat == null || _combat.IsCounterAttack)
+        if (_combat == null || _combat.IsCounterAttack
+            || kind == PlayerAttackKind.IaidoFinisher && _player.TargetedComboStrike == 0)
             return _slashVfx;
         return _combat.Strike == 2 ? _secondSlashVfx : _combat.Strike == 3 ? _thirdSlashVfx : _slashVfx;
     }

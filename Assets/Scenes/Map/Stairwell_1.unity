@@ -1238,6 +1238,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 2e56bc0a53affc14a83cb9f12610ab76, type: 3}
+      propertyPath: _detectionRange
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 2e56bc0a53affc14a83cb9f12610ab76, type: 3}
       propertyPath: m_Name
       value: Gauntlet_07_Deflectable
@@ -1298,6 +1302,10 @@ PrefabInstance:
     - target: {fileID: 733418134618474726, guid: f67941f29bd58c64183339a24a1706e9, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6942487203226978246, guid: f67941f29bd58c64183339a24a1706e9, type: 3}
+      propertyPath: _detectionRange
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 7039733516697902587, guid: f67941f29bd58c64183339a24a1706e9, type: 3}
       propertyPath: m_Name
@@ -2011,7 +2019,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 927bab50e07acfd499353792097003a4, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: 2fee01287a5c5f248a33e70ee78baf85, type: 2}
   m_BuildHeightMesh: 0
 --- !u!4 &764540200
 Transform:
@@ -2177,7 +2185,7 @@ MonoBehaviour:
   _passage: {fileID: 12738667}
   _requiredEnemies:
   - {fileID: 2142987391}
-  _nextScene: Stairwell
+  _nextScene: Stairwell_1
   _interactionDistance: 2.5
   _openingDuration: 0.6
   _openAngle: -100
@@ -2833,6 +2841,10 @@ PrefabInstance:
     - target: {fileID: 733418134618474726, guid: f67941f29bd58c64183339a24a1706e9, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6942487203226978246, guid: f67941f29bd58c64183339a24a1706e9, type: 3}
+      propertyPath: _detectionRange
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 7039733516697902587, guid: f67941f29bd58c64183339a24a1706e9, type: 3}
       propertyPath: m_Name
@@ -3591,6 +3603,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 4353215851983748173, guid: 2e56bc0a53affc14a83cb9f12610ab76, type: 3}
+      propertyPath: _obstacleMask.m_Bits
+      value: 51
+      objectReference: {fileID: 0}
     - target: {fileID: 5135211428147630035, guid: 2e56bc0a53affc14a83cb9f12610ab76, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -3630,6 +3646,10 @@ PrefabInstance:
     - target: {fileID: 5135211428147630035, guid: 2e56bc0a53affc14a83cb9f12610ab76, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 2e56bc0a53affc14a83cb9f12610ab76, type: 3}
+      propertyPath: _detectionRange
+      value: 3.17
       objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 2e56bc0a53affc14a83cb9f12610ab76, type: 3}
       propertyPath: m_Name
@@ -3699,6 +3719,10 @@ PrefabInstance:
     - target: {fileID: 4881386061489125236, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
       propertyPath: m_Name
       value: Gauntlet_04_Ranged
+      objectReference: {fileID: 0}
+    - target: {fileID: 6540411068458185360, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
+      propertyPath: _detectionRange
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -4984,6 +5008,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
+      propertyPath: _detectionRange
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 2253480226399273074, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: m_Name
       value: Gauntlet_05_Charge

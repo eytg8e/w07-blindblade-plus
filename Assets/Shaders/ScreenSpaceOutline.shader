@@ -49,8 +49,10 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             float4 _OutlineObserverRegion;
             float4 _OutlineSoundRegions[MAX_SOUND_REGIONS];
             int _OutlineSoundCount;
-            float _OutlineSoundRadius;
+            float _OutlineSoundStartRadius;
+            float _OutlineSoundEndRadius;
             float _OutlineSoundLifetime;
+            float _OutlineSoundFadeDuration;
             float _OutlineEdgeFade;
             float _OutlinePerceptionTime;
             TEXTURE2D(_OutlineTerrainMemory);
@@ -86,9 +88,13 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 for (int i = 0; i < _OutlineSoundCount; i++)
                 {
                     float age = max(0.0, _OutlinePerceptionTime - _OutlineSoundRegions[i].w);
-                    float timeVisibility = saturate(1.0 - age / max(_OutlineSoundLifetime, 0.0001));
+                    float progress = saturate(age / max(_OutlineSoundLifetime, 0.0001));
+                    float expansion = smoothstep(0.0, 1.0, progress);
+                    float revealRadius = lerp(_OutlineSoundStartRadius, _OutlineSoundEndRadius, expansion);
+                    float timeVisibility = 1.0 - smoothstep(_OutlineSoundLifetime,
+                        _OutlineSoundLifetime + max(_OutlineSoundFadeDuration, 0.0001), age);
                     float soundVisibility = RegionVisibility(
-                        position, _OutlineSoundRegions[i].xyz, _OutlineSoundRadius) * timeVisibility;
+                        position, _OutlineSoundRegions[i].xyz, revealRadius) * timeVisibility;
                     visibility = max(visibility, soundVisibility);
                 }
                 float memoryVisibility = 0.0;
