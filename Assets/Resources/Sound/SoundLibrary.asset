@@ -269,6 +269,38 @@ MonoBehaviour:
     _combatCue: 1
     _spatialize2D: 1
     _finishNaturally: 1
+  - _id: 21
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1798021619
+        Data2: 1284476525
+        Data3: 1477175740
+        Data4: -401438011
+      Path: event:/Door/DoorOpen
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 0
+    _spatialize2D: 1
+    _finishNaturally: 0
+  - _id: 22
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1755410199
+        Data2: 1075338840
+        Data3: -285908340
+        Data4: 1787633256
+      Path: event:/Door/DoorClose
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 0
+    _spatialize2D: 1
+    _finishNaturally: 0
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
   _combatFocusDuration: 0.35

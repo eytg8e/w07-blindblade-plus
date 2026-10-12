@@ -21,4 +21,6 @@ public enum SoundId
     BossChargeCry = 18,
     BossDuelCry = 19,
     BossStunCry = 20,
+    DoorOpen = 21,
+    DoorClose = 22,
 }
