@@ -135,14 +135,30 @@ public sealed class PlayerAttackSlashVfx : MonoBehaviour
     }
 
     /// <summary>
-    /// slash와 자식의 OutlineVFX 활성 여부를 Inspector의 검기 표현 선택으로 변경한다.
+    /// useOutlineShader로 연결된 공격 검기의 윤곽선 표시 여부를 즉시 변경한다.
+    /// Inspector 상태와 적용 상태를 함께 갱신하며 파티클의 재생 상태는 유지한다.
+    /// </summary>
+    public void SetUseOutlineShader(bool useOutlineShader)
+    {
+        _useOutlineShader = useOutlineShader;
+        ApplyOutlineSetting(_slashVfx);
+        ApplyOutlineSetting(_secondSlashVfx);
+        ApplyOutlineSetting(_thirdSlashVfx);
+        _appliedUseOutlineShader = useOutlineShader;
+    }
+
+    /// <summary>
+    /// slash와 자식의 OutlineVFX 활성 및 인지 예외를 Inspector의 검기 표현 선택으로 변경한다.
     /// 비어 있는 검기 슬롯은 건너뛰며 재질과 파티클 재생 상태는 변경하지 않는다.
     /// </summary>
     private void ApplyOutlineSetting(ParticleSystem slash)
     {
         if (slash == null) return;
         foreach (OutlineVFX outline in slash.GetComponentsInChildren<OutlineVFX>(true))
+        {
             outline.enabled = _useOutlineShader;
+            outline.IgnorePerception = _useOutlineShader;
+        }
     }
 
     /// <summary>

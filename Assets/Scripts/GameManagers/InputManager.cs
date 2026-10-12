@@ -57,7 +57,7 @@ public sealed class InputManager : MonoBehaviour
         player.SetCrouchInput(_crouchHold.IsPressed() || _crouchToggled);
         player.SetMovementInput(_actions.Player.Move.ReadValue<Vector2>());
         player.AddLookInput(_actions.Player.Look.ReadValue<Vector2>());
-        if (_guard.IsPressed() && !player.IsGuarding) _combat.BeginDefense();
+        if (_guard.WasPressedThisFrame() && !player.IsGuarding) _combat.BeginDefense();
         if (_guard.WasReleasedThisFrame()) _combat.EndDefense();
         if (_dodge.WasPressedThisFrame()) player.RequestDodge();
         if (_actions.Player.Attack.WasPressedThisFrame() && (!player.IsGuarding || _combat.CanCounterAttack))

@@ -204,7 +204,7 @@ public class SoundManager
 
     /// <summary>
     /// soundId의 2D BGM을 재생하고 다른 곡이면 이전 BGM을 즉시 정지한다.
-    /// 같은 BGM은 중복 생성하지 않고 owner·loop·volume을 갱신한다. 단발 이벤트는 loop 설정으로 종료 후 반복하며 성공 여부를 반환한다.
+    /// Library의 사용 여부·음량·pitch를 적용하고 같은 곡은 owner·loop·volume을 갱신한다. 재생 또는 갱신 성공 여부를 반환한다.
     /// </summary>
     public bool PlayBgm(SoundId soundId, GameObject owner = null, bool loop = false, float volume = 1f)
     {
@@ -212,6 +212,9 @@ public class SoundManager
             return false;
         if (!TryResolveEvent(soundId, SoundType.BGM, out EventReference eventReference))
             return false;
+        _library.GetPlaybackSettings(soundId, out bool enabled, out float volumeMultiplier, out float pitchMultiplier, out _);
+        if (!enabled) return false;
+        volume *= volumeMultiplier;
         if (_bgm.isValid() && _bgmId == soundId && _bgm.getPlaybackState(out var state) == FMOD.RESULT.OK && state != FMOD.Studio.PLAYBACK_STATE.STOPPED)
         {
             if (state == FMOD.Studio.PLAYBACK_STATE.STOPPING)
@@ -221,6 +224,7 @@ public class SoundManager
             _loopBgm = loop;
             _bgmPlaybackVolume = Mathf.Clamp01(volume);
             _bgm.setVolume(_footstepOnlyOwner != null ? 0f : _bgmPlaybackVolume);
+            _bgm.setPitch(pitchMultiplier);
             return true;
         }
         try
@@ -240,6 +244,7 @@ public class SoundManager
             _loopBgm = loop;
             _bgmPlaybackVolume = Mathf.Clamp01(volume);
             _bgm.setVolume(_footstepOnlyOwner != null ? 0f : _bgmPlaybackVolume);
+            _bgm.setPitch(pitchMultiplier);
             FMOD.RESULT result = _bgm.start();
             if (result == FMOD.RESULT.OK)
                 return true;
@@ -298,14 +303,16 @@ public class SoundManager
 
     /// <summary>
     /// owner가 재생한 soundId 효과음만 allowFadeOut 방식으로 정지한다.
-    /// Library의 자연 종료 설정이면 단계 전환·취소에도 음원 끝을 유지하며 전체 정리 요청은 별도로 처리한다.
+    /// 같은 소유자의 해당 ID 예약을 제거하고 forceStop이면 자연 종료 설정을 무시하여 공격 취소 신호를 정리한다.
     /// </summary>
-    public void StopFor(GameObject owner, SoundId soundId, bool allowFadeOut = false)
+    public void StopFor(GameObject owner, SoundId soundId, bool allowFadeOut = false, bool forceStop = false)
     {
         if (owner == null) return;
         if (soundId == SoundId.SwordHit || soundId == SoundId.PlayerDamaged)
             _pendingCues.RemoveAll(pending => pending.HasOwner && pending.Owner == owner);
-        if (_library.ShouldFinishNaturally(soundId)) return;
+        else
+            _pendingCues.RemoveAll(pending => pending.HasOwner && pending.Owner == owner && pending.Entry.SoundId == soundId);
+        if (!forceStop && _library.ShouldFinishNaturally(soundId)) return;
         foreach (ActiveEffect effect in _effects)
             if (effect.HasOwner && effect.Owner == owner && effect.Id == soundId)
                 StopEffect(effect.Instance, allowFadeOut);

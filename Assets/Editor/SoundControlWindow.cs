@@ -86,6 +86,7 @@ public sealed class SoundControlWindow : EditorWindow
         scroll.Add(ambience);
         _libraryObject = new SerializedObject(_library);
         SerializedProperty sounds = _libraryObject.FindProperty("_sounds");
+        var enemySounds = new Foldout { text = "적 공격·피격·보스 BGM", value = true };
         for (int i = 0; i < sounds.arraySize; i++)
         {
             SerializedProperty sound = sounds.GetArrayElementAtIndex(i);
@@ -96,14 +97,18 @@ public sealed class SoundControlWindow : EditorWindow
                 footstep.Bind(_libraryObject);
                 scroll.Add(footstep);
             }
+            else if (IsPatternSound((SoundId)id))
+                enemySounds.Add(CreatePatternSound(sounds.GetArrayElementAtIndex(i), i));
         }
+        enemySounds.Bind(_libraryObject);
+        scroll.Add(enemySounds);
         var library = new Foldout { text = "공통 음원 연결·적 베기·발소리 감쇠", value = false };
         library.Add(new HelpBox("적 베기의 Finish Naturally를 켜면 개별 정지 요청에도 음원 끝을 유지합니다. 공격 취소에도 꼬리가 남으며, 소유자 비활성화와 전체 정지는 유지됩니다.", HelpBoxMessageType.Info));
         for (int i = 0; i < sounds.arraySize; i++)
         {
             SerializedProperty sound = sounds.GetArrayElementAtIndex(i);
             int id = sound.FindPropertyRelative("_id").intValue;
-            if (id == 1 || id == 5 || id == 6 || id == 7 || id == 8 || id == 12) continue;
+            if (id == 1 || id == 5 || id == 6 || id == 7 || id == 8 || id == 12 || IsPatternSound((SoundId)id)) continue;
             library.Add(new PropertyField(sound, ((SoundId)id).ToString()));
         }
         library.Add(new HelpBox("전투 상태를 검사하지 않습니다. Combat Cue 소리가 날 때마다 아래 시간 동안 플레이어·적 발소리를 감쇠합니다. 음량 배율 1이면 감쇠하지 않습니다.", HelpBoxMessageType.Info));
@@ -160,6 +165,63 @@ public sealed class SoundControlWindow : EditorWindow
         foldout.Add(new HelpBox("실제 발접촉 사건에 재생합니다. 음량 배율은 기존 보행·은신·적 발걸음 음량에 곱하며, 미리 듣기는 배율만 적용합니다.", HelpBoxMessageType.Info));
         foldout.Add(new Button(() => PreviewFootstep(index)) { text = "발소리 미리 듣기" });
         return foldout;
+    }
+
+    /// <summary>
+    /// soundId가 새 적 음성·심장박동 또는 보스 BGM이면 true를 반환한다.
+    /// 전용 편집 영역에 표시할 등록 항목을 선택하며 기존 공통 음원은 제외한다.
+    /// </summary>
+    private static bool IsPatternSound(SoundId soundId)
+    {
+        return soundId == SoundId.BossBgm || soundId == SoundId.EnemyDamaged
+            || soundId == SoundId.EnemyGetParryed || soundId == SoundId.EnemyHeartbeat
+            || soundId == SoundId.EnemyAttackVoice || soundId == SoundId.EnemyRangedAttackVoice;
+    }
+
+    /// <summary>
+    /// sound의 이벤트·사용 여부·음량·pitch·정지 정책을 독립 편집하는 영역을 반환한다.
+    /// index로 미리 듣기를 연결하고 효과음의 이동 중 재생·발소리 감쇠 설정을 노출한다.
+    /// </summary>
+    private VisualElement CreatePatternSound(SerializedProperty sound, int index)
+    {
+        SoundId soundId = (SoundId)sound.FindPropertyRelative("_id").intValue;
+        bool bgm = soundId == SoundId.BossBgm;
+        var foldout = new Foldout { text = bgm ? "BossBGM" : soundId.ToString(), value = false };
+        foldout.AddToClassList("cue");
+        foldout.Add(new PropertyField(sound.FindPropertyRelative("_enabled"), "재생 사용"));
+        foldout.Add(new PropertyField(sound.FindPropertyRelative("_event"), "FMOD 이벤트"));
+        foldout.Add(new PropertyField(sound.FindPropertyRelative("_volumeMultiplier"), "음량 배율"));
+        foldout.Add(new PropertyField(sound.FindPropertyRelative("_pitchMultiplier"), "음높이 배율"));
+        if (!bgm)
+        {
+            foldout.Add(new PropertyField(sound.FindPropertyRelative("_combatCue"), "전투 신호·이동 중 재생 허용"));
+            foldout.Add(new PropertyField(sound.FindPropertyRelative("_finishNaturally"), "일반 정지 요청에서 끝까지 재생"));
+            foldout.Add(new HelpBox("공격 취소의 강제 정지에서는 자연 종료 설정과 관계없이 정리합니다. 심장박동 음높이는 1로 유지하는 것을 권장합니다.", HelpBoxMessageType.Info));
+        }
+        else
+            foldout.Add(new HelpBox("BGM 미리 듣기는 정지 버튼 또는 창 닫기로 종료합니다. 게임의 보스방 진입과 퇴장 사건은 발생하지 않습니다.", HelpBoxMessageType.Info));
+        foldout.Add(new Button(() => PreviewPatternSound(index)) { text = "이 음원 미리 듣기" });
+        return foldout;
+    }
+
+    /// <summary>
+    /// index의 중앙 등록 이벤트와 음량·pitch 배율로 미리 듣기를 요청한다.
+    /// 보스 BGM은 반복 이벤트도 허용하며 재생 사용을 끈 항목은 시작하지 않는다.
+    /// </summary>
+    private void PreviewPatternSound(int index)
+    {
+        _libraryObject.Update();
+        SerializedProperty sound = _libraryObject.FindProperty("_sounds").GetArrayElementAtIndex(index);
+        if (!sound.FindPropertyRelative("_enabled").boolValue)
+        {
+            StopPreview();
+            _status.text = "재생 사용이 꺼진 음원입니다.";
+            return;
+        }
+        PreviewReference(ReadReference(sound.FindPropertyRelative("_event")),
+            sound.FindPropertyRelative("_volumeMultiplier").floatValue,
+            sound.FindPropertyRelative("_pitchMultiplier").floatValue,
+            sound.FindPropertyRelative("_id").intValue == (int)SoundId.BossBgm);
     }
 
     /// <summary>
@@ -275,10 +337,10 @@ public sealed class SoundControlWindow : EditorWindow
     }
 
     /// <summary>
-    /// reference·volume·pitch를 FMOD Editor 시스템에 적용해 단발음을 미리 재생한다.
-    /// 이전 미리 듣기를 정리하고 실제 게임 상태를 변경하지 않으며 결과를 상태 표시줄에 기록한다.
+    /// reference·volume·pitch를 FMOD Editor 시스템에 적용해 미리 재생한다.
+    /// allowLoop가 true면 반복 이벤트도 허용하고 이전 인스턴스를 정리하며 결과를 상태 표시줄에 기록한다.
     /// </summary>
-    private void PreviewReference(EventReference reference, float volume, float pitch)
+    private void PreviewReference(EventReference reference, float volume, float pitch, bool allowLoop = false)
     {
         StopPreview();
         if (reference.IsNull) { _status.text = "재생할 FMOD 이벤트를 지정해 주세요."; return; }
@@ -286,7 +348,8 @@ public sealed class SoundControlWindow : EditorWindow
         FMOD.RESULT result = EditorUtils.System.getEventByID(reference.Guid, out FMOD.Studio.EventDescription description);
         if (result != FMOD.RESULT.OK) { _status.text = "이벤트 조회 실패: " + result; return; }
         result = description.isOneshot(out bool isOneShot);
-        if (!isOneShot) { _status.text = "단발 이벤트만 미리 듣기에 사용할 수 있습니다."; return; }
+        if (result != FMOD.RESULT.OK) { _status.text = "이벤트 속성 조회 실패: " + result; return; }
+        if (!isOneShot && !allowLoop) { _status.text = "단발 이벤트만 미리 듣기에 사용할 수 있습니다."; return; }
         if (result == FMOD.RESULT.OK) result = description.createInstance(out _preview);
         if (result == FMOD.RESULT.OK) result = _preview.set3DAttributes(RuntimeUtils.To3DAttributes(Vector3.zero));
         if (result == FMOD.RESULT.OK) result = _preview.setVolume(Mathf.Max(0f, volume));

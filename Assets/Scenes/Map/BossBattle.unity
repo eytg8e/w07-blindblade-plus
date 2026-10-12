@@ -3208,6 +3208,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7885862450644974965, guid: 3d1714128c8824b508ce9a0e6c411a23, type: 3}
+      propertyPath: _chargeDamage
+      value: 25
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885862450644974965, guid: 3d1714128c8824b508ce9a0e6c411a23, type: 3}
+      propertyPath: _rangedDamage
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 7885862450644974965, guid: 3d1714128c8824b508ce9a0e6c411a23, type: 3}
       propertyPath: _obstacleMask.m_Bits
       value: 51
       objectReference: {fileID: 0}

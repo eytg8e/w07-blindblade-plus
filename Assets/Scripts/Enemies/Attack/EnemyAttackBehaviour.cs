@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using UnityEngine;
 
@@ -13,6 +14,8 @@ public enum EnemyAttackPhase
 [RequireComponent(typeof(EnemySensor))]
 public abstract class EnemyAttackBehaviour : MonoBehaviour
 {
+    private const float MAX_RHYTHM_DELAY = 0.1f;
+
     [Header("패턴 선택 설정")]
     [SerializeField] private string _patternId;
     [SerializeField] private int _priority;
@@ -29,10 +32,23 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     private float _phaseEndTime;
     private float _nextAttackTime;
 
+    [Header("두 박동 공격 전조")]
+    [SerializeField] private bool _useHeartbeatTelegraph;
+    [SerializeField, Range(1f, 2f)] private float _minimumHeartbeatTelegraph = 1f;
+    [SerializeField, Range(1f, 2f)] private float _maximumHeartbeatTelegraph = 2f;
+    [SerializeField, Min(0f), Tooltip("공격 시작보다 기합을 먼저 재생할 시간입니다. 두 번째 박동 이후로 제한합니다.")]
+    private float _attackVoiceLeadTime = 0.05f;
+    private bool _usesHeartbeatForCurrentAttack;
+    private bool _secondHeartbeatPlayed;
+    private bool _attackVoicePlayed;
+    private float _secondHeartbeatTime;
+    private float _attackVoiceTime;
+
     [Header("공격 청각 신호")]
     [SerializeField, Min(0f)] private float _telegraphVolume = 1f;
     [SerializeField, Min(0f)] private float _actionVolume = 1f;
     private SoundId _playingActionSound;
+    private readonly HashSet<SoundId> _playingHeartbeatSounds = new HashSet<SoundId>();
 
     public abstract float Range { get; }
     public string PatternId => string.IsNullOrEmpty(_patternId) ? GetType().Name : _patternId;
@@ -43,6 +59,10 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     public virtual bool AllowsMovement => false;
     public EnemyAttackContext Context => _context;
     public float ExecutionDuration => ActiveDuration;
+    public bool UsesHeartbeatTelegraph => _useHeartbeatTelegraph;
+    public Vector2 ExpectedAttackInterval => new Vector2(
+        GetExpectedAttackInterval(_useHeartbeatTelegraph ? MinimumHeartbeatTelegraph : Mathf.Max(0.1f, _telegraphDuration)),
+        GetExpectedAttackInterval(_useHeartbeatTelegraph ? MaximumHeartbeatTelegraph : Mathf.Max(0.1f, _telegraphDuration)));
     public float RecoveryRemaining => _phase == EnemyAttackPhase.Recovery ? Mathf.Max(0f, _phaseEndTime - Time.time) : 0f;
     public float TelegraphProgress => _phase == EnemyAttackPhase.Telegraph
         ? Mathf.Clamp01(1f - (_phaseEndTime - Time.time) / Mathf.Max(0.1f, _context.TelegraphDuration)) : 1f;
@@ -56,6 +76,8 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     protected virtual float ActiveDuration => 0f;
     protected virtual bool HasFinishedActiveAttack => Time.time >= _phaseEndTime;
     protected virtual EnemySoundAction SoundAction => EnemySoundAction.None;
+    private float MinimumHeartbeatTelegraph => Mathf.Clamp(_minimumHeartbeatTelegraph, 1f, 2f);
+    private float MaximumHeartbeatTelegraph => Mathf.Max(MinimumHeartbeatTelegraph, Mathf.Clamp(_maximumHeartbeatTelegraph, 1f, 2f));
 
     protected virtual void Awake()
     {
@@ -66,10 +88,18 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     {
         _phase = EnemyAttackPhase.Ready;
         _nextAttackTime = 0f;
+        _usesHeartbeatForCurrentAttack = false;
+        _secondHeartbeatPlayed = false;
+        _attackVoicePlayed = false;
     }
 
     protected virtual void Update()
     {
+        if (_usesHeartbeatForCurrentAttack && Time.timeScale <= 0f)
+        {
+            if (_phase == EnemyAttackPhase.Telegraph) CancelAttack();
+            return;
+        }
         if (_phase == EnemyAttackPhase.Telegraph)
         {
             if (_context.Target == null || !_context.Target.gameObject.activeInHierarchy ||
@@ -79,7 +109,9 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
                 return;
             }
 
-            if (Time.time >= _phaseEndTime)
+            if (_usesHeartbeatForCurrentAttack)
+                UpdateHeartbeatTelegraph();
+            else if (Time.time >= _phaseEndTime)
                 CommitAttack();
         }
         else if (_phase == EnemyAttackPhase.Active)
@@ -120,17 +152,32 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     /// </summary>
     internal bool TryAttack(Transform target)
     {
+        if (_useHeartbeatTelegraph && Time.timeScale <= 0f) return false;
         if (!IsAvailable || !CanAttack(target) || target != _sensor.Target || !_sensor.CanSeeTarget())
             return false;
 
-        float telegraphDuration = Mathf.Max(0.1f, _telegraphDuration);
+        if (_playingHeartbeatSounds.Count > 0) StopActionSound(true);
+        _usesHeartbeatForCurrentAttack = _useHeartbeatTelegraph;
+        float telegraphDuration = _usesHeartbeatForCurrentAttack
+            ? UnityEngine.Random.Range(MinimumHeartbeatTelegraph, MaximumHeartbeatTelegraph)
+            : Mathf.Max(0.1f, _telegraphDuration);
         _context = new EnemyAttackContext(this, target, telegraphDuration);
         _phase = EnemyAttackPhase.Telegraph;
         _phaseEndTime = Time.time + telegraphDuration;
         _nextAttackTime = Time.time + _cooldown;
         EnemyAttackContext context = _context;
         PrepareTelegraph(context);
-        PlayActionSound(EnemySoundStage.Telegraph);
+        if (_usesHeartbeatForCurrentAttack)
+        {
+            float interval = telegraphDuration * 0.5f;
+            _secondHeartbeatTime = Time.time + interval;
+            _attackVoiceTime = _phaseEndTime - Mathf.Clamp(_attackVoiceLeadTime, 0f, interval * 0.5f);
+            _secondHeartbeatPlayed = false;
+            _attackVoicePlayed = false;
+            PlayActionSound(EnemySoundStage.Heartbeat);
+        }
+        else
+            PlayActionSound(EnemySoundStage.Telegraph);
         TelegraphStarted?.Invoke(context);
         return true;
     }
@@ -142,13 +189,61 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     public void CancelAttack()
     {
         if (!IsBusy)
+        {
+            if (_playingHeartbeatSounds.Count > 0) StopActionSound(true);
             return;
+        }
 
         EnemyAttackContext context = _context;
         _phase = EnemyAttackPhase.Ready;
-        StopActionSound();
+        StopActionSound(_usesHeartbeatForCurrentAttack);
+        _usesHeartbeatForCurrentAttack = false;
+        _secondHeartbeatPlayed = false;
+        _attackVoicePlayed = false;
+        _secondHeartbeatTime = 0f;
+        _attackVoiceTime = 0f;
         OnAttackEnded(context, true);
         AttackCancelled?.Invoke(context);
+    }
+
+    /// <summary>
+    /// 저장된 두 번째 박동·기합·공격 시각에 각 신호를 한 번 실행한다.
+    /// 게임 시간을 사용하며 박동이나 공격이 0.1초 넘게 지연되면 현재 공격을 취소하여 몰아서 실행하지 않는다.
+    /// </summary>
+    private void UpdateHeartbeatTelegraph()
+    {
+        float now = Time.time;
+        if (!_secondHeartbeatPlayed && now >= _secondHeartbeatTime)
+        {
+            if (now >= _phaseEndTime || now - _secondHeartbeatTime > MAX_RHYTHM_DELAY)
+            {
+                CancelAttack();
+                return;
+            }
+            _secondHeartbeatPlayed = true;
+            PlayActionSound(EnemySoundStage.Heartbeat);
+        }
+        if (now >= _phaseEndTime && now - _phaseEndTime > MAX_RHYTHM_DELAY)
+        {
+            CancelAttack();
+            return;
+        }
+        if (!_attackVoicePlayed && now >= _attackVoiceTime)
+        {
+            _attackVoicePlayed = true;
+            PlayActionSound(EnemySoundStage.AttackVoice);
+        }
+        if (_secondHeartbeatPlayed && now >= _phaseEndTime)
+            CommitAttack();
+    }
+
+    /// <summary>
+    /// telegraphDuration에 최대 실행 시간과 기본 후딜을 더해 쿨타임과 비교한 반복 간격을 반환한다.
+    /// 정상 공격을 끝까지 실행하는 경우의 계산값이며 피격·패링·대상 상실에 따른 지연은 포함하지 않는다.
+    /// </summary>
+    private float GetExpectedAttackInterval(float telegraphDuration)
+    {
+        return Mathf.Max(_cooldown, telegraphDuration + ActiveDuration + _recoveryDuration);
     }
 
     /// <summary>
@@ -160,7 +255,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phase = EnemyAttackPhase.Active;
         _phaseEndTime = Time.time + ActiveDuration;
         EnemyAttackContext context = _context;
-        if (SoundAction == EnemySoundAction.Melee) StopActionSound();
+        if (SoundAction == EnemySoundAction.Melee && !_usesHeartbeatForCurrentAttack) StopActionSound();
         PlayActionSound(EnemySoundStage.Action);
         PerformAttack(context);
         if (_phase != EnemyAttackPhase.Active)
@@ -183,21 +278,22 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phase = EnemyAttackPhase.Recovery;
         _phaseEndTime = Time.time + Mathf.Max(_recoveryDuration, minimumDuration);
         EnemyAttackContext context = _context;
-        if (SoundAction == EnemySoundAction.Melee) StopActionSound();
+        if (SoundAction == EnemySoundAction.Melee && !_usesHeartbeatForCurrentAttack) StopActionSound();
         OnAttackEnded(context, false);
         AttackEnded?.Invoke(context);
     }
 
     /// <summary>
     /// 행동 종류와 stage로 공통 설정의 소리를 찾아 기존 매니저에 적 위치의 단발 효과음을 요청한다.
-    /// 전조·베기 음량을 적용하고 근접 대각선 방향은 SwingType A/B로 전달하며 현재 재생 ID를 보관한다.
+    /// 전조·베기 음량과 근접 SwingType A/B를 적용하며 리듬 공격은 여러 신호의 ID를 독립적으로 보관한다.
     /// </summary>
     private void PlayActionSound(EnemySoundStage stage)
     {
         SoundId soundId = EnemySoundSettings.GetSound(SoundAction, stage);
         if (soundId == SoundId.None) return;
-        _playingActionSound = soundId;
-        float volume = stage == EnemySoundStage.Telegraph ? _telegraphVolume : _actionVolume;
+        if (_usesHeartbeatForCurrentAttack) _playingHeartbeatSounds.Add(soundId);
+        else _playingActionSound = soundId;
+        float volume = stage == EnemySoundStage.Telegraph || stage == EnemySoundStage.Heartbeat ? _telegraphVolume : _actionVolume;
         if (this is EnemyMeleeAttack melee && stage == EnemySoundStage.Action && soundId == SoundId.EnemySwordSwing)
             Managers.Sound.PlayAttachedWithLabel(soundId, gameObject, "SwingType", melee.IsLeftToRightSlash ? "A" : "B", volume);
         else
@@ -206,13 +302,19 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
 
     /// <summary>
     /// 현재 패턴이 시작한 소리 ID만 정지하고 재생 상태를 비운다.
-    /// 외부 입력 없이 공격 취소·근접 단계 전환에서 사용하며 발걸음과 방어 피드백은 유지한다.
+    /// forceStop이면 자연 종료를 무시해 박동·기합·공격음과 해당 예약을 정리하며 발걸음·방어음은 유지한다.
     /// </summary>
-    private void StopActionSound()
+    private void StopActionSound(bool forceStop = false)
     {
-        if (_playingActionSound != SoundId.None && Managers.IsInitialized)
-            Managers.Sound.StopFor(gameObject, _playingActionSound);
+        if (Managers.IsInitialized)
+        {
+            if (_playingActionSound != SoundId.None)
+                Managers.Sound.StopFor(gameObject, _playingActionSound, forceStop: forceStop);
+            foreach (SoundId soundId in _playingHeartbeatSounds)
+                Managers.Sound.StopFor(gameObject, soundId, forceStop: forceStop);
+        }
         _playingActionSound = SoundId.None;
+        _playingHeartbeatSounds.Clear();
     }
 
     /// <summary>
