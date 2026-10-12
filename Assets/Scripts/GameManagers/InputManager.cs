@@ -60,8 +60,7 @@ public sealed class InputManager : MonoBehaviour
         if (_guard.WasPressedThisFrame() && !player.IsGuarding) _combat.BeginDefense();
         if (_guard.WasReleasedThisFrame()) _combat.EndDefense();
         if (_dodge.WasPressedThisFrame()) player.RequestDodge();
-        if (_actions.Player.Attack.WasPressedThisFrame() && (!player.IsGuarding || _combat.CanCounterAttack))
-            _combat.RequestAttack();
+        if (_actions.Player.Attack.WasPressedThisFrame()) _combat.RequestAttack();
     }
 
     void OnApplicationFocus(bool focused)

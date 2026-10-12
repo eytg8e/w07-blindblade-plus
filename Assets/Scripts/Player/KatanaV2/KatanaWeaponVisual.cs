@@ -54,6 +54,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     [Header("Presentation")]
     [SerializeField] private bool _showWeapon = true;
     [SerializeField, Min(0f)] private float _blendTime = 0.025f;
+    [SerializeField, Min(0f), InspectorName("가드 전환 보간 시간")] private float _guardTransitionBlendTime = 0.1f;
+
     [SerializeField, Range(0.01f, 0.99f)] private float _iaidoImpactProgress = 0.88461536f;
     [SerializeField, Range(0.01f, 0.99f), InspectorName("2타 적중 진행도")] private float _normal1ImpactProgress = 0.75f;
     [SerializeField, Range(0.01f, 0.99f), InspectorName("반격 적중 진행도")] private float _counterImpactProgress = 0.4f;
@@ -384,7 +386,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 _attack = false;
                 _parry = false;
                 _finishingInsertion = false;
-                Play("GuardEnter", _blendTime);
+                Play("GuardEnter", _guardTransitionBlendTime);
                 _duration = 0.12f;
                 break;
             case KatanaStage.GuardSucceeded:
@@ -393,7 +395,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 _duration = 0.16f;
                 break;
             case KatanaStage.GuardEnded:
-                Play("GuardHold", _blendTime);
+                Play("GuardHold", _guardTransitionBlendTime);
                 _animator.SetFloat(ActionProgressId, 1f);
                 break;
             case KatanaStage.ParryMotionEnded:
@@ -428,7 +430,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                     break;
                 }
                 string sheath = _motion == "IaidoDoubleSlash" ? "SheatheIaido" : _motion == "Normal2" ? "Sheathe2" : "Sheathe1";
-                Play(sheath, _blendTime);
+                Play(sheath, _motion == "GuardHold" || _motion == "GuardEnter" || _motion == "GuardDeflect"
+                    ? _guardTransitionBlendTime : _blendTime);
                 _animator.SetFloat(ActionProgressId, 0f);
                 break;
             case KatanaStage.SheatheEnded:
@@ -464,8 +467,10 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         ApplyAttackClips(firstAttack);
         bool customFirstAttack = firstAttack && _firstAttackClip != null;
         bool matchedSecondAttack = name == "Normal1" && UsesOpeningTimingForSecondAttack;
-        float blend = kind == PlayerAttackKind.Normal && !opening && !_combat.IsCounterAttack
-            ? Mathf.Max(_blendTime, _comboBlendTime) : _blendTime;
+        bool transitioningFromGuard = _motion == "GuardHold" || _motion == "GuardEnter" || _motion == "GuardDeflect";
+        float blend = transitioningFromGuard ? _guardTransitionBlendTime
+            : kind == PlayerAttackKind.Normal && !opening && !_combat.IsCounterAttack
+                ? Mathf.Max(_blendTime, _comboBlendTime) : _blendTime;
         if (kind == PlayerAttackKind.Normal && _combat.IsFirstAttackFollowupTransition)
             blend = 0f;
         Play(name, blend);
