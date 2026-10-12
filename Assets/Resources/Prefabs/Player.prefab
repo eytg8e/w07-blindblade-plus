@@ -322,7 +322,7 @@ MonoBehaviour:
   _stepInterval: 0.36
   _normalFootstepNoise: 0.6
   _quietFootstepNoise: 0.2
-  _iaidoSpeed: 14
+  _iaidoSpeed: 28
   _iaidoMaxDistance: 7
   _dashCollisionMask:
     serializedVersion: 2
@@ -332,6 +332,11 @@ MonoBehaviour:
   _dodgeDistance: 2.4
   _dodgeDuration: 0.18
   _dodgeCooldown: 0.6
+  _dodgeGroundGraceDuration: 0.12
+  _attackLungeDistance: 0.45
+  _attackLungeDuration: 0.22
+  _attackFollowThroughSpeedMultiplier: 0.3
+  _combatResumeAcceleration: 14
   _recoilReturnSpeed: 18
 --- !u!114 &6616511219798166873
 MonoBehaviour:
@@ -356,7 +361,7 @@ MonoBehaviour:
   _iaidoAttackRange: 2
   _targetStandOff: 0.15
   _attackOriginHeight: 1.1
-  _normalAttackRecovery: 0.18
+  _normalAttackRecovery: 0
   _guardStartRecovery: 0
   _guardEndRecovery: 0
   _guardSuccessRecovery: 0
@@ -417,12 +422,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _player: {fileID: 6616511219798166873}
   _normalSheatheDelay: 0.8
+  _firstAttackInputBufferWindow: 0.2
   _comboBufferWindow: 0.2
   _comboFollowThrough: 0.12
   _comboResetDelay: 0.65
   _targetedAttackMinimumDuration: 0.45
-  _parryWindow: 0.18
-  _blockInputRecovery: 0.18
+  _parryWindow: 0.25
+  _blockInputRecovery: 0
   _guardPushDistance: 0.9
   _guardPushDuration: 0.12
   _counterWindow: 0.5
@@ -445,7 +451,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _maxHealth: 100
-  _hitRecovery: 0.18
+  _hitRecovery: 0
   _combat: {fileID: 5663976393034796336}
   _view: {fileID: 658615258030587121}
   _frontArc: 120
@@ -473,6 +479,7 @@ MonoBehaviour:
   _secondAttackReturnsToIdle: 1
   _showWeapon: 1
   _blendTime: 0.025
+  _guardTransitionBlendTime: 0.1
   _iaidoImpactProgress: 0.88461536
   _normal1ImpactProgress: 0.75
   _counterImpactProgress: 0.75
@@ -553,6 +560,8 @@ MonoBehaviour:
   _physicalContacts: {fileID: 3796482945788141926}
   _katana: {fileID: 5663976393034796336}
   _hitRecoilStrength: 0.25
+  _damageEffectDistance: 0.8
+  _damageEffectVerticalOffset: -0.1
   _defenseEffectDistance: 0.6
   _defenseEffectScreenOffset: 0.12
 --- !u!114 &1080894898460965423
@@ -1036,7 +1045,6 @@ MonoBehaviour:
     m_Bits: 4294967295
   _contactRadius: 0.04
   _teleportDistance: 3
-  _bloodOnEnemyContact: 1
 --- !u!95 &8362338574495906464 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 3502371185263496807, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}

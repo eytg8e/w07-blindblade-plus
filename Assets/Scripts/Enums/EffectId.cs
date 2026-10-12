@@ -11,5 +11,6 @@ public enum EffectId
     GuardClash = 5,
     ParryClash = 6,
     BossDamageHit = 7,
-    PlayerDamageHit = 8
+    PlayerDamageHit = 8,
+    EnemyDeath = 9
 }

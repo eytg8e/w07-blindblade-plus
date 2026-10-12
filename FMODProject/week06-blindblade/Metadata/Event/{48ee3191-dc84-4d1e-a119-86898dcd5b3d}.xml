@@ -2,7 +2,7 @@
 <objects serializationModel="Studio.02.03.00">
 	<object class="Event" id="{48ee3191-dc84-4d1e-a119-86898dcd5b3d}">
 		<property name="name">
-			<value>EnemyAttackVoice</value>
+			<value>EnemyAttack</value>
 		</property>
 		<property name="outputFormat">
 			<value>2</value>
@@ -84,7 +84,7 @@
 	</object>
 	<object class="MultiSound" id="{062dcaaa-6604-4f17-9313-729b170a44e2}">
 		<relationship name="sounds">
-			<destination>{bc020e2f-e327-4f32-8f88-9a91e4ba2d29}</destination>
+			<destination>{ecbf13e5-5a36-40c5-8496-0318cf86d7dc}</destination>
 		</relationship>
 	</object>
 	<object class="MixerBusEffectChain" id="{b2247c00-7266-46fa-9782-0a0169e839ce}">
@@ -100,23 +100,12 @@
 		</relationship>
 	</object>
 	<object class="MixerBusPanner" id="{8ad08177-c18c-4f0e-a7a9-fa643d8700dc}" />
-	<object class="MultiSound" id="{bc020e2f-e327-4f32-8f88-9a91e4ba2d29}">
-		<relationship name="sounds">
-			<destination>{8ae74e05-5dcc-49ed-95fc-5a5fd09b8c72}</destination>
-			<destination>{084b4ac9-3701-4161-921d-7880024cec82}</destination>
+	<object class="SingleSound" id="{ecbf13e5-5a36-40c5-8496-0318cf86d7dc}">
+		<relationship name="audioFile">
+			<destination>{9d3bbdcf-a199-4181-97f8-a26aae43f8b9}</destination>
 		</relationship>
 	</object>
 	<object class="MixerBusFader" id="{a25cec58-2498-4cc6-99bb-86e3b439fb08}" />
 	<object class="MixerBusFader" id="{6c5e4d7c-bf2d-407a-a3b3-147fd864605d}" />
 	<object class="SpatialiserEffect" id="{fee88ec2-823e-446d-9a06-a9f0502c0531}" />
-	<object class="SingleSound" id="{8ae74e05-5dcc-49ed-95fc-5a5fd09b8c72}">
-		<relationship name="audioFile">
-			<destination>{c3582619-2f41-4ab0-b24f-70ed56bb9625}</destination>
-		</relationship>
-	</object>
-	<object class="SingleSound" id="{084b4ac9-3701-4161-921d-7880024cec82}">
-		<relationship name="audioFile">
-			<destination>{0c152d34-99d2-457e-bdd4-ce67ebb5e75a}</destination>
-		</relationship>
-	</object>
 </objects>

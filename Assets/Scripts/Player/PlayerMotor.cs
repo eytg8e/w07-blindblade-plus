@@ -73,11 +73,13 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0.1f)] private float _dodgeDistance = 2.4f;
     [SerializeField, Min(0.05f)] private float _dodgeDuration = 0.18f;
     [SerializeField, Min(0f)] private float _dodgeCooldown = 0.6f;
+    [SerializeField, Min(0f), Tooltip("계단 하강 중 접지 판정이 잠깐 끊겨도 회피를 허용하는 시간")] private float _dodgeGroundGraceDuration = 0.12f;
     private bool _isDodging;
     private Vector3 _dodgeDirection;
     private float _dodgeElapsed;
     private float _dodgeProgress;
     private float _nextDodgeTime;
+    private float _lastGroundedTime = float.NegativeInfinity;
 
     [Header("공격 쳐내기 밀림")]
     private Vector3 _combatPushDirection;
@@ -85,6 +87,19 @@ public sealed class PlayerMotor : MonoBehaviour
     private float _combatPushDuration;
     private float _combatPushElapsed;
     private float _combatPushProgress;
+
+    [Header("기본 공격 전진")]
+    [SerializeField, Min(0f), InspectorName("공격 도약 거리 (m)")] private float _attackLungeDistance = 0.45f;
+    [SerializeField, Min(0.01f), InspectorName("공격 도약 시간 (초)")] private float _attackLungeDuration = 0.22f;
+    [SerializeField, Range(0f, 1f), InspectorName("공격 동작 중 이동 속도 배율")] private float _attackFollowThroughSpeedMultiplier = 0.3f;
+    [SerializeField, Min(0.01f), InspectorName("공격 후 정상 이동 복귀 가속도")] private float _combatResumeAcceleration = 14f;
+        private float _attackLungeStartSpeed;
+private Vector3 _attackLungeDirection;
+    private float _attackLungeElapsed;
+    private float _attackLungeProgress;
+    private bool _isAttackLunging;
+    private bool _attackAdvanceActive;
+    private bool _combatResumeAccelerationPending;
 
     private Vector2 _moveInput;
     private Vector2 _pendingLookDelta;
@@ -219,6 +234,8 @@ public sealed class PlayerMotor : MonoBehaviour
     public void ClearInput()
     {
         _combatPushDistance = 0f;
+        _isAttackLunging = false;
+        _attackAdvanceActive = false;
         CancelDodge();
         RestoreDashSlowMotion();
         _moveInput = Vector2.zero;
@@ -228,10 +245,13 @@ public sealed class PlayerMotor : MonoBehaviour
     }
 
     /// <summary>이동 유형, 잠금 상태, 게임 시간 간격으로 시점·이동·중력·발자국을 갱신합니다.</summary>
-    public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool lookLocked, float deltaTime)
+public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool lookLocked, float deltaTime)
     {
         if (_characterController == null || !_characterController.enabled)
             return;
+
+        if (_characterController.isGrounded)
+            _lastGroundedTime = Time.time;
 
         TickCrouch(deltaTime);
 
@@ -246,7 +266,8 @@ public sealed class PlayerMotor : MonoBehaviour
             return;
         }
 
-        if (movementLocked && _isDodging && !_isDashing) CancelDodge();
+        if (movementLocked && _isDodging && !_isDashing)
+            CancelDodge();
 
         if (_isDashing)
         {
@@ -261,6 +282,12 @@ public sealed class PlayerMotor : MonoBehaviour
             }
             TickDash(deltaTime);
             _lastHorizontalSpeed = 0f;
+            return;
+        }
+
+        if (_isAttackLunging)
+        {
+            TickAttackLunge(deltaTime);
             return;
         }
 
@@ -279,9 +306,16 @@ public sealed class PlayerMotor : MonoBehaviour
         Vector3 before = transform.position;
         if (movementLocked)
         {
-            _planarVelocity = Vector3.zero;
-            ResetWalkStep();
-            MoveWalkSegment(Vector3.zero, deltaTime);
+            if (_attackAdvanceActive)
+            {
+                TickAttackFollowThrough(deltaTime);
+            }
+            else
+            {
+                _planarVelocity = Vector3.zero;
+                ResetWalkStep();
+                MoveWalkSegment(Vector3.zero, deltaTime);
+            }
         }
         else if (GetSpeed(locomotionMode) > 0f && _moveInput.sqrMagnitude > 0.0001f)
         {
@@ -295,7 +329,6 @@ public sealed class PlayerMotor : MonoBehaviour
         actualDelta.y = 0f;
         float actualDistance = actualDelta.magnitude;
         _lastHorizontalSpeed = deltaTime > 0f ? actualDistance / deltaTime : 0f;
-
     }
 
     /// <summary>웅크리기 진행도를 부드럽게 갱신합니다. 일어설 때 머리 공간이 막혀 있으면 현재 높이를 유지합니다.</summary>
@@ -357,8 +390,10 @@ public sealed class PlayerMotor : MonoBehaviour
     /// </summary>
     public bool TryBeginDodge(Vector2 input)
     {
-        if (_isDodging || !_characterController.enabled || !_characterController.isGrounded
+        if (_isDodging || !_characterController.enabled || !HasRecentGroundContact()
             || Time.time < _nextDodgeTime) return false;
+        if (_characterController.isGrounded)
+            _lastGroundedTime = Time.time;
         Vector2 direction = input;
         if (direction.sqrMagnitude < 0.001f) direction = Vector2.down;
         direction.Normalize();
@@ -378,6 +413,13 @@ public sealed class PlayerMotor : MonoBehaviour
         ResetWalkStep();
         AddCombatRecoil(_dodgeDirection, 0.15f);
         return true;
+    }
+
+    /// <summary>현재 접지 상태이거나 마지막 접지 시점부터 회피 유예 시간이 지나지 않았는지 반환한다.</summary>
+    private bool HasRecentGroundContact()
+    {
+        return _characterController.isGrounded
+            || Time.time - _lastGroundedTime <= _dodgeGroundGraceDuration;
     }
 
     /// <summary>진행 중인 회피와 평면 속도를 정리한다. 이미 사용한 재사용 시간은 유지한다.</summary>
@@ -402,6 +444,47 @@ public sealed class PlayerMotor : MonoBehaviour
         AddCombatRecoil(direction, 1f);
     }
 
+    /// <summary>공격 시작 시 고정된 방향으로 짧게 전진하고 공격 뒤의 부드러운 재가속을 예약합니다.</summary>
+    /// <summary>공격 시작 시 일정 방향으로 짧게 전진하고 이동 입력을 이어갈 상태를 준비한다. 기존 속도로 도약 곡선의 시작 기울기를 계산한다.</summary>
+    public void BeginAttackLunge(Vector3 direction)
+    {
+        if (_characterController == null || !_characterController.enabled)
+            return;
+
+        direction = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
+        if (direction.sqrMagnitude < 0.0001f)
+            return;
+
+        CancelDodge();
+        _attackLungeDirection = direction;
+        _attackLungeStartSpeed = _planarVelocity.magnitude;
+        _attackLungeElapsed = 0f;
+        _attackLungeProgress = 0f;
+        _isAttackLunging = _attackLungeDistance > 0f && _attackLungeDuration > 0f;
+        _attackAdvanceActive = true;
+        _combatResumeAccelerationPending = true;
+        ResetWalkStep();
+    }
+
+    /// <summary>공격 전진을 끝낸다. preserveVelocity가 참이면 회복·후속 이동으로 이어질 속도를 보존하고 정상 가속을 예약한다.</summary>
+    public void EndAttackMovement(bool preserveVelocity = false)
+    {
+        _isAttackLunging = false;
+        _attackAdvanceActive = false;
+        if (preserveVelocity)
+        {
+            _combatResumeAccelerationPending = true;
+        }
+        else
+        {
+            _planarVelocity = Vector3.zero;
+            _combatResumeAccelerationPending = false;
+        }
+        ResetWalkStep();
+    }
+
+
+
     /// <summary>
     /// deltaTime으로 쳐내기 밀림을 감속시키며 CharacterController 충돌과 중력을 적용한다.
     /// 벽 또는 밀림 시간 종료 시 이동을 정리하며 공격 행동은 취소하지 않는다.
@@ -422,6 +505,63 @@ public sealed class PlayerMotor : MonoBehaviour
             _combatPushDistance = 0f;
     }
 
+    /// <summary>짧은 공격 전진을 부드럽게 진행하고 CharacterController 충돌과 중력을 반영합니다.</summary>
+    /// <summary>기존 속도에서 도약 속도로 이어지는 Hermite 곡선을 적용하고 CharacterController 충돌·중력을 반영한다.</summary>
+    private void TickAttackLunge(float deltaTime)
+    {
+        if (deltaTime <= 0f)
+            return;
+
+        _attackLungeElapsed = Mathf.Min(_attackLungeDuration, _attackLungeElapsed + deltaTime);
+        float normalized = _attackLungeElapsed / _attackLungeDuration;
+        float followThroughSpeed = _walkSpeed * Mathf.Clamp01(_attackFollowThroughSpeedMultiplier);
+        float startSlope = Mathf.Clamp(
+            _attackLungeStartSpeed * _attackLungeDuration / Mathf.Max(0.001f, _attackLungeDistance),
+            0f,
+            3f);
+        float endSlope = Mathf.Clamp(
+            followThroughSpeed * _attackLungeDuration / Mathf.Max(0.001f, _attackLungeDistance),
+            0f,
+            3f);
+        float progress = (startSlope + endSlope - 2f) * normalized * normalized * normalized
+            + (3f - 2f * startSlope - endSlope) * normalized * normalized
+            + startSlope * normalized;
+        float distance = _attackLungeDistance * (progress - _attackLungeProgress);
+        bool grounded = _characterController.isGrounded;
+        _verticalVelocity = grounded && _verticalVelocity < 0f
+            ? -2f
+            : _verticalVelocity - _gravity * deltaTime;
+
+        Vector3 before = transform.position;
+        CollisionFlags flags = _characterController.Move(
+            _attackLungeDirection * distance + Vector3.up * (_verticalVelocity * deltaTime));
+        _planarVelocity = deltaTime > 0f
+            ? Vector3.ProjectOnPlane(transform.position - before, Vector3.up) / deltaTime
+            : Vector3.zero;
+        _lastHorizontalSpeed = _planarVelocity.magnitude;
+        _attackLungeProgress = progress;
+
+        if ((flags & CollisionFlags.Sides) != 0 || normalized >= 1f)
+            _isAttackLunging = false;
+    }
+
+    /// <summary>공격 동작 중 현재 이동 입력 방향을 따라가며 설정된 속도 배율에 가속·감속으로 접근한다.</summary>
+    private void TickAttackFollowThrough(float deltaTime)
+    {
+        if (deltaTime <= 0f)
+            return;
+
+        Vector2 input = Vector2.ClampMagnitude(_moveInput, 1f);
+        Vector3 targetVelocity = input.sqrMagnitude > 0.0001f
+            ? transform.TransformDirection(new Vector3(input.x, 0f, input.y))
+                * (_walkSpeed * Mathf.Clamp01(_attackFollowThroughSpeedMultiplier))
+            : Vector3.zero;
+        float acceleration = input.sqrMagnitude > 0.0001f ? _acceleration : _deceleration;
+        MoveTowardsWalkVelocity(targetVelocity, acceleration, deltaTime);
+    }
+
+
+
     /// <summary>deltaTime으로 회피 거리를 감속 곡선에 따라 이동한다. CharacterController 충돌·중력을 유지하고 벽·낙하·시간 종료 시 회피를 마친다.</summary>
     private void TickDodge(float deltaTime)
     {
@@ -434,7 +574,12 @@ public sealed class PlayerMotor : MonoBehaviour
             + Vector3.up * (_verticalVelocity * deltaTime));
         _lastHorizontalSpeed = Vector3.ProjectOnPlane(transform.position - before, Vector3.up).magnitude / deltaTime;
         _dodgeProgress = progress;
-        if ((flags & CollisionFlags.Sides) != 0 || !_characterController.isGrounded || normalized >= 1f) CancelDodge();
+        bool grounded = (flags & CollisionFlags.Below) != 0 || _characterController.isGrounded;
+        if (grounded)
+            _lastGroundedTime = Time.time;
+
+        bool groundGraceExpired = Time.time - _lastGroundedTime > _dodgeGroundGraceDuration;
+        if ((flags & CollisionFlags.Sides) != 0 || groundGraceExpired || normalized >= 1f) CancelDodge();
     }
 
     /// <summary>
@@ -788,7 +933,13 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
             _stepInProgress = true;
             _stepMode = mode;
             float slice = Mathf.Min(remaining, Mathf.Max(0.000001f, interval - _stepElapsed));
-            MoveTowardsWalkVelocity(targetVelocity, _acceleration, slice);
+            float acceleration = _combatResumeAccelerationPending
+                ? _combatResumeAcceleration
+                : _acceleration;
+            MoveTowardsWalkVelocity(targetVelocity, acceleration, slice);
+            if (_combatResumeAccelerationPending
+                && (targetVelocity - _planarVelocity).sqrMagnitude <= 0.0001f)
+                _combatResumeAccelerationPending = false;
             _stepElapsed += slice;
             remaining = Mathf.Max(0f, remaining - slice);
             if (_stepElapsed + 0.000001f >= interval)
@@ -880,6 +1031,9 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
         RestoreDashSlowMotion();
         _isDashing = false;
         _isDodging = false;
+        _isAttackLunging = false;
+        _attackAdvanceActive = false;
+        _combatResumeAccelerationPending = false;
         _moveInput = Vector2.zero;
         _pendingLookDelta = Vector2.zero;
         _planarVelocity = Vector3.zero;

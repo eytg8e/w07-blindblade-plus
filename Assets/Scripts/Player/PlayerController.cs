@@ -64,6 +64,8 @@ public sealed class PlayerController : MonoBehaviour
     private Vector2 _requestedMoveInput;
     private float _chargeElapsed;
     private float _recoveryRemaining;
+    private bool _recoveryAllowsMovement;
+
     private bool _chargeReady;
     private bool _attackImpactResolved;
     private bool _attackActionFinished;
@@ -95,6 +97,9 @@ public sealed class PlayerController : MonoBehaviour
     public bool IsPaused => _state == PlayerActionState.Paused;
     public int CurrentActionId => _currentActionId;
     public bool IsInRecovery => _state == PlayerActionState.Recovery;
+    /// <summary>일반 공격 후 회복 중이며 이동을 허용하는 상태인지 반환한다.</summary>
+    public bool IsAttackRecoveryMovement => _state == PlayerActionState.Recovery && _recoveryAllowsMovement;
+
     public float RecoveryRemaining => _recoveryRemaining;
     public bool IsCrouching => _motor != null && _motor.IsCrouching;
 
@@ -197,6 +202,7 @@ public sealed class PlayerController : MonoBehaviour
 
 
     /// <summary>이동 입력을 저장하고 이동 장치에 전달합니다. 회복, 정지, 사망, 발도 동작 중에는 입력을 0으로 제한합니다.</summary>
+    /// <summary>이동 입력을 저장하고 이동 장치에 전달한다. 공격 후 회복에서는 입력을 유지하며 다른 회복·정지·사망·발도 동작 중에는 제한한다.</summary>
     public void SetMovementInput(Vector2 value)
     {
         if (_state == PlayerActionState.IaidoDash)
@@ -220,8 +226,8 @@ public sealed class PlayerController : MonoBehaviour
         _requestedMoveInput = Vector2.ClampMagnitude(value, 1f);
         if (_state == PlayerActionState.Recovery)
         {
-            _moveInput = Vector2.zero;
-            _motor?.SetMoveInput(Vector2.zero);
+            _moveInput = _recoveryAllowsMovement ? _requestedMoveInput : Vector2.zero;
+            _motor?.SetMoveInput(_moveInput);
             return;
         }
 
@@ -384,33 +390,38 @@ public sealed class PlayerController : MonoBehaviour
     public bool RequestNormalAttack()
     {
         if (_state != PlayerActionState.Free)
-            /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
 
         StartAttack(PlayerActionState.NormalAttack);
         _lockedAttackDirection = GetHorizontalViewDirection();
+        _motor?.BeginAttackLunge(_lockedAttackDirection);
         Publish(PlayerActionStage.AttackStarted);
         return true;
     }
 
     /// <summary>actionId의 일반 공격 판정이 끝났으면 남은 후딜을 마치고 새 일반 공격을 시작한다. 새 행동 ID를 발급하고 성공 여부를 반환한다.</summary>
+    /// <summary>actionId의 일반 공격이 명중 판정을 마쳤으면 후속 공격으로 즉시 전환하고 성공 여부를 반환한다.</summary>
     public bool TryChainNormalAttack(int actionId)
     {
         if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId
             || !_attackImpactResolved || _attackActionFinished) return false;
-        FinishAttackAction(0f, _currentAttackOutcome);
+        FinishAttackAction(0f, _currentAttackOutcome, true);
         return RequestNormalAttack();
     }
 
-    /// <summary>actionId가 현재 일반 공격과 일치하면 공격 판정을 취소하고 일반 공격 Recovery를 적용합니다.</summary>
-    public bool CancelNormalAttack(int actionId)
+    /// <summary>actionId의 미적중 일반 공격을 취소합니다. skipRecovery는 가드 전환 시 공격 후딜 없이 즉시 상태를 넘깁니다.</summary>
+    public bool CancelNormalAttack(int actionId, bool skipRecovery = false)
     {
-        if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId || _attackActionFinished)
+        if (_state != PlayerActionState.NormalAttack
+            || actionId != _currentActionId
+            || _attackActionFinished
+            || _attackImpactResolved)
             return false;
 
         _attackImpactResolved = true;
         _currentAttackOutcome = PlayerAttackOutcome.None;
-        FinishAttackAction(_normalAttackRecovery, PlayerAttackOutcome.None);
+        float recovery = skipRecovery ? 0f : _normalAttackRecovery;
+        FinishAttackAction(recovery, PlayerAttackOutcome.None, true);
         return true;
     }
     /// <summary>현재 일반 공격의 적중 프레임에서 적 시스템에 판정을 요청합니다. actionId가 현재 행동과 다르면 무시합니다.</summary>
@@ -473,6 +484,7 @@ public sealed class PlayerController : MonoBehaviour
     }
 
     /// <summary>일반 공격 애니메이션 종료를 처리하고 미판정 공격을 빗나감으로 확정한 뒤 회복을 적용합니다.</summary>
+    /// <summary>일반 공격 애니메이션 종료를 처리하고 미판정 공격을 빗나감으로 확정한 뒤 이동 가능한 회복을 적용한다.</summary>
     public void NotifyNormalAttackAnimationEnded(int actionId)
     {
         if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId || _attackActionFinished)
@@ -481,14 +493,13 @@ public sealed class PlayerController : MonoBehaviour
         if (!_attackImpactResolved)
             ApplyAttackResolution(new PlayerAttackResolution(_currentActionId, false, null, false));
 
-        FinishAttackAction(_normalAttackRecovery, _currentAttackOutcome);
+        FinishAttackAction(_normalAttackRecovery, _currentAttackOutcome, true);
     }
 
     /// <summary>완료된 기 모으기에서 감지 대상과 중앙 화면 영역으로 목표를 고정하고 발도 대시를 시작합니다. 요청 성공 여부를 반환합니다.</summary>
     public bool RequestIaidoAttack()
     {
         if (!_enableChargeAttack || _state != PlayerActionState.Charging || !_chargeReady)
-            /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
 
         _targetedComboStrike = 0;
@@ -724,24 +735,28 @@ public sealed class PlayerController : MonoBehaviour
     }
 
     /// <summary>공격 동작 종료를 게시하고 중복 없이 결과별 회복을 시작합니다.</summary>
-    private void FinishAttackAction(float recovery, PlayerAttackOutcome outcome)
+    /// <summary>공격 동작 종료를 게시하고 결과별 회복을 시작한다. 이동 허용 여부는 일반 공격 또는 피격 반응 흐름에서 전달한다.</summary>
+    private void FinishAttackAction(float recovery, PlayerAttackOutcome outcome, bool allowMovementDuringRecovery = false)
     {
         if (_attackActionFinished)
             return;
 
         _attackActionFinished = true;
         _recoveryRemaining = 0f;
+        _motor?.EndAttackMovement(allowMovementDuringRecovery);
         Publish(PlayerActionStage.ActionEnded, outcome, _preferredTargetId);
-        BeginRecovery(recovery, outcome);
+        BeginRecovery(recovery, outcome, allowMovementDuringRecovery);
     }
 
     /// <summary>회복 시간을 0 이상으로 제한해 저장하고 공격 상태를 회복 또는 자유 상태로 전환합니다.</summary>
-    private void BeginRecovery(float duration, PlayerAttackOutcome outcome)
+    /// <summary>회복 시간을 0 이상으로 저장하고 공격 상태를 회복 또는 자유 상태로 전환한다. 일반 공격 회복은 이동 입력을 계속 전달한다.</summary>
+    private void BeginRecovery(float duration, PlayerAttackOutcome outcome, bool allowMovement = false)
     {
         duration = Mathf.Max(0f, duration);
         if (duration <= 0f)
         {
             _recoveryRemaining = 0f;
+            _recoveryAllowsMovement = false;
             if (_state == PlayerActionState.NormalAttack
                 || _state == PlayerActionState.IaidoSlash
                 || _state == PlayerActionState.IaidoDash)
@@ -753,15 +768,26 @@ public sealed class PlayerController : MonoBehaviour
         }
 
         _recoveryRemaining = duration;
-        _moveInput = Vector2.zero;
-        _motor?.ClearInput();
+        _recoveryAllowsMovement = allowMovement;
+        if (allowMovement)
+        {
+            _moveInput = _requestedMoveInput;
+            _motor?.SetMoveInput(_moveInput);
+        }
+        else
+        {
+            _moveInput = Vector2.zero;
+            _motor?.ClearInput();
+        }
         SetState(PlayerActionState.Recovery, PlayerActionStage.RecoveryStarted, outcome);
     }
 
     /// <summary>회복 타이머를 끝내고 자유 상태로 복귀한 뒤 공격 임시 상태를 초기화합니다.</summary>
+    /// <summary>회복 타이머를 끝내고 자유 상태로 복귀한 뒤 회복 중 이동 허용 상태를 초기화한다.</summary>
     private void EndRecovery()
     {
         _recoveryRemaining = 0f;
+        _recoveryAllowsMovement = false;
         SetState(PlayerActionState.Free, PlayerActionStage.RecoveryEnded, _currentAttackOutcome);
         ResetFinishedAttack();
         _moveInput = _requestedMoveInput;
@@ -907,6 +933,7 @@ public sealed class PlayerController : MonoBehaviour
     }
 
     /// <summary>행동 상태, 충전 완료, 웅크리기 여부로 이동 유형을 반환합니다.</summary>
+    /// <summary>행동 상태, 충전 완료, 웅크리기 여부로 이동 유형을 반환한다. 일반 공격 회복 중에는 보행을 허용한다.</summary>
     private PlayerLocomotionMode GetLocomotionMode()
     {
         if (_state == PlayerActionState.IaidoDash)
@@ -914,7 +941,8 @@ public sealed class PlayerController : MonoBehaviour
 
         bool canWalk = _state == PlayerActionState.Free
             || _state == PlayerActionState.Guarding
-            || (_state == PlayerActionState.Charging && _chargeReady);
+            || (_state == PlayerActionState.Charging && _chargeReady)
+            || (_state == PlayerActionState.Recovery && _recoveryAllowsMovement);
         if (_motor != null && _motor.IsCrouching)
             return canWalk && _moveInput.sqrMagnitude > 0.0001f
                 ? PlayerLocomotionMode.CrouchWalking
@@ -924,16 +952,17 @@ public sealed class PlayerController : MonoBehaviour
             return PlayerLocomotionMode.GuardWalking;
         if (_state == PlayerActionState.Charging)
             return _chargeReady ? PlayerLocomotionMode.ChargingWalking : PlayerLocomotionMode.ChargingStill;
-        if (_state == PlayerActionState.Free && _moveInput.sqrMagnitude > 0.0001f)
+        if (canWalk && _moveInput.sqrMagnitude > 0.0001f)
             return PlayerLocomotionMode.Walking;
         return PlayerLocomotionMode.Stopped;
     }
 
     /// <summary>일반 공격, 회복, 일시정지, 사망, 발도 동작, 초기 충전 상태의 이동 제한 여부를 반환합니다.</summary>
+    /// <summary>일반 공격, 제한된 회복, 일시정지, 사망, 발도 동작, 초기 충전 상태의 이동 잠금 여부를 반환한다.</summary>
     private bool IsMovementLocked()
     {
         return _state == PlayerActionState.NormalAttack
-            || _state == PlayerActionState.Recovery
+            || (_state == PlayerActionState.Recovery && !_recoveryAllowsMovement)
             || _state == PlayerActionState.Paused
             || _state == PlayerActionState.Dead
             || _state == PlayerActionState.IaidoDash

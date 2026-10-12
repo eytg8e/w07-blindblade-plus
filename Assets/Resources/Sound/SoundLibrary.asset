@@ -101,7 +101,7 @@ MonoBehaviour:
         Data2: 1174647988
         Data3: 624561286
         Data4: 493909528
-      Path: event:/Enemy/EnemyAttack
+      Path: event:/Enemy/EnemyAttackSwing
     _enabled: 1
     _volumeMultiplier: 1
     _pitchMultiplier: 1
@@ -373,7 +373,7 @@ MonoBehaviour:
         Data2: 1293868164
         Data3: -1987700319
         Data4: 1029426573
-      Path: event:/Enemy/EnemyAttackVoice
+      Path: event:/Enemy/EnemyAttack
     _enabled: 1
     _volumeMultiplier: 1
     _pitchMultiplier: 1

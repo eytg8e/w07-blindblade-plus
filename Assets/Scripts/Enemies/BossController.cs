@@ -37,12 +37,18 @@ public sealed class BossController : MonoBehaviour
     private float _patternWaitMax = 2f;
     private BossState _nextPattern = BossState.Ranged;
 
-    [Header("두 박동 공격 전조")]
+    [Header("박동 공격 전조")]
     [SerializeField] private bool _useHeartbeatTelegraph = true;
-    [SerializeField, Min(1f), Tooltip("첫 박동부터 발사·돌진까지의 최소 준비 시간(초)")]
-    private float _minimumHeartbeatTelegraph = 1.4f;
-    [SerializeField, Min(1f), Tooltip("최대 준비 시간(초). 한 번의 연사는 같은 준비 시간을 사용합니다.")]
-    private float _maximumHeartbeatTelegraph = 2.2f;
+    [SerializeField, Min(1), InspectorName("박동 횟수"), Tooltip("발사·돌진 전 박동 횟수입니다. 마지막 박동 이후 공격 지연을 적용합니다.")]
+    private int _heartbeatCount = 1;
+    [SerializeField, Min(0f), InspectorName("첫 박동 전 대기 (초)"), Tooltip("준비 시작부터 첫 박동까지의 고정 대기 시간입니다. 박동 간격과 독립적으로 설정합니다.")]
+    private float _firstHeartbeatDelay = 0.2f;
+    [SerializeField, Min(0.1f), InspectorName("박동 간격 최소 (초)"), Tooltip("두 박동 사이의 최소 간격(초). 발사·돌진마다 한 번 선택합니다.")]
+    private float _minimumHeartbeatInterval = 0.4f;
+    [SerializeField, Min(0.1f), InspectorName("박동 간격 최대 (초)"), Tooltip("두 박동 사이의 최대 간격(초). 최소값보다 작으면 최소값을 사용합니다.")]
+    private float _maximumHeartbeatInterval = 0.55f;
+    [SerializeField, Min(0.05f), InspectorName("마지막 박동 후 공격 지연 (초)"), Tooltip("마지막 박동부터 발사·돌진까지의 고정 지연(초)")]
+    private float _postHeartbeatAttackDelay = 0.2f;
     private bool _preparationSucceeded;
     public event Action Heartbeat;
     public event Action PreparationCancelled;
@@ -58,7 +64,7 @@ public sealed class BossController : MonoBehaviour
     public event Action RangedFiring;
 
     [Header("돌진")]
-    [SerializeField, Min(0.1f), Tooltip("두 박동 전조를 끈 경우 사용하는 돌진 준비 시간(초)")]
+    [SerializeField, Min(0.1f), Tooltip("박동 전조를 끈 경우 사용하는 돌진 준비 시간(초)")]
     private float _chargePreparation = 0.9f;
     [SerializeField, Min(0.1f)] private float _chargeSpeed = 14f;
     [SerializeField, Min(0.1f)] private float _chargeDistance = 12f;
@@ -207,11 +213,10 @@ public sealed class BossController : MonoBehaviour
     {
         ChangeState(BossState.Ranged);
         _motor.Stop();
-        float preparation = GetPreparationDuration(_rangedPreparation);
         for (int i = 0; i < _rangedShots; i++)
         {
             RangedPreparing?.Invoke();
-            yield return PrepareAttack(preparation);
+            yield return PrepareAttack(GetPreparationDuration(_rangedPreparation));
             if (!_preparationSucceeded) yield break;
             Vector3 origin = transform.position + Vector3.up;
             Vector3 direction = (_player.transform.position + Vector3.up - origin).normalized;
@@ -479,18 +484,20 @@ public sealed class BossController : MonoBehaviour
     }
 
     /// <summary>
-    /// 박동 사용 설정과 최소·최대 준비 시간으로 이번 패턴의 전조 시간을 반환한다.
+    /// 첫 박동 대기와 박동 사이 간격에 고정 공격 지연을 더해 이번 패턴의 전체 전조 시간을 반환한다.
     /// 박동을 끄면 legacyDuration을 사용하며 호출당 한 번만 랜덤 값을 선택한다.
     /// </summary>
     private float GetPreparationDuration(float legacyDuration)
     {
         if (!_useHeartbeatTelegraph) return Mathf.Max(0.1f, legacyDuration);
-        float minimum = Mathf.Max(1f, _minimumHeartbeatTelegraph);
-        return UnityEngine.Random.Range(minimum, Mathf.Max(minimum, _maximumHeartbeatTelegraph));
+        float minimum = Mathf.Max(0.1f, _minimumHeartbeatInterval);
+        return Mathf.Max(0f, _firstHeartbeatDelay) + (Mathf.Max(1, _heartbeatCount) - 1)
+            * UnityEngine.Random.Range(minimum, Mathf.Max(minimum, _maximumHeartbeatInterval))
+            + Mathf.Max(0.05f, _postHeartbeatAttackDelay);
     }
 
     /// <summary>
-    /// duration의 시작·절반 시점에 박동을 알리고 종료 시 공격 준비 성공 상태를 저장한다.
+    /// duration과 횟수로 첫 박동 대기 뒤부터 박동을 알리고 준비 성공을 저장한다. 박동 설정이 꺼져 있으면 재생 없이 기다린다.
     /// 일시정지 후 같은 간격의 첫 박동부터 재개하며 큰 프레임 지연에서는 준비를 취소한다.
     /// </summary>
     private IEnumerator PrepareAttack(float duration)
@@ -502,9 +509,12 @@ public sealed class BossController : MonoBehaviour
             _preparationSucceeded = true;
             yield break;
         }
+        int count = Mathf.Max(1, _heartbeatCount);
+        float firstDelay = Mathf.Max(0f, _firstHeartbeatDelay);
+        float interval = count > 1
+            ? Mathf.Max(0.1f, (duration - firstDelay - Mathf.Max(0.05f, _postHeartbeatAttackDelay)) / (count - 1)) : 0f;
         float started = Time.time;
-        bool secondPlayed = false;
-        Heartbeat?.Invoke();
+        int played = 0;
         while (true)
         {
             yield return null;
@@ -513,21 +523,20 @@ public sealed class BossController : MonoBehaviour
                 PreparationCancelled?.Invoke();
                 while (Time.timeScale <= 0f) yield return null;
                 started = Time.time;
-                secondPlayed = false;
-                Heartbeat?.Invoke();
+                played = 0;
                 continue;
             }
             float now = Time.time;
-            float secondAt = started + duration * 0.5f;
+            float nextAt = started + firstDelay + interval * played;
             float attackAt = started + duration;
-            if (!secondPlayed && now >= secondAt)
+            if (played < count && now >= nextAt)
             {
-                if (now >= attackAt || now - secondAt > MAX_RHYTHM_DELAY)
+                if (now >= attackAt || now - nextAt > MAX_RHYTHM_DELAY)
                 {
                     PreparationCancelled?.Invoke();
                     yield break;
                 }
-                secondPlayed = true;
+                played++;
                 Heartbeat?.Invoke();
             }
             if (now < attackAt) continue;
@@ -536,7 +545,7 @@ public sealed class BossController : MonoBehaviour
                 PreparationCancelled?.Invoke();
                 yield break;
             }
-            _preparationSucceeded = secondPlayed;
+            _preparationSucceeded = played >= count;
             yield break;
         }
     }

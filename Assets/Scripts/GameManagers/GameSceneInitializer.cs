@@ -30,6 +30,10 @@ public sealed class GameSceneInitializer : MonoBehaviour
     private KatanaInputCommandAdapter _katanaInput;
     private bool _started;
 
+    public bool SwordNoiseEnabled => _useSwordNoise;
+    public float SwordHearingDistance => _swordHearingDistance;
+    public float SwordAlertDuration => _swordAlertDuration;
+
     void Start()
     {
         _started = true;

@@ -11,8 +11,14 @@ public sealed class EnemySensor : MonoBehaviour
     [SerializeField] private Vector3 _targetOffset = new Vector3(0f, 1f, 0f);
     [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
 
+    [Header("소리 감지")]
+    [SerializeField, Min(0f), Tooltip("시야 탐지와 독립적인 검 소음 감지 거리입니다. NavMesh 경로 길이를 사용하며 0이면 소음에 반응하지 않습니다.")]
+    private float _hearingDistance = 20f;
+    [SerializeField] private bool _showHearingRange = true;
+
     public Transform Target => _target;
     public float DetectionRange => _detectionRange;
+    public float HearingDistance => _hearingDistance;
 
     void Start()
     {
@@ -58,12 +64,35 @@ public sealed class EnemySensor : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
+        Color previous = Gizmos.color;
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, _detectionRange);
+        if (_showHearingRange)
+        {
+            float range = _hearingDistance;
+            foreach (GameObject root in gameObject.scene.GetRootGameObjects())
+            {
+                GameSceneInitializer settings = root.GetComponentInChildren<GameSceneInitializer>();
+                if (settings == null) continue;
+                range = settings.SwordNoiseEnabled ? Mathf.Min(range, settings.SwordHearingDistance) : 0f;
+                break;
+            }
+            Gizmos.color = new Color(0.1f, 0.85f, 1f, 0.7f);
+            Gizmos.DrawWireSphere(transform.position, range);
+#if UNITY_EDITOR
+            Color previousHandleColor = UnityEditor.Handles.color;
+            UnityEditor.Handles.color = Gizmos.color;
+            UnityEditor.Handles.DrawWireDisc(transform.position, Vector3.up, range);
+            UnityEditor.Handles.Label(transform.position + Vector3.up * 2f,
+                $"소리 감지: {range:0.##}m (NavMesh 경로 거리)");
+            UnityEditor.Handles.color = previousHandleColor;
+#endif
+        }
         if (_target != null)
         {
             Gizmos.color = Color.cyan;
             Gizmos.DrawLine(transform.TransformPoint(_eyeOffset), _target.TransformPoint(_targetOffset));
         }
+        Gizmos.color = previous;
     }
 }

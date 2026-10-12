@@ -228,6 +228,8 @@ MonoBehaviour:
   _repathInterval: 0.2
   _memoryDuration: 3
   _allowWalkingChase: 0
+  _hearingDistance: 40
+  _showHearingRange: 1
 --- !u!114 &2120341061812145690
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -299,8 +301,11 @@ MonoBehaviour:
   _cooldown: 4
   _cancelWhenHidden: 1
   _useHeartbeatTelegraph: 1
-  _minimumHeartbeatTelegraph: 1.4
-  _maximumHeartbeatTelegraph: 2.2
+  _heartbeatCount: 1
+  _firstHeartbeatDelay: 0.2
+  _minimumHeartbeatInterval: 0.9
+  _maximumHeartbeatInterval: 1.2
+  _postHeartbeatAttackDelay: 0.5
   _attackVoiceLeadTime: 0.05
   _telegraphVolume: 1
   _actionVolume: 1

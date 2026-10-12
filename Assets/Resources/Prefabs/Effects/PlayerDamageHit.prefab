@@ -101,4 +101,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db16b22a0bc65e848923ce4a72f46787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _ignorePerception: 0
+  _ignorePerception: 1

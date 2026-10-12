@@ -57,11 +57,17 @@ public sealed class InputManager : MonoBehaviour
         player.SetCrouchInput(_crouchHold.IsPressed() || _crouchToggled);
         player.SetMovementInput(_actions.Player.Move.ReadValue<Vector2>());
         player.AddLookInput(_actions.Player.Look.ReadValue<Vector2>());
-        if (_guard.WasPressedThisFrame() && !player.IsGuarding) _combat.BeginDefense();
+
+        // 새 우클릭은 공격을 가드로 전환하고, 계속 누르는 우클릭은 공격 완료 뒤 가드로 복귀시킨다.
+        if (_guard.WasPressedThisFrame() && !player.IsGuarding)
+            _combat.BeginDefense();
+        else if (_guard.IsPressed() && !player.IsGuarding
+            && player.CurrentState == PlayerActionState.Free)
+            _combat.BeginDefense();
+
         if (_guard.WasReleasedThisFrame()) _combat.EndDefense();
         if (_dodge.WasPressedThisFrame()) player.RequestDodge();
-        if (_actions.Player.Attack.WasPressedThisFrame() && (!player.IsGuarding || _combat.CanCounterAttack))
-            _combat.RequestAttack();
+        if (_actions.Player.Attack.WasPressedThisFrame()) _combat.RequestAttack();
     }
 
     void OnApplicationFocus(bool focused)

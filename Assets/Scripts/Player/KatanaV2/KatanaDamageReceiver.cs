@@ -24,6 +24,11 @@ public sealed class KatanaDamageReceiver : PlayerHealth
         }
     }
 
+    void OnEnable()
+    {
+        _motor = GetComponent<PlayerMotor>();
+    }
+
     /// <summary>
     /// context의 전방 근접·보스 돌진 피해를 먼저 가드·패링으로 검사한다.
     /// 성공하면 피해를 소비하고 실패하면 PlayerHealth가 HP 차감과 사망 및 피해 이벤트를 처리한다.
