@@ -73,11 +73,13 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0.1f)] private float _dodgeDistance = 2.4f;
     [SerializeField, Min(0.05f)] private float _dodgeDuration = 0.18f;
     [SerializeField, Min(0f)] private float _dodgeCooldown = 0.6f;
+    [SerializeField, Min(0f), Tooltip("계단 하강 중 접지 판정이 잠깐 끊겨도 회피를 허용하는 시간")] private float _dodgeGroundGraceDuration = 0.12f;
     private bool _isDodging;
     private Vector3 _dodgeDirection;
     private float _dodgeElapsed;
     private float _dodgeProgress;
     private float _nextDodgeTime;
+    private float _lastGroundedTime = float.NegativeInfinity;
 
     [Header("공격 쳐내기 밀림")]
     private Vector3 _combatPushDirection;
@@ -248,6 +250,9 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
         if (_characterController == null || !_characterController.enabled)
             return;
 
+        if (_characterController.isGrounded)
+            _lastGroundedTime = Time.time;
+
         TickCrouch(deltaTime);
 
         if (!lookLocked)
@@ -385,8 +390,10 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
     /// </summary>
     public bool TryBeginDodge(Vector2 input)
     {
-        if (_isDodging || !_characterController.enabled || !_characterController.isGrounded
+        if (_isDodging || !_characterController.enabled || !HasRecentGroundContact()
             || Time.time < _nextDodgeTime) return false;
+        if (_characterController.isGrounded)
+            _lastGroundedTime = Time.time;
         Vector2 direction = input;
         if (direction.sqrMagnitude < 0.001f) direction = Vector2.down;
         direction.Normalize();
@@ -406,6 +413,13 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
         ResetWalkStep();
         AddCombatRecoil(_dodgeDirection, 0.15f);
         return true;
+    }
+
+    /// <summary>현재 접지 상태이거나 마지막 접지 시점부터 회피 유예 시간이 지나지 않았는지 반환한다.</summary>
+    private bool HasRecentGroundContact()
+    {
+        return _characterController.isGrounded
+            || Time.time - _lastGroundedTime <= _dodgeGroundGraceDuration;
     }
 
     /// <summary>진행 중인 회피와 평면 속도를 정리한다. 이미 사용한 재사용 시간은 유지한다.</summary>
@@ -560,7 +574,12 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
             + Vector3.up * (_verticalVelocity * deltaTime));
         _lastHorizontalSpeed = Vector3.ProjectOnPlane(transform.position - before, Vector3.up).magnitude / deltaTime;
         _dodgeProgress = progress;
-        if ((flags & CollisionFlags.Sides) != 0 || !_characterController.isGrounded || normalized >= 1f) CancelDodge();
+        bool grounded = (flags & CollisionFlags.Below) != 0 || _characterController.isGrounded;
+        if (grounded)
+            _lastGroundedTime = Time.time;
+
+        bool groundGraceExpired = Time.time - _lastGroundedTime > _dodgeGroundGraceDuration;
+        if ((flags & CollisionFlags.Sides) != 0 || groundGraceExpired || normalized >= 1f) CancelDodge();
     }
 
     /// <summary>
