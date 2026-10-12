@@ -116,6 +116,7 @@ GameObject:
   - component: {fileID: 7126814091994982836}
   - component: {fileID: 171932971782144278}
   - component: {fileID: 5663085455822621945}
+  - component: {fileID: 5406997345495847073}
   m_Layer: 0
   m_Name: UIManager
   m_TagString: Untagged
@@ -200,6 +201,19 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
+--- !u!114 &5406997345495847073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9118493050156042497}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab9bfdbf02319c14bbc3328be135e8e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _advanceKey: 2
 --- !u!1001 &2673709203376745288
 PrefabInstance:
   m_ObjectHideFlags: 0

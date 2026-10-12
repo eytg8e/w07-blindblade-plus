@@ -145,6 +145,30 @@ public sealed class InputManager : MonoBehaviour
         Cursor.visible = !locked;
     }
 
+    /// <summary>튜토리얼 재개에 사용한 command를 복구된 플레이어에 한 번 전달한다. 회피 방향은 현재 이동 입력을 사용한다.</summary>
+    public void ApplyTutorialInput(TutorialResumeInput command)
+    {
+        PlayerController player = Game.Player;
+        if (!IsGameplayInputEnabled || player == null || player.IsPaused || !Application.isFocused) return;
+        SetCursor(true);
+        player.SetMovementInput(_actions.Player.Move.ReadValue<Vector2>());
+        switch (command)
+        {
+            case TutorialResumeInput.Attack:
+                _combat.RequestAttack();
+                break;
+            case TutorialResumeInput.Defense:
+                _combat.BeginDefense();
+                break;
+            case TutorialResumeInput.Dodge:
+                player.RequestDodge();
+                break;
+            case TutorialResumeInput.Crouch:
+                player.SetCrouchInput(true);
+                break;
+        }
+    }
+
     /// <summary>입력 액션과 상태 구독·플레이어 장치 참조를 해제한다. 매니저는 다음 씬에서 재사용한다.</summary>
     public void Shutdown()
     {
