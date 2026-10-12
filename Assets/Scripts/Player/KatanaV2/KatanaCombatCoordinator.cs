@@ -85,7 +85,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     private bool _sheatheAfterRecovery;
 
     [Header("방어")]
-    [SerializeField, Min(0.01f)] private float _parryWindow = 0.18f;
+    [SerializeField, Min(0.01f)] private float _parryWindow = 0.25f;
     [SerializeField, Min(0f)] private float _blockInputRecovery = 0.18f;
     [SerializeField, Min(0f), InspectorName("일반 적 가드 밀림 거리 (m)")] private float _guardPushDistance = 0.9f;
     [SerializeField, Min(0.01f), InspectorName("일반 적 가드 밀림 시간 (초)")] private float _guardPushDuration = 0.12f;
@@ -838,14 +838,26 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         EventRaised?.Invoke(new KatanaEvent(stage, _strike, _player.CurrentActionId, wasDrawn, detail));
     }
 
-    /// <summary>자유 상태에서 가드를 시작하고 짧은 패링 창을 연다. 방어 입력 수락 여부를 반환한다.</summary>
-    /// <summary>자유 상태에서 패링 창을 연다. 공격 또는 공격 회복 중에는 가드 입력을 저장해 회복 종료 뒤 일반 가드로 시작한다.</summary>
+    /// <summary>자유 상태에서는 패링 창을 열고, 미적중 일반 공격 중 새 방어 입력은 즉시 가드로 전환한다. 이미 적중했으면 공격 종료 뒤 가드로 복귀한다.</summary>
     public bool BeginDefense()
     {
         if (!isActiveAndEnabled || _player.IsPaused || Time.timeScale <= 0f)
             return false;
 
-        if (_player.CurrentState == PlayerActionState.NormalAttack || _player.IsAttackRecoveryMovement)
+        if (_player.CurrentState == PlayerActionState.NormalAttack)
+        {
+            if (_player.CancelNormalAttack(_player.CurrentActionId, true))
+            {
+                ResetChain();
+                if (StartDefense(true))
+                    return true;
+            }
+
+            _bufferedDefense = true;
+            return true;
+        }
+
+        if (_player.IsAttackRecoveryMovement)
         {
             _bufferedDefense = true;
             return true;
