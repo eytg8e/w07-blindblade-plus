@@ -124,3 +124,10 @@ Game.Instance.UIManager.Hide<MonologueUI>();
 - StageStartMonologue.cs와 메타, Stage_1의 전용 테스트 오브젝트를 제거했다. 스테이지 시작의 테스트 문구 자동 표시는 더 이상 실행하지 않는다.
 - 이미지 배경으로 대체되어 비활성 상태였던 MonologuePanelStyle.cs와 메타 및 프리팹 컴포넌트를 제거했다. 사용 중인 InkPanel 이미지·본문·안내 표시·독백 API와 사용자가 조정한 배치는 유지한다.
 - 코드·프리팹·씬에서 삭제 코드 참조가 남지 않은 것을 검색으로 확인했다. Unity recompile은 30초 시간 초과로 완료하지 못했고 상태는 triggered이다. 프리팹 조회도 메인 스레드 시간 초과로 완료하지 못했다. 추가 Inspector 연결은 없다. 이전 구현 기록은 당시 동작이다.
+
+## 2026-10-13 문 안내 장치별 표시 및 폰트
+
+- 공통 OpenDoorPromptUI.prefab의 본문에 기존 ChosunCentennial_otf SDF 폰트를 적용했다.
+- ShowFor에서 현재 입력 장치를 갱신하고 문 열기는 “문 열기 - (F)” 또는 “문 열기 - (X)”, 문 닫기는 같은 형식의 닫기 문구로 표시한다. 실제 입력 매핑 F 및 Gamepad.buttonWest(X)는 유지한다.
+- 그 외 사용자 지정 상호작용 문구와 잠긴 문 조건은 기존 처리 경로를 유지한다.
+- Unity 컴파일 오류 없음, 프리팹 저장 완료. 플레이 및 시각 검증은 사용자 지침에 따라 미실행이다.
