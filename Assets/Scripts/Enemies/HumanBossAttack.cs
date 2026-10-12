@@ -18,6 +18,8 @@ public sealed class HumanBossAttack : MonoBehaviour
     [SerializeField, Min(0f)] private float _damage = 15f;
     [SerializeField, Min(0.1f)] private float _preparation = 0.8f;
     [SerializeField, Min(0.1f)] private float _shotInterval = 0.8f;
+    [SerializeField, Min(0.1f), Tooltip("탑승 연속 사격의 발사 후 간격(초)")]
+    private float _continuousShotInterval = 0.5f;
     [SerializeField, Min(1)] private int _soloShots = 3;
     [SerializeField] private SoundId _preparationSound = SoundId.EnemyRangedAttackVoice;
     private readonly List<TwinBossProjectile> _projectiles = new List<TwinBossProjectile>();
@@ -108,7 +110,7 @@ public sealed class HumanBossAttack : MonoBehaviour
                 ShotFired?.Invoke();
             }
             shots++;
-            yield return new WaitForSeconds(_shotInterval);
+            yield return new WaitForSeconds(continuous ? _continuousShotInterval : _shotInterval);
             if (teleportBetweenShots && !continuous && !_mounted && shots < _soloShots
                 && _health.IsAlive && _player != null && _player.IsAlive && _motor.IsReady)
                 TryTeleportAroundPlayer();

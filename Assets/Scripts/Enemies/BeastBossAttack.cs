@@ -35,6 +35,7 @@ public sealed class BeastBossAttack : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _contactRadius = 0.7f;
     [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
     [SerializeField] private SoundId _preparationSound = SoundId.EnemyAttackVoice;
+    [SerializeField] private SoundId _parrySound = SoundId.None;
     private readonly RaycastHit[] _hits = new RaycastHit[32];
     private readonly Collider[] _contacts = new Collider[32];
     private bool _attackResolved;
@@ -269,6 +270,11 @@ public sealed class BeastBossAttack : MonoBehaviour
         _attackResolved = true;
         DamageContext context = new DamageContext(damage, gameObject, point, direction, pattern);
         if (!player.TryDefendProjectile(context, out bool parried)) player.TakeDamage(context);
+        else if (parried && _parrySound != SoundId.None)
+        {
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyGetParryed, forceStop: true);
+            Managers.Sound.Play(_parrySound, transform.position, owner: gameObject, playDuringMovement: true);
+        }
     }
 
     /// <summary>점프 종료·중단 시 유효한 지면으로 복귀하고 위치·회전 자동 갱신을 복원한다.</summary>

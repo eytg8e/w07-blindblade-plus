@@ -235,6 +235,7 @@ MonoBehaviour:
   _damage: 15
   _preparation: 0.35
   _shotInterval: 0.35
+  _continuousShotInterval: 0.5
   _soloShots: 3
   _preparationSound: 28
   _teleportRadius: 6
@@ -374,7 +375,7 @@ GameObject:
   - component: {fileID: 305}
   - component: {fileID: 306}
   - component: {fileID: 307}
-  - component: {fileID: 308}
+  - component: {fileID: 330}
   - component: {fileID: 309}
   - component: {fileID: 329}
   m_Layer: 0
@@ -524,7 +525,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _riderSeat: {fileID: 321}
   _orbitRadius: 6
-  _orbitSpeed: 3
+  _orbitSpeed: 2.5
   _orbitDestinationInterval: 0.2
   _chargePreparation: 0.5
   _chargeSpeed: 16
@@ -536,7 +537,8 @@ MonoBehaviour:
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 4294967291
-  _preparationSound: 27
+  _preparationSound: 0
+  _parrySound: 33
   _jumpPreparation: 0.45
   _jumpDuration: 0.55
   _jumpHeight: 3
@@ -693,21 +695,6 @@ MonoBehaviour:
   _damageSound: 4
   _volume: 1.1
   _pitch: 1.15
---- !u!114 &308
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 300}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37becb1a49869b446a804dfe774638c6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _damageSound: 4
-  _volume: 1.1
-  _pitch: 1.15
 --- !u!114 &209
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -774,3 +761,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _volume: 1.7782794
+--- !u!114 &330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc77e7f6561f42f2bf6e7a2bcc5f075d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _attackSound: 29
+  _hitSound: 30
+  _deathSound: 31
+  _idleSound: 32
+  _swordHitVolume: 1.1
+  _swordHitPitch: 1.15
