@@ -33,4 +33,9 @@ public enum SoundId
     [InspectorName("EnemyAttack")]
     EnemyAttackVoice = 27,
     EnemyRangedAttackVoice = 28,
+    BeastBossAttack = 29,
+    BeastBossHit = 30,
+    BeastBossDie = 31,
+    BeastBossIdle = 32,
+    BeastBossParry = 33,
 }

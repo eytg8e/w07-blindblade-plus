@@ -397,6 +397,86 @@ MonoBehaviour:
     _combatCue: 1
     _spatialize2D: 0
     _finishNaturally: 1
+  - _id: 29
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1177222722
+        Data2: 1209830251
+        Data3: 543545266
+        Data4: -1077990987
+      Path: event:/BossMonsterDog/Attack
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 30
+    _type: 1
+    _event:
+      Guid:
+        Data1: -1594699986
+        Data2: 1130216330
+        Data3: -996229443
+        Data4: 1285838115
+      Path: event:/BossMonsterDog/Hit
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 31
+    _type: 1
+    _event:
+      Guid:
+        Data1: -1966133406
+        Data2: 1207387217
+        Data3: -1385599058
+        Data4: 1706439609
+      Path: event:/BossMonsterDog/Die
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 32
+    _type: 1
+    _event:
+      Guid:
+        Data1: -532837527
+        Data2: 1318835587
+        Data3: 804989573
+        Data4: -1944881462
+      Path: event:/BossMonsterDog/Idle
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 33
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1405409476
+        Data2: 1105627062
+        Data3: 1184694916
+        Data4: 1177110675
+      Path: event:/BossMonsterDog/ParryResponse
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
   _combatFocusDuration: 0.35
