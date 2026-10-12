@@ -208,7 +208,7 @@ public sealed class BossController : MonoBehaviour
         RestoreAfterDisappearance();
     }
 
-    /// <summary>설정 횟수만큼 발사 전 소리와 준비 시간을 두고 플레이어 방향으로 기존 투사체를 발사한다.</summary>
+    /// <summary>설정 횟수와 준비 시간을 사용하여 발사 시 플레이어의 반동 없는 시점보다 0.1m 아래로 투사체를 직선 발사한다.</summary>
     private IEnumerator Ranged()
     {
         ChangeState(BossState.Ranged);
@@ -216,10 +216,10 @@ public sealed class BossController : MonoBehaviour
         for (int i = 0; i < _rangedShots; i++)
         {
             RangedPreparing?.Invoke();
-            yield return PrepareAttack(GetPreparationDuration(_rangedPreparation));
+            yield return PrepareAttack(Mathf.Max(0.1f, _rangedPreparation), false);
             if (!_preparationSucceeded) yield break;
             Vector3 origin = transform.position + Vector3.up;
-            Vector3 direction = (_player.transform.position + Vector3.up - origin).normalized;
+            Vector3 direction = (_playerMotor.ViewOrigin - Vector3.up * 0.1f - origin).normalized;
             if (direction.sqrMagnitude < 0.0001f) yield break;
             transform.rotation = Quaternion.LookRotation(direction);
             RangedFiring?.Invoke();
@@ -497,13 +497,13 @@ public sealed class BossController : MonoBehaviour
     }
 
     /// <summary>
-    /// duration과 횟수로 첫 박동 대기 뒤부터 박동을 알리고 준비 성공을 저장한다. 박동 설정이 꺼져 있으면 재생 없이 기다린다.
+    /// duration과 횟수로 첫 박동 대기 뒤부터 박동을 알리고 준비 성공을 저장한다. useHeartbeat 또는 박동 설정이 꺼져 있으면 재생 없이 기다린다.
     /// 일시정지 후 같은 간격의 첫 박동부터 재개하며 큰 프레임 지연에서는 준비를 취소한다.
     /// </summary>
-    private IEnumerator PrepareAttack(float duration)
+    private IEnumerator PrepareAttack(float duration, bool useHeartbeat = true)
     {
         _preparationSucceeded = false;
-        if (!_useHeartbeatTelegraph)
+        if (!useHeartbeat || !_useHeartbeatTelegraph)
         {
             yield return new WaitForSeconds(duration);
             _preparationSucceeded = true;

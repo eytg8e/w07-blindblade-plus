@@ -16,6 +16,7 @@ public sealed class TwinBossController : MonoBehaviour
     [SerializeField] private BeastBossAttack _beast;
     [SerializeField, Tooltip("비어 있으면 현재 Game.Player를 사용합니다.")]
     private KatanaDamageReceiver _player;
+    private PlayerMotor _playerMotor;
     private EnemyMotor _humanMotor;
     private EnemyMotor _beastMotor;
     private NavMeshAgent _humanAgent;
@@ -44,6 +45,10 @@ public sealed class TwinBossController : MonoBehaviour
     private float _breakRecovery = 2f;
 
     [Header("피격 회피 이동")]
+    [SerializeField, Min(0f), Tooltip("실제 피격 후 추가 타격을 패링하는 무적 시간(초)")]
+    private float _hitInvulnerabilityDuration = 2f;
+    [SerializeField, Min(0f)] private float _deflectPushDistance = 3f;
+    [SerializeField, Min(0.01f)] private float _deflectPushDuration = 0.16f;
     [SerializeField, Min(1f)] private float _evadeRadius = 6f;
     [SerializeField, Min(0.1f)] private float _evadeSpeed = 10f;
     [SerializeField, Min(0.5f)] private float _evadeMinimumDistance = 3f;
@@ -58,6 +63,8 @@ public sealed class TwinBossController : MonoBehaviour
     private float _humanAcceleration;
     private float _beastSpeed;
     private float _beastAcceleration;
+    private float _humanInvulnerableUntil;
+    private float _beastInvulnerableUntil;
 
     public TwinBossPattern Pattern => _pattern;
     public event Action<TwinBossPattern> PatternChanged;
@@ -75,6 +82,21 @@ public sealed class TwinBossController : MonoBehaviour
         if (_started) BeginBattle();
     }
 
+    void Update()
+    {
+        if (!_subscribed) return;
+        if (_humanInvulnerableUntil > 0f && Time.time >= _humanInvulnerableUntil)
+        {
+            _humanInvulnerableUntil = 0f;
+            _human.Health.SetInvulnerable(false);
+        }
+        if (_beastInvulnerableUntil > 0f && Time.time >= _beastInvulnerableUntil)
+        {
+            _beastInvulnerableUntil = 0f;
+            _beast.Health.SetInvulnerable(false);
+        }
+    }
+
     /// <summary>필수 연결과 독립 루트를 확인하고 이동 참조를 캐싱하며 실제 피해·사망 사건을 구독한다.</summary>
     private void BeginBattle()
     {
@@ -90,6 +112,7 @@ public sealed class TwinBossController : MonoBehaviour
             return;
         }
         _humanMotor = _human.GetComponent<EnemyMotor>();
+        _playerMotor = _player.GetComponent<PlayerMotor>();
         _beastMotor = _beast.GetComponent<EnemyMotor>();
         _humanAgent = _human.GetComponent<NavMeshAgent>();
         _beastAgent = _beast.GetComponent<NavMeshAgent>();
@@ -103,6 +126,8 @@ public sealed class TwinBossController : MonoBehaviour
         _interrupted = false;
         _human.Health.Damaged += HandleHumanDamaged;
         _beast.Health.Damaged += HandleBeastDamaged;
+        _human.Health.DamageBlocked += HandleHumanDamageBlocked;
+        _beast.Health.DamageBlocked += HandleBeastDamageBlocked;
         _human.Health.Died += HandleBossDied;
         _beast.Health.Died += HandleBossDied;
         _subscribed = true;
@@ -312,12 +337,52 @@ public sealed class TwinBossController : MonoBehaviour
     /// <summary>health를 최초 피격 회피 대상으로 기록하며 회피·회복 중 추가 피해는 대상을 바꾸지 않는다.</summary>
     private void HandleBossDamaged(EnemyHealth health)
     {
+        if (health.IsAlive && _hitInvulnerabilityDuration > 0f)
+        {
+            health.SetInvulnerable(true);
+            if (health == _human.Health)
+                _humanInvulnerableUntil = Time.time + _hitInvulnerabilityDuration;
+            else
+                _beastInvulnerableUntil = Time.time + _hitInvulnerabilityDuration;
+        }
         if (_hitRequested || _pattern == TwinBossPattern.Evading || _pattern == TwinBossPattern.Finished) return;
         _hitRequested = true;
         _hitBoss = health;
         if (_pattern == TwinBossPattern.Cooperation)
             CooperationBroken?.Invoke();
         CancelPattern();
+    }
+
+    /// <summary>
+    /// 인간에게 차단된 context를 전달해 인간의 무적을 해제하고 플레이어 타격을 쳐낸다.
+    /// </summary>
+    private void HandleHumanDamageBlocked(DamageContext context)
+    {
+        HandleBossDamageBlocked(_human.Health, context);
+    }
+
+    /// <summary>짐승에게 차단된 context를 전달해 짐승의 무적을 해제하고 플레이어 타격을 쳐낸다.</summary>
+    private void HandleBeastDamageBlocked(DamageContext context)
+    {
+        HandleBossDamageBlocked(_beast.Health, context);
+    }
+
+    /// <summary>
+    /// health가 무적으로 차단한 플레이어 공격 context에 패링 효과·소리·검 튕김을 적용한다.
+    /// 플레이어를 시점 뒤로 설정 거리만큼 밀고 해당 보스의 무적과 종료 시각을 즉시 해제한다.
+    /// </summary>
+    private void HandleBossDamageBlocked(EnemyHealth health, DamageContext context)
+    {
+        if (context.Instigator != _player.gameObject) return;
+        health.SetInvulnerable(false);
+        if (health == _human.Health) _humanInvulnerableUntil = 0f;
+        else _beastInvulnerableUntil = 0f;
+        Vector3 direction = -_playerMotor.ViewForward;
+        _playerMotor.ApplyCombatPush(direction, _deflectPushDistance, _deflectPushDuration);
+        KatanaWeaponVisual weapon = _player.GetComponent<KatanaWeaponVisual>();
+        if (weapon != null) weapon.PlayAttackDeflection();
+        Game.Instance.EffectManager.Play(EffectId.ParryClash, context.Point, Quaternion.LookRotation(direction));
+        Managers.Sound.Play(SoundId.ParryClash, context.Point, 1f, gameObject);
     }
 
     /// <summary>health 사망을 기록해 남은 연계를 중단하며 회피 중에는 생존자 이동을 유지한다.</summary>
@@ -357,13 +422,19 @@ public sealed class TwinBossController : MonoBehaviour
         if (_human != null)
         {
             _human.Health.Damaged -= HandleHumanDamaged;
+            _human.Health.DamageBlocked -= HandleHumanDamageBlocked;
+            _human.Health.SetInvulnerable(false);
             _human.Health.Died -= HandleBossDied;
         }
         if (_beast != null)
         {
             _beast.Health.Damaged -= HandleBeastDamaged;
+            _beast.Health.DamageBlocked -= HandleBeastDamageBlocked;
+            _beast.Health.SetInvulnerable(false);
             _beast.Health.Died -= HandleBossDied;
         }
+        _humanInvulnerableUntil = 0f;
+        _beastInvulnerableUntil = 0f;
     }
 
     void OnDisable()

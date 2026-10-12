@@ -1,4 +1,7 @@
 using UnityEngine;
+using UnityEngine.AI;
+
+using Unity.AI.Navigation;
 
 /// <summary>Moves one or two assigned shoji leaves through the shared interaction contract.</summary>
 public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
@@ -15,6 +18,10 @@ public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
     [SerializeField, Min(0.01f)] private float _duration = 0.65f;
     private float _progress;
     private bool _targetOpen;
+
+    [Header("Navigation")]
+    [SerializeField] private NavMeshObstacle[] _navigationObstacles = System.Array.Empty<NavMeshObstacle>();
+    [SerializeField] private NavMeshLink[] _navigationLinks = System.Array.Empty<NavMeshLink>();
     public bool IsOpen => _progress >= 1f;
     public bool CanInteract => isActiveAndEnabled;
     public string InteractionPrompt => _targetOpen ? "[F] CLOSE DOOR" : "[F] OPEN DOOR";
@@ -64,6 +71,7 @@ public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
     {
         bool changed = _targetOpen != open;
         _targetOpen = open;
+        UpdateNavigationState();
         if (Application.isPlaying && changed)
             Managers.Sound.Play(open ? SoundId.DoorOpen : SoundId.DoorClose,
                 transform.position, owner: gameObject, playDuringMovement: true);
@@ -85,5 +93,19 @@ public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
         Vector3 offset = _slideDirection.normalized * (_slideDistance * Mathf.SmoothStep(0f, 1f, progress));
         if (_leftLeaf != null) _leftLeaf.localPosition = _leftClosedPosition - offset;
         if (_rightLeaf != null) _rightLeaf.localPosition = _rightClosedPosition + offset;
+        UpdateNavigationState();
+    }
+
+    /// <summary>
+    /// 개폐 목표와 진행도로 연결된 통로 장애물과 링크를 갱신한다.
+    /// 완전히 열린 상태에서만 장애물을 끄고 링크를 켜며, 그 외에는 통로를 차단한다.
+    /// </summary>
+    private void UpdateNavigationState()
+    {
+        bool blocked = !_targetOpen || _progress < 1f;
+        foreach (NavMeshObstacle obstacle in _navigationObstacles)
+            obstacle.enabled = blocked;
+        foreach (NavMeshLink link in _navigationLinks)
+            link.enabled = !blocked;
     }
 }

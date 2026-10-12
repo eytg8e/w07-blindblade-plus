@@ -301,7 +301,7 @@ MonoBehaviour:
   _roamRadius: 7
   _roamDestinationInterval: 2.5
   _roamSpeed: 2
-  _projectilePrefab: {fileID: 2285517556864344112, guid: 6c377b39585c5364eb80b5f8c8fcde63, type: 3}
+  _projectilePrefab: {fileID: 2115214498364783961, guid: 2ba542a427653624eb6c9beb63ffa91e, type: 3}
   _rangedDamage: 15
   _rangedPreparation: 0.8
   _rangedShots: 3
@@ -367,6 +367,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _size: {x: 420, y: 16}
   _topOffset: 36
+  _followColor: {r: 1, g: 0, b: 0, a: 1}
+  _followDuration: 0.8
+
 --- !u!114 &3826241647446682600
 MonoBehaviour:
   m_ObjectHideFlags: 0

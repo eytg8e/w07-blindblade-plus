@@ -464,6 +464,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4919781189916895599}
   - component: {fileID: 6371278784824638807}
+  - component: {fileID: 4996174563044808020}
+  - component: {fileID: 1329056319666600647}
   m_Layer: 0
   m_Name: JapanSlideDoor
   m_TagString: Untagged
@@ -507,3 +509,41 @@ MonoBehaviour:
   _slideDirection: {x: 0.99910057, y: 0, z: -0.0424031}
   _slideDistance: 2.8793168
   _duration: 0.65
+  _navigationObstacles:
+  - {fileID: 4996174563044808020}
+--- !u!208 &4996174563044808020
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7792393849753846717}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 2.847913, y: 1.1383, z: 0.21572971}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 1.4605, y: 0, z: -0.0625}
+  m_TimeToStationary: 0.5
+--- !u!114 &1329056319666600647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7792393849753846717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff

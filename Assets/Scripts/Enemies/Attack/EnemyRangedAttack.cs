@@ -14,6 +14,7 @@ public class EnemyRangedAttack : EnemyAttackBehaviour
     [SerializeField] private EnemyProjectile _projectilePrefab;
     [SerializeField] private Transform _muzzle;
     [SerializeField] private float _aimHeight = 1f;
+    private Vector3 _lockedAimPosition;
 
     public override float Range => _attackRange;
     public event Action<EnemyAttackContext> RangedAttack;
@@ -36,7 +37,7 @@ public class EnemyRangedAttack : EnemyAttackBehaviour
     }
 
     /// <summary>
-    /// 전조 때 고정한 context의 조준 위치로 연결된 투사체를 발사하고 원거리 이벤트를 전달한다.
+    /// context의 전조 시작 시 고정한 시점 높이의 조준 위치로 투사체를 발사하고 원거리 이벤트를 전달한다.
     /// Use Built In Projectile이 켜져 있으면 연결된 프리팹을 사용하며 꺼져 있으면 이벤트만 호출한다.
     /// </summary>
     protected override void PerformAttack(EnemyAttackContext context)
@@ -44,7 +45,7 @@ public class EnemyRangedAttack : EnemyAttackBehaviour
         if (_useBuiltInProjectile)
         {
             Vector3 origin = LaunchPosition;
-            Vector3 direction = (context.AimPosition + Vector3.up * _aimHeight - origin).normalized;
+            Vector3 direction = (_lockedAimPosition - origin).normalized;
             if (direction.sqrMagnitude > 0f)
             {
                 EnemyProjectile projectile = CreateProjectile(origin, Quaternion.LookRotation(direction));
@@ -53,6 +54,17 @@ public class EnemyRangedAttack : EnemyAttackBehaviour
         }
 
         RangedAttack?.Invoke(context);
+    }
+
+    /// <summary>
+    /// context의 대상 위치와 PlayerMotor 시점보다 0.1m 낮은 높이로 전조 시작 시 _lockedAimPosition을 고정한다.
+    /// PlayerMotor가 없는 대상은 Inspector의 _aimHeight를 사용하며 전조 중 재조준하지 않는다.
+    /// </summary>
+    protected override void PrepareTelegraph(EnemyAttackContext context)
+    {
+        _lockedAimPosition = context.AimPosition + Vector3.up * _aimHeight;
+        if (context.Target.TryGetComponent(out PlayerMotor playerMotor))
+            _lockedAimPosition.y = playerMotor.ViewOrigin.y - 0.1f;
     }
 
     /// <summary>
