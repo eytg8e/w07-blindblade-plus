@@ -206,12 +206,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _target: {fileID: 0}
-  _detectionRange: 20
+  _detectionRange: 5
   _eyeOffset: {x: 0, y: 1.5, z: 0}
   _targetOffset: {x: 0, y: 1, z: 0}
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 51
+  _hearingDistance: 5
+  _showHearingRange: 1
 --- !u!114 &8395260701315056192
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -228,8 +230,6 @@ MonoBehaviour:
   _repathInterval: 0.2
   _memoryDuration: 3
   _allowWalkingChase: 1
-  _hearingDistance: 40
-  _showHearingRange: 1
 --- !u!114 &4699714733045868579
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -327,7 +327,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad211ee5731c0be4f805049036d85292, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _distance: 3
+  _distance: 5
   _localDirection: {x: 0, y: 0, z: 1}
   _waitDuration: 1
 --- !u!114 &5368321131972277671

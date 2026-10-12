@@ -206,12 +206,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _target: {fileID: 0}
-  _detectionRange: 18
+  _detectionRange: 5
   _eyeOffset: {x: 0, y: 1.5, z: 0}
   _targetOffset: {x: 0, y: 1, z: 0}
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 51
+  _hearingDistance: 5
+  _showHearingRange: 1
 --- !u!114 &3725735830008567037
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -228,8 +230,6 @@ MonoBehaviour:
   _repathInterval: 0.2
   _memoryDuration: 3
   _allowWalkingChase: 0
-  _hearingDistance: 40
-  _showHearingRange: 1
 --- !u!114 &2120341061812145690
 MonoBehaviour:
   m_ObjectHideFlags: 0
