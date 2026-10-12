@@ -88,9 +88,10 @@ public sealed class EnemyCombatEffects : MonoBehaviour
         slash.gameObject.SetActive(false);
     }
 
-    /// <summary>context의 실제 베기 시작에 방향별 자식 검기를 재생한다. 속도만 베기 시간에 맞추며 Transform은 유지한다.</summary>
+    /// <summary>context의 근접 베기는 방향별 자식 검기를, 돌진은 공용 검기를 재생한다. 원거리 발사는 투사체 표현을 사용한다.</summary>
     private void HandleAttack(EnemyAttackContext context)
     {
+        if (context.Pattern is EnemyRangedAttack) return;
         if (!(context.Pattern is EnemyMeleeAttack melee))
         {
             if (_effects == null || !_effects.IsReady) return;
