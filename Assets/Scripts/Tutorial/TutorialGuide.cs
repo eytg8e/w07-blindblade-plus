@@ -146,7 +146,8 @@ public sealed class TutorialGuide : MonoBehaviour
         if (_keysUseGamepad != InputDeviceDisplay.IsGamepad)
         {
             _keysUseGamepad = InputDeviceDisplay.IsGamepad;
-            foreach (TutorialLesson lesson in _lessons) lesson.KeyLabel.text = lesson.DisplayKeys;
+            foreach (TutorialLesson lesson in _lessons)
+                if (lesson.KeyLabel != null) lesson.KeyLabel.text = lesson.DisplayKeys;
         }
         if (!_bound && !TryBind()) return;
         if (_waitingForInput)
