@@ -22,6 +22,11 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     private AnimationClip _idleSourceClip;
     private AnimationClip _idleDefaultClip;
 
+    [Header("패링 반격 애니메이션")]
+    [SerializeField, InspectorName("반격 AnimationClip")] private AnimationClip _counterAttackClip;
+    private AnimationClip _counterSourceClip;
+    private AnimationClip _counterDefaultClip;
+
     [Header("1·2타 애니메이션 교체")]
     [SerializeField, InspectorName("1타 AnimationClip")]
     [Tooltip("일반 공격·대상 돌진의 1타 IaidoDoubleSlash를 교체합니다. 빈 슬롯과 충전 발도는 기존 클립을 사용합니다.")]
@@ -196,6 +201,11 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 _secondSourceClip = pair.Key;
                 _secondDefaultClip = pair.Value != null ? pair.Value : pair.Key;
             }
+            else if (pair.Key.name == "Normal2")
+            {
+                _counterSourceClip = pair.Key;
+                _counterDefaultClip = pair.Value != null ? pair.Value : pair.Key;
+            }
         }
         _animator.runtimeAnimatorController = _attackController;
         ApplyAttackClips();
@@ -203,7 +213,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
 
     /// <summary>
     /// Inspector의 Idle·1·2타 클립을 해당 원본 클립에 대응시킨다.
-    /// firstAttack이면 1타를 교체하고 빈 슬롯은 기본 클립으로 복원한다. 반격 Normal2는 기존 클립을 유지한다.
+    /// firstAttack이면 1타를 교체하고 반격 Normal2에 전용 클립을 적용한다. 빈 슬롯은 기본 클립으로 복원한다.
     /// </summary>
     private void ApplyAttackClips(bool firstAttack = false)
     {
@@ -217,6 +227,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 clip = firstAttack && _firstAttackClip != null ? _firstAttackClip : _firstDefaultClip;
             else if (pair.Key == _secondSourceClip)
                 clip = _secondAttackClip != null ? _secondAttackClip : _secondDefaultClip;
+            else if (pair.Key == _counterSourceClip)
+                clip = _counterAttackClip != null ? _counterAttackClip : _counterDefaultClip;
             _attackOverrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(pair.Key, clip);
         }
         _attackController.ApplyOverrides(_attackOverrides);
@@ -431,7 +443,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 ReleaseCharge();
                 break;
             case KatanaStage.DashStarted:
-                Play("SheathedHold", _blendTime);
+                Play(_combat.IsCounterAttack ? "GuardHold" : "SheathedHold", _blendTime);
                 break;
             case KatanaStage.SlashStarted:
                 string slash = _combat.Strike == 2 ? "Normal1" : "IaidoDoubleSlash";
@@ -459,7 +471,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         Play(name, blend);
         _usingFirstAttackClip = customFirstAttack;
         _attackReturnsToIdle = customFirstAttack && _firstAttackReturnsToIdle
-            || name == "Normal1" && _secondAttackClip != null && _secondAttackReturnsToIdle;
+            || name == "Normal1" && _secondAttackClip != null && _secondAttackReturnsToIdle
+            || name == "Normal2" && _counterAttackClip != null && _secondAttackReturnsToIdle;
         _attack = true;
         _parry = false;
         _actionId = e.ActionId;
