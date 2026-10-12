@@ -1740,7 +1740,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffeee0c2ba913dd4f968f29ac58d6711, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _nextSceneBuildIndex: 2
+  _nextSceneBuildIndex: 1
 --- !u!1 &284603084
 GameObject:
   m_ObjectHideFlags: 0
@@ -12487,6 +12487,10 @@ MonoBehaviour:
   _recoveryDuration: 0.15
   _cooldown: 1.5
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 0
+  _minimumHeartbeatTelegraph: 1
+  _maximumHeartbeatTelegraph: 2
+  _attackVoiceLeadTime: 0.05
   _telegraphVolume: 1
   _actionVolume: 1
   _attackRange: 6
