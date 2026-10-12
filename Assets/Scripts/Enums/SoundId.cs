@@ -23,4 +23,10 @@ public enum SoundId
     BossStunCry = 20,
     DoorOpen = 21,
     DoorClose = 22,
+    BossBgm = 23,
+    EnemyDamaged = 24,
+    EnemyGetParryed = 25,
+    EnemyHeartbeat = 26,
+    EnemyAttackVoice = 27,
+    EnemyRangedAttackVoice = 28,
 }
