@@ -83,6 +83,11 @@ public class EnemyController : MonoBehaviour
         }
         if (_attackSelector.IsBusy)
         {
+            if (_attackSelector.CurrentAttack.Phase == EnemyAttackPhase.Recovery)
+            {
+                UpdateRecoveryPursuit();
+                return;
+            }
             ChangeState(EnemyState.Attacking);
             if (!_attackSelector.CurrentAttack.AllowsMovement)
                 _motor.Stop();
@@ -139,6 +144,34 @@ public class EnemyController : MonoBehaviour
                 : (_state == EnemyState.Searching ? 0.1f : (float?)null);
             _motor.MoveTo(_lastKnownPosition, approachDistance);
         }
+    }
+
+    /// <summary>
+    /// 센서 대상의 위치를 후딜 중 갱신하여 사거리 밖이면 추적하고 안이면 바라본다.
+    /// 기존 감지·경로 갱신 간격을 사용하며 공격 후딜과 쿨타임을 유지한다.
+    /// </summary>
+    private void UpdateRecoveryPursuit()
+    {
+        if (Time.time >= _nextPerceptionTime)
+        {
+            _nextPerceptionTime = Time.time + _perceptionInterval;
+            UpdatePerception();
+        }
+        if (_state == EnemyState.Attacking)
+        {
+            _motor.Stop();
+            _motor.FaceTarget(_lastKnownPosition);
+            return;
+        }
+        if (AllowsWalkingChase && (_state == EnemyState.Chasing || _state == EnemyState.Searching))
+        {
+            if (Time.time < _nextRepathTime) return;
+            _nextRepathTime = Time.time + _repathInterval;
+            float? range = _state == EnemyState.Chasing ? _attackSelector.GetApproachRange(_sensor.Target) : null;
+            _motor.MoveTo(_lastKnownPosition, range.HasValue ? Mathf.Max(0f, range.Value - 0.2f) : 0.1f);
+            return;
+        }
+        _motor.Stop();
     }
 
     protected virtual void OnDisable()

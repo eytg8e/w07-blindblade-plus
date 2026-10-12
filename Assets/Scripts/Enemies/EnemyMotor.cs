@@ -57,6 +57,18 @@ public sealed class EnemyMotor : MonoBehaviour
         if (normalized >= 1f) _isPushed = false;
     }
 
+    /// <summary>
+    /// position의 수평 방향으로 설정된 각속도만큼 회전한다.
+    /// 이동 경로를 유지하고 대상이 같은 위치이면 현재 회전을 유지한다.
+    /// </summary>
+    public void FaceTarget(Vector3 position)
+    {
+        Vector3 direction = Vector3.ProjectOnPlane(position - transform.position, Vector3.up);
+        if (direction.sqrMagnitude < 0.0001f) return;
+        transform.rotation = Quaternion.RotateTowards(transform.rotation,
+            Quaternion.LookRotation(direction), _angularSpeed * Time.deltaTime);
+    }
+
     void OnDisable()
     {
         _isPushed = false;
