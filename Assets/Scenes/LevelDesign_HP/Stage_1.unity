@@ -10032,9 +10032,25 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1239245691009019635, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 2061890155}
     - target: {fileID: 2147414133172360306, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
       propertyPath: m_Name
       value: Player
+      objectReference: {fileID: 0}
+    - target: {fileID: 3907718511437192674, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 60.736
+      objectReference: {fileID: 0}
+    - target: {fileID: 3907718511437192674, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 96.208
+      objectReference: {fileID: 0}
+    - target: {fileID: 3907718511437192674, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 31.91301
       objectReference: {fileID: 0}
     - target: {fileID: 9061784569180931348, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
       propertyPath: m_LocalPosition.x
@@ -12200,6 +12216,19 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2038722718}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!134 &2061890155
+PhysicsMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  serializedVersion: 2
+  m_DynamicFriction: 0.6
+  m_StaticFriction: 0.6
+  m_Bounciness: 0
+  m_FrictionCombine: 0
+  m_BounceCombine: 0
 --- !u!1 &2066450293
 GameObject:
   m_ObjectHideFlags: 0
