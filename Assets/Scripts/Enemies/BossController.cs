@@ -7,7 +7,7 @@ using UnityEngine.AI;
 
 public enum BossState { Idle, Roaming, Charging, ChainCharge, Duel, Stunned, Dead, Disappeared, Ranged }
 
-/// <summary>보스 행동의 단일 실행과 플레이어 피해·방어 결과 및 종료 수명을 관리한다.</summary>
+/// <summary>보스의 원거리·돌진 순환과 피격 전환 및 전투 종료 수명을 관리한다.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(EnemyHealth), typeof(EnemyMotor), typeof(EnemySensor))]
 public sealed class BossController : MonoBehaviour
@@ -15,31 +15,27 @@ public sealed class BossController : MonoBehaviour
     private const float MAX_RHYTHM_DELAY = 0.1f;
 
     [Header("전투 연결")]
-    [SerializeField] private BossMeleeAttack _melee;
+    [SerializeField, Min(0f), Tooltip("피격 후 다음 패턴으로 넘어가기 전 회복 시간(초)")]
+    private float _hitRecoveryDuration = 0.25f;
     private EnemyHealth _health;
     private EnemyMotor _motor;
     private EnemySensor _sensor;
     private NavMeshAgent _agent;
+    private NavMeshPath _path;
     private PlayerController _player;
     private PlayerMotor _playerMotor;
     private PlayerHealth _playerHealth;
-    private KatanaCombatCoordinator _combat;
     private Coroutine _routine;
-    private int _strike;
-    private int _parriedStrikes;
-    private bool _strikeResolved;
-    private bool _playerHit;
     private BossState _state;
     private bool _started;
-    [SerializeField, Min(0f), Tooltip("피격 후 다음 패턴으로 넘어가기 전 회복 시간(초)")]
-    private float _hitRecoveryDuration = 0.25f;
     private BossState _resumeState;
+
     [Header("패턴 사이 대기")]
     [SerializeField, Min(0f), Tooltip("패턴 사이 최소 대기 시간(초)")]
     private float _patternWaitMin = 1f;
     [SerializeField, Min(0f), Tooltip("패턴 사이 최대 대기 시간(초)")]
     private float _patternWaitMax = 2f;
-    private BossState _nextPattern = BossState.Roaming;
+    private BossState _nextPattern = BossState.Ranged;
 
     [Header("두 박동 공격 전조")]
     [SerializeField] private bool _useHeartbeatTelegraph = true;
@@ -50,16 +46,6 @@ public sealed class BossController : MonoBehaviour
     private bool _preparationSucceeded;
     public event Action Heartbeat;
     public event Action PreparationCancelled;
-
-    [Header("배회")]
-    [SerializeField, Min(0.1f), Tooltip("마지막 피격 이후 돌진까지의 시간(초)")]
-    private float _roamDuration = 7f;
-    [SerializeField, Min(1f), Tooltip("플레이어 주변 배회 반경(미터)")]
-    private float _roamRadius = 7f;
-    [SerializeField, Min(0.1f)] private float _roamDestinationInterval = 2.5f;
-    [SerializeField, Min(0.1f)] private float _roamSpeed = 2f;
-    private float _roamUntil;
-    private NavMeshPath _path;
 
     [Header("원거리 공격")]
     [SerializeField] private EnemyProjectile _projectilePrefab;
@@ -103,23 +89,11 @@ public sealed class BossController : MonoBehaviour
     private float _hitDeflectDuration = 2f;
     private float _hitDeflectUntil;
 
-    [Header("연속 돌진")]
+    [Header("돌진·피격 재배치 위치")]
     [SerializeField, Min(1f)] private float _teleportRadius = 6f;
     [SerializeField, Range(1f, 180f), Tooltip("플레이어 시점 기준 돌진 등장 각도(도). 180도는 전방 반원입니다.")]
     private float _teleportArc = 180f;
-    [SerializeField, Min(0.1f)] private float _chargeInterval = 0.7f;
     private readonly Collider[] _placementContacts = new Collider[16];
-
-    [Header("정면승부")]
-    [SerializeField, Min(0.8f), Tooltip("플레이어 정면 배치 거리(미터)")]
-    private float _duelDistance = 1.6f;
-    [SerializeField, Min(0.1f)] private float _duelPreparation = 0.6f;
-    [SerializeField, Min(0.1f)] private float _strikeInterval = 0.45f;
-    [SerializeField, Min(0.1f)] private float _stunDuration = 3f;
-    private bool _duelPoseActive;
-    private bool _previousUpdatePosition;
-    private bool _previousUpdateRotation;
-    private Vector3 _duelNavigationPosition;
 
     public BossState State => _state;
     public event Action<BossState> StateChanged;
@@ -165,11 +139,10 @@ public sealed class BossController : MonoBehaviour
         {
             _playerHealth = _player.GetComponent<PlayerHealth>();
             _playerMotor = _player.GetComponent<PlayerMotor>();
-            _combat = _player.GetComponent<KatanaCombatCoordinator>();
         }
-        if (_projectilePrefab == null || _melee == null || _player == null || _playerMotor == null || _playerHealth == null || _combat == null || !_motor.IsReady)
+        if (_projectilePrefab == null || _player == null || _playerMotor == null || _playerHealth == null || !_motor.IsReady)
         {
-            Debug.LogError("보스의 투사체·근접 공격·플레이어·방어 계약·NavMesh 연결이 누락되었습니다.", this);
+            Debug.LogError("보스의 투사체·플레이어·NavMesh 연결이 누락되었습니다.", this);
             enabled = false;
             return;
         }
@@ -177,31 +150,21 @@ public sealed class BossController : MonoBehaviour
         _health.Damaged += HandleBossDamaged;
         _health.DamageBlocked += HandleBossDamageBlocked;
         _health.Died += HandleBossDied;
-        _playerHealth.DamageReceived += HandlePlayerDamaged;
-        _combat.DefenseSucceeded += HandleDefense;
         _routine = StartCoroutine(RunBattle());
     }
 
     /// <summary>
     /// startingState부터 단일 행동 흐름을 실행하고 전투 종료 시 코루틴 참조를 정리한다.
-    /// resumeAfterHit이면 무적을 해제하고 첫 배회·패턴 대기·돌진 재배치를 생략해 공격을 재개한다.
+    /// resumeAfterHit이면 무적을 해제하고 첫 패턴 대기·돌진 재배치를 생략해 공격을 재개한다.
     /// </summary>
-    private IEnumerator RunBattle(BossState startingState = BossState.Roaming, bool resumeAfterHit = false)
+    private IEnumerator RunBattle(BossState startingState = BossState.Ranged, bool resumeAfterHit = false)
     {
         yield return null;
         if (resumeAfterHit)
-        {
             RestoreAfterDisappearance();
-            if (startingState == BossState.Roaming) startingState = BossState.Ranged;
-        }
         while (_health.IsAlive && _playerHealth.IsAlive)
         {
-            if (startingState == BossState.Roaming)
-            {
-                yield return WaitForPattern(BossState.Roaming);
-                yield return Roam();
-            }
-            if (startingState == BossState.Roaming || startingState == BossState.Ranged)
+            if (startingState == BossState.Ranged)
             {
                 if (!resumeAfterHit) yield return WaitForPattern(BossState.Ranged);
                 resumeAfterHit = false;
@@ -223,7 +186,7 @@ public sealed class BossController : MonoBehaviour
                     if (_repositionReached) yield return Charge();
                 }
             }
-            startingState = BossState.Roaming;
+            startingState = BossState.Ranged;
         }
         _routine = null;
     }
@@ -237,28 +200,6 @@ public sealed class BossController : MonoBehaviour
         float maximum = Mathf.Max(_patternWaitMin, _patternWaitMax);
         yield return new WaitForSeconds(UnityEngine.Random.Range(_patternWaitMin, maximum));
         RestoreAfterDisappearance();
-    }
-
-    /// <summary>마지막 피격 기준 제한 시간 동안 플레이어 주변의 유효한 경로를 골라 배회한다.</summary>
-    private IEnumerator Roam()
-    {
-        ChangeState(BossState.Roaming);
-        _roamUntil = Time.time + _roamDuration;
-        _agent.speed = _roamSpeed;
-        float nextDestination = 0f;
-        while (Time.time < _roamUntil)
-        {
-            if (Time.time >= nextDestination)
-            {
-                Vector2 offset = UnityEngine.Random.insideUnitCircle.normalized * _roamRadius;
-                if (TrySamplePosition(_player.transform.position + new Vector3(offset.x, 0f, offset.y), out Vector3 position)
-                    && _agent.CalculatePath(position, _path) && _path.status == NavMeshPathStatus.PathComplete)
-                    _motor.MoveTo(position, 0.1f);
-                nextDestination = Time.time + _roamDestinationInterval;
-            }
-            yield return null;
-        }
-        _motor.Stop();
     }
 
     /// <summary>설정 횟수만큼 발사 전 소리와 준비 시간을 두고 플레이어 방향으로 기존 투사체를 발사한다.</summary>
@@ -370,20 +311,6 @@ public sealed class BossController : MonoBehaviour
         return found;
     }
 
-    /// <summary>주변 유효 위치로 빠르게 이동하고 각 위치에서 준비·돌진을 총 세 번 반복한다.</summary>
-    private IEnumerator ChainCharge()
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            if (!TryTeleportAround(out Vector3 position)) yield break;
-            ChangeState(BossState.ChainCharge);
-            yield return MoveQuickly(position);
-            if (!_repositionReached) yield break;
-            yield return Charge();
-            yield return new WaitForSeconds(_chargeInterval);
-        }
-    }
-
     /// <summary>플레이어 전방 부채꼴의 랜덤 후보 중 이동 가능한 빈 지면을 destination으로 반환한다.</summary>
     private bool TryTeleportAround(out Vector3 destination)
     {
@@ -452,80 +379,6 @@ public sealed class BossController : MonoBehaviour
         }
     }
 
-    /// <summary>정면 준비 뒤 칼날 공격을 세 번 실행하고 유효타는 중단하며 세 번의 패링만 스턴으로 보상한다.</summary>
-    private IEnumerator Duel()
-    {
-        ChangeState(BossState.Duel);
-        if (!TrySamplePosition(_player.transform.position + _playerMotor.ViewForward * _duelDistance,
-            out Vector3 position)) yield break;
-        yield return MoveQuickly(position);
-        if (!_repositionReached) yield break;
-        _motor.Stop();
-        _duelNavigationPosition = _agent.nextPosition;
-        _previousUpdatePosition = _agent.updatePosition;
-        _previousUpdateRotation = _agent.updateRotation;
-        _duelPoseActive = true;
-        _agent.updatePosition = false;
-        _agent.updateRotation = false;
-        try
-        {
-            PlaceInFront();
-            ChangeState(BossState.Duel);
-            _parriedStrikes = 0;
-            _playerHit = false;
-            for (_strike = 1; _strike <= 3; _strike++)
-            {
-                _strikeResolved = false;
-                float until = Time.time + (_melee.UsesHeartbeatTelegraph ? 0f : _duelPreparation);
-                while (Time.time < until)
-                {
-                    PlaceInFront();
-                    yield return null;
-                }
-                if (!_melee.TryAttack(_player.transform)) yield break;
-                while (_melee.IsBusy && !_playerHit) yield return null;
-                if (_playerHit) break;
-                yield return new WaitForSeconds(_strikeInterval);
-            }
-            _strike = 0;
-            if (_parriedStrikes != 3 || _playerHit) yield break;
-            _motor.Stop();
-            ChangeState(BossState.Stunned);
-            yield return new WaitForSeconds(_stunDuration);
-        }
-        finally
-        {
-            RestoreNavigation();
-        }
-    }
-
-    /// <summary>플레이어 위치와 수평 시점으로 정면에 배치하며 준비 중에는 NavMesh 경계를 적용하지 않는다.</summary>
-    private void PlaceInFront()
-    {
-        Vector3 forward = _playerMotor.ViewForward;
-        transform.SetPositionAndRotation(Vector3.MoveTowards(transform.position,
-            _player.transform.position + forward * _duelDistance, _repositionSpeed * Time.deltaTime),
-            Quaternion.LookRotation(-forward));
-    }
-
-    /// <summary>정면승부 종료·취소 시 유효한 지면으로 복귀하고 기존 에이전트 위치·회전 갱신 설정을 복원한다.</summary>
-    private void RestoreNavigation()
-    {
-        if (!_duelPoseActive) return;
-        _duelPoseActive = false;
-        Vector3 position = transform.position;
-        position.y = _duelNavigationPosition.y;
-        NavMeshQueryFilter filter = new NavMeshQueryFilter { agentTypeID = _agent.agentTypeID, areaMask = _agent.areaMask };
-        if (NavMesh.SamplePosition(position, out NavMeshHit hit, _duelDistance + 1f, filter))
-            position = hit.position;
-        else
-            position = _duelNavigationPosition;
-        _agent.updatePosition = _previousUpdatePosition;
-        _agent.updateRotation = _previousUpdateRotation;
-        if (_agent.isActiveAndEnabled) _agent.Warp(position);
-        Teleported?.Invoke();
-    }
-
     /// <summary>context의 실제 피격 시 행동을 취소하고 외형을 유지한 채 무적으로 다음 패턴을 준비한다.</summary>
     private void HandleBossDamaged(DamageContext context)
     {
@@ -533,20 +386,14 @@ public sealed class BossController : MonoBehaviour
         switch (_state)
         {
             case BossState.Idle: _resumeState = _nextPattern; break;
-            case BossState.Roaming: _resumeState = BossState.Ranged; break;
             case BossState.Ranged: _resumeState = BossState.Charging; break;
-            case BossState.Charging: _resumeState = BossState.Roaming; break;
-            default: _resumeState = BossState.Roaming; break;
+            case BossState.Charging: _resumeState = BossState.Ranged; break;
+            default: _resumeState = BossState.Ranged; break;
         }
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
         PreparationCancelled?.Invoke();
-        RestoreNavigation();
-        _melee.CancelAttack();
         _motor.Stop();
-        _strike = 0;
-        _strikeResolved = false;
-        _parriedStrikes = 0;
         IsRepositioning = false;
         ChangeState(BossState.Idle);
         _health.SetInvulnerable(true);
@@ -601,27 +448,6 @@ public sealed class BossController : MonoBehaviour
         _health.SetInvulnerable(false);
     }
 
-    /// <summary>context가 현재 보스 3연격의 피해이면 남은 공격을 중단하도록 적중을 기록한다.</summary>
-    private void HandlePlayerDamaged(DamageContext context)
-    {
-        if (_state == BossState.Duel && context.Instigator == gameObject && context.PatternId == _melee.PatternId)
-        {
-            _playerHit = true;
-            _strikeResolved = true;
-            _melee.CancelAttack();
-        }
-    }
-
-    /// <summary>result의 공격자와 패턴을 확인해 현재 타격의 방어를 한 번만 기록하고 정확한 패링만 집계한다.</summary>
-    private void HandleDefense(KatanaDefenseResult result)
-    {
-        if (_state != BossState.Duel || _strike <= 0 || _strikeResolved
-            || result.Incoming.Instigator != gameObject || result.Incoming.PatternId != _melee.PatternId)
-            return;
-        _strikeResolved = true;
-        if (result.IsParry) _parriedStrikes++;
-    }
-
     /// <summary>사망한 health의 행동을 종료하고 사망 상태를 구독자에게 전달한다.</summary>
     private void HandleBossDied(EnemyHealth health)
     {
@@ -637,7 +463,7 @@ public sealed class BossController : MonoBehaviour
         StateChanged?.Invoke(state);
     }
 
-    /// <summary>실행 중인 공격·이동·코루틴을 중지하고 전투 결과 구독과 타격 상태를 정리한다.</summary>
+    /// <summary>실행 중인 공격·이동·코루틴을 중지하고 피격·사망 사건 구독을 정리한다.</summary>
     private void StopBattle()
     {
         if (_routine != null) StopCoroutine(_routine);
@@ -645,16 +471,10 @@ public sealed class BossController : MonoBehaviour
         PreparationCancelled?.Invoke();
         IsRepositioning = false;
         RestoreAfterDisappearance(true);
-        RestoreNavigation();
-        if (_melee != null) _melee.CancelAttack();
         _motor.Stop();
         _health.Damaged -= HandleBossDamaged;
         _health.DamageBlocked -= HandleBossDamageBlocked;
         _health.Died -= HandleBossDied;
-        if (_playerHealth != null) _playerHealth.DamageReceived -= HandlePlayerDamaged;
-        if (_combat != null) _combat.DefenseSucceeded -= HandleDefense;
-        _strike = 0;
-        _strikeResolved = false;
         if (_state != BossState.Dead) ChangeState(BossState.Idle);
     }
 
