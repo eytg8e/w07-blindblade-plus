@@ -66,6 +66,25 @@ MonoBehaviour:
   _movementObstacleMask:
     serializedVersion: 2
     m_Bits: 4294967291
+--- !u!114 &103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51845d6d55f64422b5d876dbecd0c95e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _humanHealth: {fileID: 204}
+  _beastHealth: {fileID: 304}
+  _playerHealth: {fileID: 0}
+  _bossHitEffect: 7
+  _playerHitEffect: 8
+  _playerEffectDistance: 0.8
+  _playerEffectVerticalOffset: -0.1
 --- !u!1 &200
 GameObject:
   m_ObjectHideFlags: 0
@@ -243,6 +262,58 @@ MonoBehaviour:
   _teleportObstacleMask:
     serializedVersion: 2
     m_Bits: 4294967291
+  _dismountDistance: 2
+--- !u!114 &208
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37becb1a49869b446a804dfe774638c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _damageSound: 4
+  _volume: 1.1
+  _pitch: 1.15
+  _minimumDeathPitchSemitones: -4
+  _maximumDeathPitchSemitones: -1
+  _originalDeathPitchChance: 0.3
+--- !u!114 &209
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77bb09cf75204f668050e7c814cf3b30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stepDistance: 0.7
+  _footOffset: 0.15
+  _teleportDistance: 5
+  _groundLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  _rayHeight: 0.5
+  _rayDepth: 0.5
+--- !u!114 &229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fded09b31d54cd887339df9f805d97e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _volume: 1.7782794
 --- !u!1 &210
 GameObject:
   m_ObjectHideFlags: 0
@@ -539,11 +610,68 @@ MonoBehaviour:
     m_Bits: 4294967291
   _preparationSound: 0
   _parrySound: 33
+  _useHeartbeatTelegraph: 1
+  _heartbeatCount: 1
+  _firstHeartbeatDelay: 0.2
+  _minimumHeartbeatInterval: 1
+  _maximumHeartbeatInterval: 1.2
+  _postHeartbeatAttackDelay: 0.5
   _jumpPreparation: 0.45
   _jumpDuration: 0.55
   _jumpHeight: 3
   _landingRadius: 2
   _jumpDamage: 25
+--- !u!114 &330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc77e7f6561f42f2bf6e7a2bcc5f075d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _attackSound: 29
+  _hitSound: 30
+  _deathSound: 31
+  _idleSound: 32
+  _swordHitVolume: 1.1
+  _swordHitPitch: 1.15
+--- !u!114 &309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77bb09cf75204f668050e7c814cf3b30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stepDistance: 0.7
+  _footOffset: 0.3
+  _teleportDistance: 5
+  _groundLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  _rayHeight: 0.5
+  _rayDepth: 0.5
+--- !u!114 &329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fded09b31d54cd887339df9f805d97e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _volume: 1.7782794
 --- !u!1 &310
 GameObject:
   m_ObjectHideFlags: 0
@@ -661,121 +789,3 @@ Transform:
   m_Children: []
   m_Father: {fileID: 301}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &103
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 100}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 51845d6d55f64422b5d876dbecd0c95e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _humanHealth: {fileID: 204}
-  _beastHealth: {fileID: 304}
-  _playerHealth: {fileID: 0}
-  _bossHitEffect: 7
-  _playerHitEffect: 8
-  _playerEffectDistance: 0.8
-  _playerEffectVerticalOffset: -0.1
---- !u!114 &208
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 200}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37becb1a49869b446a804dfe774638c6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _damageSound: 4
-  _volume: 1.1
-  _pitch: 1.15
---- !u!114 &209
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 200}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77bb09cf75204f668050e7c814cf3b30, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _stepDistance: 0.7
-  _footOffset: 0.15
-  _teleportDistance: 5
-  _groundLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  _rayHeight: 0.5
-  _rayDepth: 0.5
---- !u!114 &229
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 200}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9fded09b31d54cd887339df9f805d97e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _volume: 1.7782794
---- !u!114 &309
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 300}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77bb09cf75204f668050e7c814cf3b30, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _stepDistance: 0.7
-  _footOffset: 0.3
-  _teleportDistance: 5
-  _groundLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  _rayHeight: 0.5
-  _rayDepth: 0.5
---- !u!114 &329
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 300}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9fded09b31d54cd887339df9f805d97e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _volume: 1.7782794
---- !u!114 &330
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 300}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc77e7f6561f42f2bf6e7a2bcc5f075d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _attackSound: 29
-  _hitSound: 30
-  _deathSound: 31
-  _idleSound: 32
-  _swordHitVolume: 1.1
-  _swordHitPitch: 1.15

@@ -33,7 +33,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     private float _nextAttackTime;
 
     [Header("박동 공격 전조")]
-    [SerializeField, Tooltip("근접·원거리·돌진 공격에 박동 전조를 적용합니다. 횟수와 간격은 이 컴포넌트의 설정을 사용합니다.")]
+    [SerializeField, Tooltip("근접·돌진 공격에 박동 전조를 적용합니다. 원거리 공격은 설정과 무관하게 박동을 사용하지 않습니다.")]
     private bool _useHeartbeatTelegraph;
     [SerializeField, Min(1), Tooltip("공격 전에 재생할 박동 횟수입니다. 마지막 박동 이후 공격 지연을 적용합니다.")]
     private int _heartbeatCount = 1;
@@ -71,7 +71,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     public float LastHeartbeatInterval { get; private set; }
     public int HeartbeatCount => Mathf.Max(1, _heartbeatCount);
     public float ExecutionDuration => ActiveDuration;
-    public bool UsesHeartbeatTelegraph => _useHeartbeatTelegraph;
+    public bool UsesHeartbeatTelegraph => _useHeartbeatTelegraph && SoundAction != EnemySoundAction.Ranged;
     public Vector2 ExpectedAttackInterval => new Vector2(
         GetExpectedAttackInterval(UsesHeartbeatTelegraph ? FirstHeartbeatDelay + (HeartbeatCount - 1) * MinimumHeartbeatInterval + PostHeartbeatAttackDelay : Mathf.Max(0.1f, _telegraphDuration)),
         GetExpectedAttackInterval(UsesHeartbeatTelegraph ? FirstHeartbeatDelay + (HeartbeatCount - 1) * MaximumHeartbeatInterval + PostHeartbeatAttackDelay : Mathf.Max(0.1f, _telegraphDuration)));
