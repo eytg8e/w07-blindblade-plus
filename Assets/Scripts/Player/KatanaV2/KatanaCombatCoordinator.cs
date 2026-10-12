@@ -644,6 +644,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         _motor.AddCombatRecoil(incoming.Direction, perfect ? 0.9f : 0.6f);
         foreach (EnemyAttackBehaviour pattern in incoming.Instigator.GetComponents<EnemyAttackBehaviour>())
             if (pattern.PatternId == incoming.PatternId && pattern is EnemyMeleeAttack melee) melee.Deflect(perfect, point);
+        EndDefense();
         DefenseSucceeded?.Invoke(new KatanaDefenseResult(incoming, point, perfect));
         if (perfect)
         {

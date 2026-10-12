@@ -241,6 +241,9 @@ GameObject:
   - component: {fileID: 9012958133378258241}
   - component: {fileID: 8491623887222581670}
   - component: {fileID: 1080894898460965423}
+  - component: {fileID: 900100200}
+  - component: {fileID: 900100300}
+  - component: {fileID: 900100400}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1212,3 +1215,44 @@ ParticleSystem:
   m_CorrespondingSourceObject: {fileID: 3437129320176675894, guid: 641ef78c43feafe4fbcf82c9b47f2227, type: 3}
   m_PrefabInstance: {fileID: 6350052290514714908}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &900100200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147414133172360306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eaab7063f08e4669bc740762793b1aef, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _size: {x: 280, y: 14}
+  _bottomOffset: 36
+--- !u!114 &900100300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147414133172360306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93fc9209f1824b06bb9fb45e0af79c78, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _maximum: 60
+  _recoveryRate: 40
+--- !u!114 &900100400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147414133172360306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2362ea7f996041f392b23bd63e4571ba, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _size: {x: 280, y: 14}

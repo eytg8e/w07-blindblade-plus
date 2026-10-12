@@ -25,6 +25,7 @@ public sealed class PlayerController : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private PlayerMotor _motor;
+    private PlayerStamina _stamina;
     [SerializeField] private Camera _viewCamera;
     [SerializeField] private MonoBehaviour _perceptionProviderSource;
     [SerializeField] private MonoBehaviour _combatServiceSource;
@@ -98,6 +99,7 @@ public sealed class PlayerController : MonoBehaviour
 
     private void Awake()
     {
+        _stamina = GetComponent<PlayerStamina>();
         if (_motor == null)
             _motor = GetComponent<PlayerMotor>();
         if (_viewCamera == null)
@@ -264,6 +266,7 @@ public sealed class PlayerController : MonoBehaviour
     /// <summary>자유 상태에서 가드를 시작합니다. 상태가 허용되지 않으면 false를 반환합니다.</summary>
     public bool BeginGuard()
     {
+        if (_stamina != null && !_stamina.CanAct) return false;
         if (_state != PlayerActionState.Free)
             /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
@@ -331,6 +334,7 @@ public sealed class PlayerController : MonoBehaviour
     /// <summary>자유 상태에서 일반 공격을 시작하고 공격 방향과 행동 식별자를 고정합니다. 요청 수락 여부를 반환합니다.</summary>
     public bool RequestNormalAttack()
     {
+        if (_stamina != null && !_stamina.CanAct) return false;
         if (_state != PlayerActionState.Free)
             /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
@@ -414,6 +418,7 @@ public sealed class PlayerController : MonoBehaviour
     /// <summary>완료된 기 모으기에서 감지 대상과 중앙 화면 영역으로 목표를 고정하고 발도 대시를 시작합니다. 요청 성공 여부를 반환합니다.</summary>
     public bool RequestIaidoAttack()
     {
+        if (_stamina != null && !_stamina.CanAct) return false;
         if (!_enableChargeAttack || _state != PlayerActionState.Charging || !_chargeReady)
             /// <summary>거부된 행동 요청 이벤트를 게시하고 false를 반환합니다.</summary>
             return RejectRequest();
@@ -469,6 +474,7 @@ public sealed class PlayerController : MonoBehaviour
     /// <summary>target과 perceivedPosition으로 대시 공격 행동을 시작하고 대시 시작 여부를 반환한다.</summary>
     private bool BeginTargetedDashAttack(PlayerCombatTarget target, Vector3 perceivedPosition)
     {
+        if (_stamina != null && !_stamina.CanAct) return false;
         StartAttack(PlayerActionState.IaidoDash);
         _targetedDashAttack = true;
         _preferredTargetId = target.TargetId;
