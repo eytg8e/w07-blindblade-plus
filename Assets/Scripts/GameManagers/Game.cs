@@ -18,9 +18,10 @@ public class Game : MonoSingleton<Game>
     public GameStateManager GameStateManager { get; private set; }
     public UIManager UIManager { get; private set; }
 
-    /// <summary>등록된 플레이어로 공통 세션을 초기화하고 필수 매니저 준비 여부를 반환한다.</summary>
+    /// <summary>씬에 배치된 UIManager와 등록된 플레이어로 공통 세션을 초기화하고 필수 매니저 준비 여부를 반환한다.</summary>
     public bool InitializeSession()
     {
+        UIManager = FindFirstObjectByType<UIManager>(FindObjectsInactive.Include);
         if (_player == null || InputManager == null || GameStateManager == null || UIManager == null)
         {
             Debug.LogError("게임 세션의 플레이어 또는 공통 매니저가 준비되지 않았습니다.", this);
@@ -37,7 +38,7 @@ public class Game : MonoSingleton<Game>
         return false;
     }
 
-    /// <summary>입력·화면·상태의 씬 연결을 해제하고 매니저 인스턴스는 유지한다.</summary>
+    /// <summary>입력·화면·상태의 세션 연결을 해제한다. 배치된 UI 객체와 영속 입력·상태 매니저는 유지한다.</summary>
     public void ShutdownSession()
     {
         if (InputManager != null) InputManager.Shutdown();
@@ -90,7 +91,6 @@ public class Game : MonoSingleton<Game>
         _effectManager.Initialize();
         InputManager = LoadManager<InputManager>(ResourcePaths.INPUT_MANAGER_PATH);
         GameStateManager = LoadManager<GameStateManager>(ResourcePaths.GAME_STATE_MANAGER_PATH);
-        UIManager = LoadManager<UIManager>(ResourcePaths.UI_MANAGER_PATH);
     }
 
     /// <summary>기존 T 매니저를 재사용하거나 path의 프리팹을 동적 생성해 반환한다.</summary>

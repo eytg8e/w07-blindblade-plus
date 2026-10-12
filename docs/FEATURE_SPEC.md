@@ -17,6 +17,7 @@
 | 인트로 메뉴 | [명세](features/인트로_메뉴.md) |
 | 매니저 싱글턴 | [명세](features/매니저_싱글턴.md) |
 | 게임 씬 공통 구성 | [명세](features/게임_씬_공통_구성.md) |
+| 독백 UI | [명세](features/독백_UI.md) |
 | 게임 공통 구조 검증 씬 | [명세](features/게임_공통_구조_검증_씬.md) |
 | FMOD 사운드 수동 검증 | [명세](features/FMOD_사운드_검증.md) |
 | FMOD 사운드 매니저 | [명세](features/FMOD_사운드_매니저.md) |

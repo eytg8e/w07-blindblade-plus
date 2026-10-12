@@ -3,15 +3,22 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-/// <summary>공통 UI를 생성하고 화면 타입별 조회와 표시 및 씬 수명을 관리한다.</summary>
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
+
+/// <summary>씬에 미리 배치된 공통 UI의 타입별 조회와 표시 및 세션 연결을 관리한다.</summary>
 public sealed class UIManager : MonoBehaviour
 {
     [Header("공통 UI 캔버스")]
     [SerializeField] private Canvas _canvas;
 
+    [Header("UI 입력")]
+    [SerializeField] private EventSystem _eventSystem;
+    [SerializeField] private InputSystemUIInputModule _inputModule;
+
     private readonly Dictionary<Type, GameUI> _views = new Dictionary<Type, GameUI>();
 
-    /// <summary>기존 화면을 정리하고 필요한 메인 카메라 연결과 UI 입력용 이벤트 시스템을 준비한다.</summary>
+    /// <summary>기존 화면을 정리하고 Canvas에 메인 카메라를 연결한다. 활성 EventSystem이 없으면 프리팹의 입력 컴포넌트를 활성화한다.</summary>
     public void Initialize()
     {
         Shutdown();
@@ -23,25 +30,26 @@ public sealed class UIManager : MonoBehaviour
             return;
         }
         _canvas.enabled = true;
+        _eventSystem.enabled = EventSystem.current == null;
+        _inputModule.enabled = _eventSystem.enabled;
+        foreach (GameUI view in _canvas.GetComponentsInChildren<GameUI>(true))
+        {
+            if (_views.ContainsKey(view.GetType()))
+            {
+                Debug.LogError($"공통 Canvas에 같은 타입의 UI가 중복 배치되었습니다: {view.GetType().Name}", view);
+                continue;
+            }
+            _views.Add(view.GetType(), view);
+            view.Initialize();
+        }
     }
 
-    /// <summary>T 화면을 최초 조회 시 리소스에서 생성·초기화하고 이후에는 캐싱한 화면을 반환한다.</summary>
+    /// <summary>초기화된 씬의 T 화면을 반환한다. 배치되지 않은 타입은 오류를 보고하고 null을 반환한다.</summary>
     public T Get<T>() where T : GameUI
     {
         if (_views.TryGetValue(typeof(T), out GameUI view) && view != null) return (T)view;
-        var path = ResourcePaths.UI_PATH + typeof(T).Name;
-        GameObject instance = Managers.Resource.Instantiate(path, _canvas.transform, usePool: false);
-        if (instance == null) return null;
-        T screen = instance.GetComponent<T>();
-        if (screen == null)
-        {
-            Debug.LogError($"UI 프리팹에 {typeof(T).Name} 컴포넌트가 없습니다: {path}", instance);
-            Managers.Resource.Destroy(instance);
-            return null;
-        }
-        _views[typeof(T)] = screen;
-        screen.Initialize();
-        return screen;
+        Debug.LogError($"공통 Canvas에 {typeof(T).Name} 화면이 배치되지 않았습니다.", this);
+        return null;
     }
 
     /// <summary>생성된 T 화면을 표시한다.</summary>
@@ -52,24 +60,25 @@ public sealed class UIManager : MonoBehaviour
         view.SetVisible(true);
     }
 
-    /// <summary>생성된 T 화면을 숨긴다.</summary>
+    /// <summary>이미 생성된 T 화면을 숨긴다. 해당 타입이 캐시에 없으면 새 화면을 생성하지 않는다.</summary>
     public void Hide<T>() where T : GameUI
     {
-        T view = Get<T>();
-        if (view == null) return;
+        if (!_views.TryGetValue(typeof(T), out GameUI view) || view == null) return;
         view.SetVisible(false);
     }
 
-    /// <summary>모든 화면의 연결을 해제하고 생성한 화면을 제거한다.</summary>
+    /// <summary>배치된 화면의 연결과 캐시를 정리하고 공통 Canvas와 자체 UI 입력을 비활성화한다. 화면 객체는 유지한다.</summary>
     public void Shutdown()
     {
         foreach (GameUI view in _views.Values)
         {
             if (view == null) continue;
             view.Shutdown();
-            Managers.Resource.Destroy(view.gameObject);
         }
         _views.Clear();
+        _inputModule.enabled = false;
+        _eventSystem.enabled = false;
+        _canvas.enabled = false;
     }
 
     void OnDestroy()
