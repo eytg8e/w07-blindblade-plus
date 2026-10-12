@@ -14724,6 +14724,7 @@ GameObject:
   - component: {fileID: 8306778148007116594}
   - component: {fileID: 6112655535052497127}
   - component: {fileID: 7420961727351748573}
+  - component: {fileID: 8278747186131285952}
   m_Layer: 0
   m_Name: EnemySlash
   m_TagString: Untagged
@@ -19559,6 +19560,19 @@ ParticleSystemRenderer:
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
   m_MaskInteraction: 0
+--- !u!114 &8278747186131285952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8307060409358143758}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db16b22a0bc65e848923ce4a72f46787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _ignorePerception: 0
 --- !u!1 &8703285099506347597
 GameObject:
   m_ObjectHideFlags: 0
