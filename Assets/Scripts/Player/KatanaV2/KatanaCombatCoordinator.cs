@@ -60,7 +60,11 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     [SerializeField, Min(0f)] private float _normalSheatheDelay = 0.8f;
 
     [Header("발도 시작 2타 연계")]
-    [SerializeField, Min(0f)] private float _comboBufferWindow = 0.2f;
+    
+    [SerializeField, Min(0f), InspectorName("1타 후속 입력 예약 시간 (초)")]
+    [Tooltip("1타 연결 시점 전의 예약 입력 허용 구간 길이입니다. 0.1이면 연결 시점 0.1초 전부터 연결 시점까지만 입력을 받습니다.")]
+    private float _firstAttackInputBufferWindow = 0.1f;
+[SerializeField, Min(0f)] private float _comboBufferWindow = 0.2f;
     [SerializeField, Min(0f), InspectorName("다음 타 연계 지연 (초)")]
     [Tooltip("각 베기의 타격 구간 종료부터 다음 타 시작까지의 지연입니다. 값이 커지면 연계가 느려집니다. 동작이 끝났다면 회복 종료도 기다립니다.")]
     private float _comboFollowThrough = 0.12f;
@@ -118,6 +122,9 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     private bool _waiting;
     private bool _waitAfterRecovery;
     private bool _normalRequested;
+    private bool _bufferedDefense;
+    private bool _suppressSheatheOnGuardEnd;
+
     private bool _attackWasDrawn;
 
     public event Action<KatanaEvent> EventRaised;
@@ -176,10 +183,14 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         ResetChain();
     }
 
+    /// <summary>패링·공격·납도 시계를 진행하고 예약된 행동이 가능한 상태가 되면 실행한다.</summary>
     void Update()
     {
         if (_player.IsPaused || _player.CurrentState == PlayerActionState.Dead)
+        {
+            _bufferedDefense = false;
             return;
+        }
 
         _clock += Time.deltaTime;
         if (_automaticCounterPending)
@@ -221,6 +232,13 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             RequestAttack();
         }
 
+        if (_bufferedDefense && !_queuedAttack && !_queuedOpeningAttack
+            && _player.CurrentState == PlayerActionState.Free && Time.time >= _defenseReadyUntil)
+        {
+            if (StartDefense(false))
+                _bufferedDefense = false;
+        }
+
         if (!_waiting || _player.CurrentState != PlayerActionState.Free || _parryMotion || _queuedAttack || CounterRemaining > 0f)
             return;
         if (!_parryOpen && _clock - _waitStarted >= _normalSheatheDelay)
@@ -234,11 +252,21 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     public void AddLookInput(Vector2 delta) => _player.AddLookInput(delta);
 
     /// <summary>발도·Normal1의 2타를 시작하거나 다음 클릭 하나를 예약한다. 새 연계는 납도를 거쳐 발도로 시작하며 입력 수락 여부를 반환한다.</summary>
+    /// <summary>발도 또는 다음 일반 공격을 시작한다. 가드 중 공격 입력은 가드를 유지한 채 무기를 뽑은 상태로 공격에 연결한다.</summary>
     public bool RequestAttack()
     {
         if (!isActiveAndEnabled || _player.IsPaused || Time.timeScale <= 0f)
             return Reject("Attack: input unavailable");
         if (CanCounterAttack) return RequestCounterAttack();
+
+        bool attackFromGuard = _player.IsGuarding;
+        if (attackFromGuard)
+        {
+            _suppressSheatheOnGuardEnd = true;
+            EndDefense();
+            _suppressSheatheOnGuardEnd = false;
+        }
+
         if (_queuedOpeningAttack) return Reject("Attack: opening already buffered");
         if (_player.CurrentState == PlayerActionState.Free && _weaponState == KatanaWeaponState.Sheathing)
         {
@@ -262,7 +290,15 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         if (_player.CurrentState == PlayerActionState.NormalAttack && _strike > 0 && _strike < MAX_COMBO_STRIKES && !_counterAttack)
         {
             bool firstAttackFollowup = _strike == 1 && _weaponVisual != null && _weaponVisual.HasFirstAttackFollowup;
-            if (_queuedAttack || !firstAttackFollowup && GetAttackElapsed() < GetBufferStart())
+            float attackElapsed = GetAttackElapsed();
+            bool outsideBufferWindow;
+            if (firstAttackFollowup)
+            {
+                GetFirstAttackBufferWindow(out float bufferStart, out float bufferEnd);
+                outsideBufferWindow = attackElapsed < bufferStart || attackElapsed > bufferEnd;
+            }
+            else outsideBufferWindow = attackElapsed < GetBufferStart();
+            if (_queuedAttack || outsideBufferWindow)
                 return Reject("Attack: chain input unavailable");
             _queuedAttack = true;
             _queuedActionId = _player.CurrentActionId;
@@ -282,7 +318,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         }
         if (_player.RequestTargetedIaidoAttack(strike))
             return true;
-        if (strike == 1 && _weaponState == KatanaWeaponState.Drawn)
+        if (strike == 1 && _weaponState == KatanaWeaponState.Drawn && !attackFromGuard)
         {
             BeginSheathe();
             _queuedOpeningAttack = true;
@@ -343,6 +379,19 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         _actionDriver.GetPresentationTiming(PlayerAttackKind.Normal, out _, out float duration);
         return Mathf.Max(0f, Mathf.Min(GetChainStart(), duration) - _comboBufferWindow);
     }
+
+/// <summary>1타의 연결 시각과 입력 예약 폭으로 후속 공격 입력을 처음 받을 시각을 반환한다.</summary>
+/// <summary>1타 연결 시각과 예약 폭으로 후속 입력을 받을 시작·종료 시각을 반환한다.</summary>
+    private void GetFirstAttackBufferWindow(out float start, out float end)
+    {
+        if (_actionDriver != null)
+            _actionDriver.GetPresentationTiming(PlayerAttackKind.Normal, out end, out _);
+        else
+            end = FALLBACK_IAIDO_HIT_TIME;
+
+        start = Mathf.Max(0f, end - _firstAttackInputBufferWindow);
+    }
+
 
     /// <summary>1타의 표시 자세가 연계 프레임에 도달하면 예약된 공격 ID의 마지막 피해 검사를 마치고 2타를 시작한다. 시작 성공 여부를 반환한다.</summary>
     public bool TryStartFirstAttackFollowup()
@@ -585,6 +634,8 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                 _parryOpen = false;
                 break;
             case PlayerActionStage.GuardStarted:
+                _bufferedDefense = false;
+
                 _queuedAttack = false;
                 _queuedOpeningAttack = false;
                 _comboExpiresAt = 0f;
@@ -597,6 +648,12 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             case PlayerActionStage.GuardEnded:
                 _parryOpen = false;
                 Publish(KatanaStage.GuardEnded);
+                if (_suppressSheatheOnGuardEnd)
+                {
+                    _weaponState = KatanaWeaponState.Drawn;
+                    _waiting = false;
+                    return;
+                }
                 if (CounterRemaining > 0f)
                 {
                     BeginWaiting();
@@ -703,19 +760,30 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     }
 
     /// <summary>자유 상태에서 가드를 시작하고 짧은 패링 창을 연다. 방어 입력 수락 여부를 반환한다.</summary>
+    /// <summary>자유 상태에서 패링 창을 연다. 공격 또는 공격 회복 중에는 가드 입력을 저장해 회복 종료 뒤 일반 가드로 시작한다.</summary>
     public bool BeginDefense()
     {
-        if (!isActiveAndEnabled || _player.CurrentState != PlayerActionState.Free || _player.IsPaused
-            || Time.timeScale <= 0f || Time.time < _defenseReadyUntil) return false;
-        _waiting = false;
-        if (!_player.BeginGuard()) return false;
-        OpenDefenseWindow();
-        return true;
+        if (!isActiveAndEnabled || _player.IsPaused || Time.timeScale <= 0f)
+            return false;
+
+        if (_player.CurrentState == PlayerActionState.NormalAttack || _player.IsAttackRecoveryMovement)
+        {
+            _bufferedDefense = true;
+            return true;
+        }
+
+        if (_player.CurrentState != PlayerActionState.Free || Time.time < _defenseReadyUntil)
+            return false;
+
+        _bufferedDefense = false;
+        return StartDefense(true);
     }
 
     /// <summary>유지 가드와 패링 창을 종료한다. 기존 행동 상태와 납도 대기 흐름으로 복귀한다.</summary>
+    /// <summary>유지 가드와 예약된 가드 입력을 종료하고 기존 납도 대기 흐름으로 복귀한다.</summary>
     public void EndDefense()
     {
+        _bufferedDefense = false;
         _parryOpen = false;
         _player.EndGuard();
     }
@@ -765,6 +833,19 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         return true;
     }
 
+
+
+    /// <summary>자유 상태로 가드에 들어간다. openParryWindow가 참일 때만 즉시 패링 창을 연다.</summary>
+    private bool StartDefense(bool openParryWindow)
+    {
+        if (_player.CurrentState != PlayerActionState.Free || !_player.BeginGuard())
+            return false;
+
+        _waiting = false;
+        if (openParryWindow)
+            OpenDefenseWindow();
+        return true;
+    }
 }
 
 /// <summary>방어 접촉의 원래 피해, 검 앞 접촉점, 정확한 패링 여부를 표현 담당자에게 전달한다.</summary>

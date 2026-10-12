@@ -54,6 +54,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     [Header("Presentation")]
     [SerializeField] private bool _showWeapon = true;
     [SerializeField, Min(0f)] private float _blendTime = 0.025f;
+    [SerializeField, Min(0f), InspectorName("가드 전환 보간 시간")] private float _guardTransitionBlendTime = 0.1f;
+
     [SerializeField, Range(0.01f, 0.99f)] private float _iaidoImpactProgress = 0.88461536f;
     [SerializeField, Range(0.01f, 0.99f), InspectorName("2타 적중 진행도")] private float _normal1ImpactProgress = 0.75f;
     [SerializeField, Range(0.01f, 0.99f), InspectorName("반격 적중 진행도")] private float _counterImpactProgress = 0.4f;
@@ -372,6 +374,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         {
             case KatanaStage.NormalStarted:
                 string normal = _combat.IsCounterAttack ? "Normal2"
+                    : e.WasDrawn ? "Normal1"
                     : e.Strike == 1 ? "IaidoDoubleSlash" : "Normal1";
                 BeginStrike(normal, e, PlayerAttackKind.Normal);
                 break;
@@ -384,7 +387,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 _attack = false;
                 _parry = false;
                 _finishingInsertion = false;
-                Play("GuardEnter", _blendTime);
+                Play("GuardEnter", _guardTransitionBlendTime);
                 _duration = 0.12f;
                 break;
             case KatanaStage.GuardSucceeded:
@@ -393,7 +396,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                 _duration = 0.16f;
                 break;
             case KatanaStage.GuardEnded:
-                Play("GuardHold", _blendTime);
+                Play("GuardHold", _guardTransitionBlendTime);
                 _animator.SetFloat(ActionProgressId, 1f);
                 break;
             case KatanaStage.ParryMotionEnded:
@@ -428,7 +431,8 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
                     break;
                 }
                 string sheath = _motion == "IaidoDoubleSlash" ? "SheatheIaido" : _motion == "Normal2" ? "Sheathe2" : "Sheathe1";
-                Play(sheath, _blendTime);
+                Play(sheath, _motion == "GuardHold" || _motion == "GuardEnter" || _motion == "GuardDeflect"
+                    ? _guardTransitionBlendTime : _blendTime);
                 _animator.SetFloat(ActionProgressId, 0f);
                 break;
             case KatanaStage.SheatheEnded:
@@ -458,14 +462,16 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     /// <summary>name과 e의 타수·행동 ID 및 kind로 베기 모션을 선택한다. 공통 타격 시간과 해당 클립의 적중 진행도를 설정한다.</summary>
     private void BeginStrike(string name, KatanaEvent e, PlayerAttackKind kind = PlayerAttackKind.IaidoFinisher)
     {
-        bool opening = kind == PlayerAttackKind.Normal && _combat.IsOpeningAttack;
+        bool opening = kind == PlayerAttackKind.Normal && _combat.IsOpeningAttack && !e.WasDrawn;
         bool firstAttack = name == "IaidoDoubleSlash" && (opening
             || kind == PlayerAttackKind.IaidoFinisher && _combat.Player.TargetedComboStrike == 1);
         ApplyAttackClips(firstAttack);
         bool customFirstAttack = firstAttack && _firstAttackClip != null;
         bool matchedSecondAttack = name == "Normal1" && UsesOpeningTimingForSecondAttack;
-        float blend = kind == PlayerAttackKind.Normal && !opening && !_combat.IsCounterAttack
-            ? Mathf.Max(_blendTime, _comboBlendTime) : _blendTime;
+        bool transitioningFromGuard = _motion == "GuardHold" || _motion == "GuardEnter" || _motion == "GuardDeflect";
+        float blend = transitioningFromGuard ? _guardTransitionBlendTime
+            : kind == PlayerAttackKind.Normal && !opening && !_combat.IsCounterAttack
+                ? Mathf.Max(_blendTime, _comboBlendTime) : _blendTime;
         if (kind == PlayerAttackKind.Normal && _combat.IsFirstAttackFollowupTransition)
             blend = 0f;
         Play(name, blend);
