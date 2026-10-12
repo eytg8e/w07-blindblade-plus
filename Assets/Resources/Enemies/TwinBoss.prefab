@@ -58,6 +58,9 @@ MonoBehaviour:
   _patternWaitMax: 0.5
   _cooperationDuration: 10
   _breakRecovery: 0.75
+  _hitInvulnerabilityDuration: 2
+  _deflectPushDistance: 3
+  _deflectPushDuration: 0.16
   _evadeRadius: 6
   _evadeSpeed: 10
   _evadeMinimumDistance: 3
