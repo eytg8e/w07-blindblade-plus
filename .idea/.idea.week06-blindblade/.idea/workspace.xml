@@ -11,28 +11,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d4e56f78-704a-419d-8dc1-4a83f2dd9a13" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Boss_SoundDuel.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Boss_SoundDuel.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_DeflectableMelee.prefab" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_DeflectableMelee.prefab.meta" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_MultiPattern.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_MultiPattern.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_RhythmCharge.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_RhythmCharge.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleMelee.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleMelee.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleRanged.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Enemies/Enemy_SingleRanged.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Prefabs/Effects/PlayerDamageHit.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Prefabs/Effects/PlayerDamageHit.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Resources/Prefabs/Player.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Prefabs/Player.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Effects/BossBattleHitEffects.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Effects/BossBattleHitEffects.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Effects/PlayerCombatEffects.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Effects/PlayerCombatEffects.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyMeleeAttack.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/Attack/EnemyMeleeAttack.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemyController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemySensor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Enemies/EnemySensor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/GameManagers/GameSceneInitializer.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/GameManagers/GameSceneInitializer.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Maps/StageSwordNoise.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Maps/StageSwordNoise.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaDamageReceiver.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Player/KatanaV2/KatanaDamageReceiver.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.week06-blindblade/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapanSlideDoor.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapanSlideDoor.prefab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapanSlideDoor_SingleDoor.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapanSlideDoor_SingleDoor.prefab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapanSlideDoor_TwoDoor.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapanSlideDoor_TwoDoor.prefab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapaneseSlideDoor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Resources/Prefabs/Enviornment/JapaneseSlideDoor/JapaneseSlideDoor.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scenes/LevelDesign_HP/Stage_1.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scenes/LevelDesign_HP/Stage_1.unity" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scenes/LevelDesign_HP/Stage_2.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scenes/LevelDesign_HP/Stage_2.unity" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/ThirdParty/Epic Toon FX/Materials/Basics/circle_AB.mat" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/ThirdParty/Epic Toon FX/Materials/Basics/circle_AB.mat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ProjectSettings/Packages/com.unity.probuilder/Settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/ProjectSettings/Packages/com.unity.probuilder/Settings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/이펙트_시스템.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/이펙트_시스템.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/적_공격_패턴.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/적_공격_패턴.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/적_추적.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/적_추적.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/features/플레이어_피격_체력.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/features/플레이어_피격_체력.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/FEATURE_SPEC.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/FEATURE_SPEC.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -150,7 +138,7 @@
     "cidr.known.project.marker": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "feature/Enemy__fix",
+    "git-widget-placeholder": "dev",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
