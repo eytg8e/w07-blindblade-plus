@@ -19,6 +19,8 @@
 | 매니저 싱글턴 | [명세](features/매니저_싱글턴.md) |
 | 게임 씬 공통 구성 | [명세](features/게임_씬_공통_구성.md) |
 | 독백 UI | [명세](features/독백_UI.md) |
+| 엔딩 연출 | [명세](features/엔딩_연출.md) |
+| 보스 사망 씬 전환 | [명세](features/보스_사망_씬_전환.md) |
 | 게임 공통 구조 검증 씬 | [명세](features/게임_공통_구조_검증_씬.md) |
 | FMOD 사운드 수동 검증 | [명세](features/FMOD_사운드_검증.md) |
 | FMOD 사운드 매니저 | [명세](features/FMOD_사운드_매니저.md) |

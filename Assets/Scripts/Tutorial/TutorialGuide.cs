@@ -131,19 +131,13 @@ public sealed class TutorialGuide : MonoBehaviour
         for (int i = 0; i < _lastVisited.Length; i++) _lastVisited[i] = float.NegativeInfinity;
         foreach (TutorialLesson lesson in _lessons)
         {
-<<<<<<< Updated upstream
             if (lesson.KeyLabel != null)
             {
-                lesson.KeyLabel.text = lesson.Keys;
+                lesson.KeyLabel.text = lesson.DisplayKeys;
                 lesson.KeyLabel.color = _keyColor;
             }
             foreach (LineRenderer ring in lesson.Rings)
                 if (ring != null) ring.sharedMaterial = _ringMaterial;
-=======
-            lesson.KeyLabel.text = lesson.DisplayKeys;
-            lesson.KeyLabel.color = _keyColor;
-            foreach (LineRenderer ring in lesson.Rings) ring.sharedMaterial = _ringMaterial;
->>>>>>> Stashed changes
         }
     }
 
