@@ -51,8 +51,7 @@ public sealed class PlayerMotor : MonoBehaviour
 
     [Header("Look")]
     [SerializeField, Min(0f)] private float _lookSensitivity = 0.12f;
-    [SerializeField, Range(0f, 89f), Tooltip("상하 시점의 최대 각도(도)")]
-    private float _verticalLookLimit = 89f;
+    [SerializeField, Range(45f, 89f)] private float _verticalLookLimit = 80f;
 
     [Header("Footsteps")]
     [SerializeField, Min(0.01f), Tooltip("보행 중 발소리 사이의 시간. 이동을 멈추는 구간은 만들지 않습니다.")] private float _stepInterval = 0.36f;
@@ -136,7 +135,7 @@ private Vector3 _attackLungeDirection;
     [Header("전투 카메라 반동")]
     [SerializeField, Min(0f)] private float _recoilReturnSpeed = 18f;
     private Vector3 _recoilOffset;
-    public Vector3 ViewForward => Quaternion.Euler(_pitch, _yaw, 0f) * Vector3.forward;
+    public Vector3 ViewForward => Quaternion.Euler(0f, _yaw, 0f) * Vector3.forward;
     public Vector3 ViewOrigin => _cameraPivot.parent.TransformPoint(GetCameraBasePosition());
 
     /// <summary>strength로 카메라 위치 반동만 누적하고 회전과 논리적인 조준 방향은 유지한다.</summary>
@@ -196,8 +195,6 @@ private Vector3 _attackLungeDirection;
             _crouchedCharacterHeight, _characterController.radius * 2f, _standingCharacterHeight);
         if (_cameraPivot != null)
         {
-            _pitch = Mathf.Clamp(Mathf.DeltaAngle(0f, _cameraPivot.localEulerAngles.x),
-                -_verticalLookLimit, _verticalLookLimit);
             _cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
             _standingCameraLocalPosition = _cameraPivot.localPosition;
             _crouchedCameraHeight = Mathf.Clamp(
@@ -892,15 +889,17 @@ private bool TryGetFirstDashObstacle(Vector3 direction, float distance, out Rayc
         DashEnded?.Invoke(result);
     }
 
-    /// <summary>누적 시점 입력으로 플레이어 좌우 방향과 허용 각도 내 카메라 상하 회전을 갱신한다.</summary>
+    /// <summary>누적 입력으로 플레이어의 좌우 방향과 카메라의 상하 시점을 갱신합니다.</summary>
     private void ApplyLook()
     {
         if (_pendingLookDelta.sqrMagnitude <= 0f)
             return;
 
         _yaw += _pendingLookDelta.x * _lookSensitivity;
-        _pitch = Mathf.Clamp(_pitch - _pendingLookDelta.y * _lookSensitivity,
-            -_verticalLookLimit, _verticalLookLimit);
+        _pitch = Mathf.Clamp(
+            _pitch - _pendingLookDelta.y * _lookSensitivity,
+            -_verticalLookLimit,
+            _verticalLookLimit);
         transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
         if (_cameraPivot != null)
             _cameraPivot.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
