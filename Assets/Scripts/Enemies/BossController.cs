@@ -84,6 +84,9 @@ public sealed class BossController : MonoBehaviour
     [Header("무적 중 공격 쳐내기")]
     [SerializeField, Min(0f)] private float _deflectPushDistance = 3f; // 뒤로 밀리는 거리 
     [SerializeField, Min(0.01f)] private float _deflectPushDuration = 0.16f;
+    [SerializeField, Min(0f), Tooltip("실제 피격 후 쳐내기를 유지하는 시간. 한 번 쳐내면 즉시 종료합니다.")]
+    private float _hitDeflectDuration = 2f;
+    private float _hitDeflectUntil;
 
     [Header("연속 돌진")]
     [SerializeField, Min(1f)] private float _teleportRadius = 6f;
@@ -128,6 +131,8 @@ public sealed class BossController : MonoBehaviour
 
     void Update()
     {
+        if (_hitDeflectUntil > 0f && Time.time >= _hitDeflectUntil)
+            RestoreAfterDisappearance();
         if (_routine != null && (_player == null || !_playerHealth.IsAlive || !_motor.IsReady))
             StopBattle();
     }
@@ -524,6 +529,7 @@ public sealed class BossController : MonoBehaviour
         IsRepositioning = false;
         ChangeState(BossState.Idle);
         _health.SetInvulnerable(true);
+        _hitDeflectUntil = Time.time + _hitDeflectDuration;
         _routine = StartCoroutine(RecoverFromHit());
     }
 
@@ -538,7 +544,7 @@ public sealed class BossController : MonoBehaviour
         _routine = null;
         _motor.Stop();
         IsRepositioning = false;
-        RestoreAfterDisappearance();
+        RestoreAfterDisappearance(true);
         Vector3 direction = -_playerMotor.ViewForward;
         _playerMotor.ApplyCombatPush(direction, _deflectPushDistance, _deflectPushDuration);
         KatanaWeaponVisual weapon = _player.GetComponent<KatanaWeaponVisual>();
@@ -561,9 +567,14 @@ public sealed class BossController : MonoBehaviour
         _routine = null;
     }
 
-    /// <summary>패턴 대기 종료 또는 전투 중단 시 피격 후 무적을 해제한다. 위치와 외형은 유지한다.</summary>
-    private void RestoreAfterDisappearance()
+    /// <summary>
+    /// 피격 후 쳐내기 시간이 끝났으면 무적과 종료 시각을 초기화한다.
+    /// force가 true인 쳐내기 성공·전투 중단에서는 남은 시간과 무관하게 즉시 해제한다.
+    /// </summary>
+    private void RestoreAfterDisappearance(bool force = false)
     {
+        if (!force && Time.time < _hitDeflectUntil) return;
+        _hitDeflectUntil = 0f;
 
         _health.SetInvulnerable(false);
     }
@@ -610,7 +621,7 @@ public sealed class BossController : MonoBehaviour
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
         IsRepositioning = false;
-        RestoreAfterDisappearance();
+        RestoreAfterDisappearance(true);
         RestoreNavigation();
         if (_melee != null) _melee.CancelAttack();
         _motor.Stop();
