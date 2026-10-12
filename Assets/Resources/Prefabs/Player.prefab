@@ -559,6 +559,8 @@ MonoBehaviour:
   _physicalContacts: {fileID: 3796482945788141926}
   _katana: {fileID: 5663976393034796336}
   _hitRecoilStrength: 0.25
+  _damageEffectDistance: 0.8
+  _damageEffectVerticalOffset: -0.1
   _defenseEffectDistance: 0.6
   _defenseEffectScreenOffset: 0.12
 --- !u!114 &1080894898460965423
@@ -1042,7 +1044,6 @@ MonoBehaviour:
     m_Bits: 4294967295
   _contactRadius: 0.04
   _teleportDistance: 3
-  _bloodOnEnemyContact: 1
 --- !u!95 &8362338574495906464 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 3502371185263496807, guid: 6faf8eeeaec28cd4f97ea16dd7ea601a, type: 3}

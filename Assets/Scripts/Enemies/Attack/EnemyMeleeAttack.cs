@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-/// <summary>EnemySlash와 같은 위치의 칼날 Trigger를 베기 구간에만 활성화한다.</summary>
+/// <summary>EnemySlash 베기 구간에 플레이어와 같은 칼날 접촉 조회로 근접 피해를 한 번 적용한다.</summary>
 public class EnemyMeleeAttack : EnemyAttackBehaviour
 {
     [Header("근접 공격 설정")]
@@ -27,6 +27,7 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
     [SerializeField, Min(0f)] private float _parryRecovery = 0.9f;
     private Vector3 _swingOrigin;
     private Vector3 _swingForward;
+    private Vector3 _previousBase;
     private Vector3 _previousTip;
     private float _startedAt;
     private bool _contactConsumed;
@@ -71,8 +72,9 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
         _debugHadContact = false;
 #endif
         UpdateHitboxPose(0f);
+        _previousBase = BladeBase;
         _previousTip = BladeTip;
-        _bladeHitbox.enabled = _useBuiltInHitDetection;
+        _bladeHitbox.enabled = false;
         MeleeAttack?.Invoke(context);
     }
 
@@ -91,21 +93,17 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
             return;
         }
         UpdateHitboxPose(Mathf.Clamp01((Time.time - _startedAt) / _swingDuration));
+        if (!_useBuiltInHitDetection) return;
+        Collider contact = EnemyCombatService.FindBladeContact(transform, Context.Target,
+            _previousBase, _previousTip, BladeBase, BladeTip, _hitRadius,
+            _hitMask.value | _obstacleMask.value, out Vector3 point);
+        if (contact != null) TryHit(contact);
     }
 
-    void OnTriggerEnter(Collider other)
-    {
-        TryHit(other);
-    }
-
-    void OnTriggerStay(Collider other)
-    {
-        TryHit(other);
-    }
-
-    /// <summary>progress로 단일 BoxCollider의 위치·회전·크기를 변경한다. 같은 칼날 좌표를 VFX에 공개한다.</summary>
+    /// <summary>progress로 칼날의 이전·현재 좌표와 표시용 BoxCollider의 위치·회전·크기를 갱신한다.</summary>
     private void UpdateHitboxPose(float progress)
     {
+        _previousBase = BladeBase;
         _previousTip = BladeTip;
         GetBladePose(progress, out Vector3 bladeBase, out Vector3 bladeTip);
         BladeBase = bladeBase;
@@ -156,10 +154,10 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
         bladeTip = bladeBase + Quaternion.AngleAxis(angle, swingAxis) * forward * (_attackRange - offset);
     }
 
-    /// <summary>other가 베기 중 유효한 대상 또는 장애물인지 검사한다. 최초 Trigger 접촉만 피해 또는 회복으로 확정한다.</summary>
+    /// <summary>other가 베기 중 대상 또는 대상을 차폐한 장애물인지 검사한다. 유효한 최초 접촉만 피해 또는 회복으로 확정한다.</summary>
     private void TryHit(Collider other)
     {
-        if (Phase != EnemyAttackPhase.Active || !_bladeHitbox.enabled || _contactConsumed
+        if (Phase != EnemyAttackPhase.Active || !_useBuiltInHitDetection || _contactConsumed
             || Time.time < _startedAt || Time.time >= _startedAt + _swingDuration
             || other.isTrigger || other.transform.IsChildOf(transform)) return;
         EnemyAttackContext context = Context;
@@ -167,6 +165,9 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
         int layer = 1 << other.gameObject.layer;
         if (isTarget ? (_hitMask.value & layer) == 0 : (_obstacleMask.value & layer) == 0) return;
         if (!isTarget && other.GetComponentInParent<EnemyHealth>() != null) return;
+        if (!isTarget && context.Target != null
+            && !IsBlocked(context, context.Target.position + Vector3.up * _hitHeight,
+                context.Target.GetComponent<IDamageable>())) return;
         Vector3 point = other.ClosestPoint(_bladeHitbox.transform.position);
 #if UNITY_EDITOR
         _debugContactPoint = point;
@@ -211,7 +212,8 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
         Vector3 delta = point - _swingOrigin;
         foreach (RaycastHit hit in Physics.RaycastAll(_swingOrigin, delta.normalized, delta.magnitude, _obstacleMask, QueryTriggerInteraction.Ignore))
         {
-            if (hit.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<IDamageable>() == receiver) continue;
+            if (hit.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<IDamageable>() == receiver
+                || hit.collider.GetComponentInParent<EnemyHealth>() != null) continue;
             return true;
         }
         return false;

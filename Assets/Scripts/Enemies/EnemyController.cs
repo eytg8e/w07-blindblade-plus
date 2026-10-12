@@ -36,6 +36,7 @@ public class EnemyController : MonoBehaviour
     private bool _openingAttackPending;
     private bool _openingAttackPerformed;
 
+
     public EnemyState State => _state;
     private bool AllowsWalkingChase => _allowWalkingChase || _attackSelector.MeleeOnly;
     public event Action<EnemyState> StateChanged;

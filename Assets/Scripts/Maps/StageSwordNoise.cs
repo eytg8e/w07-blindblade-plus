@@ -7,6 +7,7 @@ public sealed class StageSwordNoise : MonoBehaviour
 {
     private EnemyController[] _enemies;
     private PlayerController _player;
+    private GameSceneInitializer _settings;
 
     private float _hearingDistance;
     private float _alertDuration;
@@ -17,6 +18,7 @@ public sealed class StageSwordNoise : MonoBehaviour
     {
         Shutdown();
         _player = player;
+        _settings = GetComponent<GameSceneInitializer>();
         _enemies = enemies;
         _hearingDistance = hearingDistance;
         _alertDuration = alertDuration;
@@ -52,6 +54,9 @@ public sealed class StageSwordNoise : MonoBehaviour
     /// <summary>position까지 연결된 NavMesh 경로 길이가 청각 범위 이내인 생존 적에게 소음 위치를 전달한다.</summary>
     public void AlertEnemies(Vector3 position)
     {
+        if (!_settings.SwordNoiseEnabled) return;
+        _hearingDistance = _settings.SwordHearingDistance;
+        _alertDuration = _settings.SwordAlertDuration;
         foreach (EnemyController enemy in _enemies)
         {
             if (enemy == null || !enemy.isActiveAndEnabled || enemy.gameObject.scene != gameObject.scene)
@@ -68,7 +73,8 @@ public sealed class StageSwordNoise : MonoBehaviour
             Vector3[] corners = path.corners;
             for (int i = 1; i < corners.Length; i++)
                 distance += Vector3.Distance(corners[i - 1], corners[i]);
-            if (distance <= _hearingDistance)
+            float hearingDistance = Mathf.Min(_hearingDistance, enemy.GetComponent<EnemySensor>().HearingDistance);
+            if (hearingDistance > 0f && distance <= hearingDistance)
                 enemy.HearNoise(destination.position, _alertDuration);
         }
     }

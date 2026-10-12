@@ -228,6 +228,8 @@ MonoBehaviour:
   _repathInterval: 0.2
   _memoryDuration: 3
   _allowWalkingChase: 1
+  _hearingDistance: 40
+  _showHearingRange: 1
 --- !u!114 &4699714733045868579
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -20,6 +20,12 @@ public sealed class PlayerCombatEffects : MonoBehaviour
     [SerializeField, Min(0f)] private float _hitRecoilStrength = 0.25f;
     private PlayerMotor _motor;
 
+    [Header("플레이어 피격 표시")]
+    [SerializeField, Min(0.1f)] private float _damageEffectDistance = 0.8f;
+    [SerializeField] private float _damageEffectVerticalOffset = -0.1f;
+    private PlayerHealth _health;
+    private Camera _damageCamera;
+
     [Header("방어 섬광 표시")]
     [SerializeField, Min(0.1f)] private float _defenseEffectDistance = 0.6f;
     [SerializeField, Min(0f)] private float _defenseEffectScreenOffset = 0.12f;
@@ -37,6 +43,9 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         EnemyCombatService playerContacts = _player.GetComponent<EnemyCombatService>();
         if (playerContacts != null) _contacts = playerContacts;
         _motor = _player.GetComponent<PlayerMotor>();
+        _health = _player.GetComponent<PlayerHealth>();
+        _damageCamera = _player.GetComponentInChildren<Camera>();
+        _health.DamageReceived += HandlePlayerDamaged;
         if (_contacts != null) _contacts.AttackContactResolved += HandleHitFeedback;
         _player.ActionEvent += HandleAction;
         if (_contacts != null && _physicalContacts == null)
@@ -54,6 +63,7 @@ public sealed class PlayerCombatEffects : MonoBehaviour
 
     void OnDisable()
     {
+        _health.DamageReceived -= HandlePlayerDamaged;
         _player.ActionEvent -= HandleAction;
         if (_contacts != null) _contacts.AttackContactResolved -= HandleHitFeedback;
         if (_contacts != null && _physicalContacts == null)
@@ -126,6 +136,19 @@ public sealed class PlayerCombatEffects : MonoBehaviour
         if (collider == null || _effects == null || !_effects.IsReady)
             return;
         _effects.PlayHit(point);
+    }
+
+    /// <summary>
+    /// 실제 피해 context를 받으면 현재 시야 앞에 PlayerDamageHit를 재생한다.
+    /// 표시 거리와 수직 오프셋을 사용하며 가드·패링으로 차단된 피해에는 호출되지 않는다.
+    /// </summary>
+    private void HandlePlayerDamaged(DamageContext context)
+    {
+        Vector3 forward = _damageCamera.transform.forward;
+        Vector3 point = _damageCamera.transform.position + forward * _damageEffectDistance
+            + _damageCamera.transform.up * _damageEffectVerticalOffset;
+        _effects.Play(EffectId.PlayerDamageHit, point,
+            Quaternion.LookRotation(-forward, _damageCamera.transform.up));
     }
 
     /// <summary>

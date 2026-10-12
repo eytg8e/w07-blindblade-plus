@@ -290,6 +290,8 @@ MonoBehaviour:
   _repathInterval: 0.2
   _memoryDuration: 3
   _allowWalkingChase: 1
+  _hearingDistance: 40
+  _showHearingRange: 1
 --- !u!114 &9174286875222053205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -577,6 +579,9 @@ MonoBehaviour:
   _damageSound: 4
   _volume: 0.8
   _pitch: 1
+  _minimumDeathPitchSemitones: -4
+  _maximumDeathPitchSemitones: -1
+  _originalDeathPitchChance: 0.3
 --- !u!1 &8140427288079008813
 GameObject:
   m_ObjectHideFlags: 0
