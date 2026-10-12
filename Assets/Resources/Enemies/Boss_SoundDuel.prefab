@@ -282,6 +282,7 @@ MonoBehaviour:
   _patternWaitMin: 1
   _patternWaitMax: 2
   _projectilePrefab: {fileID: 2285517556864344112, guid: 6c377b39585c5364eb80b5f8c8fcde63, type: 3}
+  _rangedDamage: 15
   _roamDuration: 7
   _roamRadius: 7
   _roamDestinationInterval: 2.5
@@ -290,7 +291,7 @@ MonoBehaviour:
   _chargeSpeed: 14
   _chargeDistance: 12
   _chargeDuration: 1
-  _chargeDamage: 15
+  _chargeDamage: 25
   _chargeHitRadius: 0.65
   _obstacleMask:
     serializedVersion: 2
