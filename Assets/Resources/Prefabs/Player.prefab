@@ -421,7 +421,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _player: {fileID: 6616511219798166873}
   _normalSheatheDelay: 0.8
-  _firstAttackInputBufferWindow: 0.1
+  _firstAttackInputBufferWindow: 0.2
   _comboBufferWindow: 0.2
   _comboFollowThrough: 0.12
   _comboResetDelay: 0.65

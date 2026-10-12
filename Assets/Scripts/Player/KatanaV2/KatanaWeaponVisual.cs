@@ -374,7 +374,6 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
         {
             case KatanaStage.NormalStarted:
                 string normal = _combat.IsCounterAttack ? "Normal2"
-                    : e.WasDrawn ? "Normal1"
                     : e.Strike == 1 ? "IaidoDoubleSlash" : "Normal1";
                 BeginStrike(normal, e, PlayerAttackKind.Normal);
                 break;
@@ -462,7 +461,7 @@ public sealed class KatanaWeaponVisual : MonoBehaviour
     /// <summary>name과 e의 타수·행동 ID 및 kind로 베기 모션을 선택한다. 공통 타격 시간과 해당 클립의 적중 진행도를 설정한다.</summary>
     private void BeginStrike(string name, KatanaEvent e, PlayerAttackKind kind = PlayerAttackKind.IaidoFinisher)
     {
-        bool opening = kind == PlayerAttackKind.Normal && _combat.IsOpeningAttack && !e.WasDrawn;
+        bool opening = kind == PlayerAttackKind.Normal && _combat.IsOpeningAttack;
         bool firstAttack = name == "IaidoDoubleSlash" && (opening
             || kind == PlayerAttackKind.IaidoFinisher && _combat.Player.TargetedComboStrike == 1);
         ApplyAttackClips(firstAttack);
