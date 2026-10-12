@@ -1740,6 +1740,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _size: {x: 420, y: 16}
   _topOffset: 36
+  _followColor: {r: 1, g: 0, b: 0, a: 1}
+  _followDuration: 0.8
+
 --- !u!114 &910000012
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1754,6 +1757,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _size: {x: 420, y: 16}
   _topOffset: 60
+  _followColor: {r: 1, g: 0, b: 0, a: 1}
+  _followDuration: 0.8
+
 --- !u!4 &910000022 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 301, guid: d40b1d4aa1924ba2b5fe179c3867f4e1, type: 3}
