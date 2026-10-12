@@ -968,6 +968,10 @@ PrefabInstance:
       propertyPath: _detectionRange
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: m_Name
       value: Enemy_SingleMelee (1)
@@ -1056,6 +1060,10 @@ PrefabInstance:
     - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: _detectionRange
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 2253480226399273074, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: m_Name
@@ -1277,7 +1285,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6540411068458185360, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
       propertyPath: _detectionRange
-      value: 4
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6540411068458185360, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
+      propertyPath: _hearingDistance
+      value: 10
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2499,6 +2511,10 @@ PrefabInstance:
       propertyPath: _detectionRange
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: m_Name
       value: Enemy_SingleMelee (3)
@@ -3164,6 +3180,10 @@ PrefabInstance:
     - target: {fileID: 6540411068458185360, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
       propertyPath: _detectionRange
       value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6540411068458185360, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -4244,7 +4264,11 @@ PrefabInstance:
       objectReference: {fileID: 1937035634}
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _detectionRange
-      value: 6
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: m_Name
@@ -4615,6 +4639,10 @@ PrefabInstance:
       propertyPath: _detectionRange
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 2253480226399273074, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: m_Name
       value: Enemy_RhythmCharge (3)
@@ -4719,7 +4747,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _detectionRange
-      value: 3
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: m_Name
@@ -5483,6 +5515,10 @@ PrefabInstance:
     - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: _detectionRange
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 2253480226399273074, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: m_Name
@@ -7335,6 +7371,10 @@ PrefabInstance:
       propertyPath: _detectionRange
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: m_Name
       value: Enemy_SingleMelee
@@ -7365,6 +7405,10 @@ PrefabInstance:
     - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: _detectionRange
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 2253480226399273074, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: m_Name
@@ -7470,7 +7514,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _detectionRange
-      value: 3
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: m_Name
@@ -8025,6 +8073,10 @@ PrefabInstance:
       propertyPath: _detectionRange
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 8382106560393218092, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: m_Name
       value: Enemy_SingleMelee (2)
@@ -8278,6 +8330,10 @@ PrefabInstance:
       propertyPath: _detectionRange
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 1710548442803620168, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 2253480226399273074, guid: 6df26d5e98dd36c47b246793b665b6ac, type: 3}
       propertyPath: m_Name
       value: Enemy_RhythmCharge (2)
@@ -8475,6 +8531,10 @@ PrefabInstance:
     - target: {fileID: 6540411068458185360, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
       propertyPath: _detectionRange
       value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6540411068458185360, guid: 8c6d6fedaf1dcc843bb08d1c1297713d, type: 3}
+      propertyPath: _hearingDistance
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -10900,7 +10960,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: _detectionRange
-      value: 4
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6722378550781248484, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
+      propertyPath: _hearingDistance
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 7523857855964521133, guid: 037f6be151a515745a6193a2a06100f0, type: 3}
       propertyPath: InitialModule.startSizeY.minMaxState
