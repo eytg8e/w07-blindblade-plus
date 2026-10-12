@@ -82,6 +82,8 @@ GameObject:
   - component: {fileID: 206}
   - component: {fileID: 207}
   - component: {fileID: 208}
+  - component: {fileID: 209}
+  - component: {fileID: 229}
   m_Layer: 0
   m_Name: Human
   m_TagString: Untagged
@@ -373,6 +375,8 @@ GameObject:
   - component: {fileID: 306}
   - component: {fileID: 307}
   - component: {fileID: 308}
+  - component: {fileID: 309}
+  - component: {fileID: 329}
   m_Layer: 0
   m_Name: Beast
   m_TagString: Untagged
@@ -704,3 +708,69 @@ MonoBehaviour:
   _damageSound: 4
   _volume: 1.1
   _pitch: 1.15
+--- !u!114 &209
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77bb09cf75204f668050e7c814cf3b30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stepDistance: 0.7
+  _footOffset: 0.15
+  _teleportDistance: 5
+  _groundLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  _rayHeight: 0.5
+  _rayDepth: 0.5
+--- !u!114 &229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fded09b31d54cd887339df9f805d97e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _volume: 1.7782794
+--- !u!114 &309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77bb09cf75204f668050e7c814cf3b30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stepDistance: 0.7
+  _footOffset: 0.3
+  _teleportDistance: 5
+  _groundLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  _rayHeight: 0.5
+  _rayDepth: 0.5
+--- !u!114 &329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 300}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fded09b31d54cd887339df9f805d97e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _volume: 1.7782794
