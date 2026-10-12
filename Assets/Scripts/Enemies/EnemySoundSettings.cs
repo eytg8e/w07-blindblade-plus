@@ -13,7 +13,9 @@ public enum EnemySoundAction
 public enum EnemySoundStage
 {
     Telegraph,
-    Action
+    Action,
+    Heartbeat,
+    AttackVoice
 }
 
 [CreateAssetMenu(fileName = "EnemySoundSettings", menuName = "BlindBlade/Enemies/Sound Settings")]
@@ -22,6 +24,10 @@ public sealed class EnemySoundSettings : ScriptableObject
     private const string RESOURCE_PATH = "Enemies/EnemySoundSettings";
     private static EnemySoundSettings _shared;
     private static bool _loaded;
+
+    [Header("두 박동 공격 신호")]
+    [SerializeField] private SoundId _heartbeat = SoundId.EnemyHeartbeat;
+    [SerializeField] private SoundId _attackVoice = SoundId.EnemyAttackVoice;
 
     [Header("근접 공격")]
     [SerializeField] private SoundId _meleeTelegraph = SoundId.EnemyAttackPrepare;
@@ -61,10 +67,14 @@ public sealed class EnemySoundSettings : ScriptableObject
 
     /// <summary>
     /// action과 stage를 공통 설정 필드에 대응시켜 사용할 SoundId를 반환한다.
-    /// 발걸음은 단계 구분 없이 같은 소리를 반환하며 등록되지 않은 행동은 None을 반환한다.
+    /// 리듬 공격의 박동·기합을 별도 반환하며 발걸음 및 기존 행동의 전조·실행 연결은 유지한다.
     /// </summary>
     private SoundId ResolveSound(EnemySoundAction action, EnemySoundStage stage)
     {
+        if (action == EnemySoundAction.None) return SoundId.None;
+        if (action == EnemySoundAction.Footstep) return _footstep;
+        if (stage == EnemySoundStage.Heartbeat) return _heartbeat;
+        if (stage == EnemySoundStage.AttackVoice) return _attackVoice;
         bool telegraph = stage == EnemySoundStage.Telegraph;
         switch (action)
         {

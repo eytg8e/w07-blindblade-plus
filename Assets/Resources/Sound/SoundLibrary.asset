@@ -301,6 +301,102 @@ MonoBehaviour:
     _combatCue: 0
     _spatialize2D: 1
     _finishNaturally: 0
+  - _id: 23
+    _type: 0
+    _event:
+      Guid:
+        Data1: -490590573
+        Data2: 1229917881
+        Data3: -1272490096
+        Data4: -1633643967
+      Path: event:/Ambience/BossBGM
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 0
+    _spatialize2D: 0
+    _finishNaturally: 0
+  - _id: 24
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1736309694
+        Data2: 1116578882
+        Data3: -1400574044
+        Data4: -925442160
+      Path: event:/Enemy/Damaged/EnemyDamaged
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 25
+    _type: 1
+    _event:
+      Guid:
+        Data1: -634405247
+        Data2: 1327913601
+        Data3: 169375906
+        Data4: -1334133532
+      Path: event:/Enemy/Damaged/EnemyGetParryed
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 26
+    _type: 1
+    _event:
+      Guid:
+        Data1: -1985699736
+        Data2: 1178136433
+        Data3: -621625447
+        Data4: 204199252
+      Path: event:/Enemy/EnemyHeartbeat
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 27
+    _type: 1
+    _event:
+      Guid:
+        Data1: 1223569809
+        Data2: 1293868164
+        Data3: -1987700319
+        Data4: 1029426573
+      Path: event:/Enemy/EnemyAttackVoice
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
+  - _id: 28
+    _type: 1
+    _event:
+      Guid:
+        Data1: -1796534244
+        Data2: 1162375132
+        Data3: 313470876
+        Data4: -1069072751
+      Path: event:/Enemy/EnemyRangedAttackVoice
+    _enabled: 1
+    _volumeMultiplier: 1
+    _pitchMultiplier: 1
+    _useCallerLabel: 0
+    _combatCue: 1
+    _spatialize2D: 0
+    _finishNaturally: 1
   _bgmBusPath: bus:/BGM_Bus
   _effectBusPath: bus:/SFX_Bus
   _combatFocusDuration: 0.35

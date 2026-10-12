@@ -1,5 +1,14 @@
 ### FMOD 사운드 매니저
 
+#### 적 리듬 공격 등록 및 취소 기반 — 2단계 (2026-10-12)
+
+- 새 이벤트 6개를 SoundId 23~28 및 기존 SoundLibrary에 등록했다. 중앙 편집·기본 설정·검증은 [사운드 중앙 편집](사운드_중앙_편집.md)의 「적 리듬 공격 사운드 중앙 등록」을 따른다. 기존 ID와 재생 호출부는 유지했다.
+- StopFor(owner, soundId, allowFadeOut=false, forceStop=false)의 마지막 선택 인자를 추가했다. 기본값은 기존 자연 종료 정책을 유지하고 forceStop=true일 때 해당 소유자·ID의 효과음만 강제 정지한다. 해당 ID의 상황별 예약도 제거한다. 기존 SwordHit/PlayerDamaged의 공통 피격 예약 정리 규칙과 소유자 전체 정지는 유지했다.
+- PlayBgm은 중앙 Library의 재생 사용과 음량·pitch 배율을 읽고 새 재생 또는 같은 BGM 갱신에 적용한다. 현재 Ambience 배율 1·활성 설정은 보존하며 이동 제한 중 BGM 음소거와 단발 이벤트의 loop 재시작 흐름은 유지한다.
+- 여러 ID의 효과음은 기존 ActiveEffect 목록에서 각각 관리한다. 공격 단계의 단일 _playingActionSound 추적을 바꾸는 작업과 박동 예약·공격 취소의 호출 연결은 3단계부터 진행한다. 신규 이벤트의 실제 공격·피격·패링 및 보스방 진입 호출은 아직 없다.
+- 관련 코드: Assets/Scripts/Managers/SoundManager.cs / PlayBgm, StopFor; Assets/Scripts/Enums/SoundId.cs; Assets/Resources/Sound/SoundLibrary.asset.
+- 검증: Unity 컴파일 completed·failed=false·errors=[]·compilationFailed=false. 설정 조회와 기존 Library 항목 보존을 확인했다. 실제 효과음 정지·예약 취소·BGM 출력·청취 검증은 최종 검증으로 이월했다. Play 및 테스트 코드 추가 없음.
+
 - 최신 사건 연결: 정규화된 Bank의 공격·피격·치명타격·사망·가드·패링·대시·발견 전조·접촉과 기본 BGM 자동 반복을 연결했다. 적 공격음은 EnemyAttack으로 분리했다. 현재 설정·검증·루프 한계는 [사운드 중앙 편집](사운드_중앙_편집.md)의 「현재 사운드 사건 연결」을 따른다. 가드·패링 통합 설명은 이전 구현 기록이다.
 
 - 2026-10-11 중앙 편집: 플레이어 상황별 프로필·시간 예약, 접촉·가드·패링 금속음 교체, 적 준비·베기 자연 종료 정책을 추가했다. 현재 설정·편집 방법·검증과 한계는 [사운드 중앙 편집](사운드_중앙_편집.md)을 따른다. 아래 과거 TemporarySwordHit 연결 및 단계별 즉시 정지는 이전 구현 기록이다.
