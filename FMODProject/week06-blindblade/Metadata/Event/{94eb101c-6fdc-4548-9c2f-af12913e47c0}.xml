@@ -2,7 +2,7 @@
 <objects serializationModel="Studio.02.03.00">
 	<object class="Event" id="{94eb101c-6fdc-4548-9c2f-af12913e47c0}">
 		<property name="name">
-			<value>EnemyRangedAttackVoice</value>
+			<value>EnemyRangedAttack</value>
 		</property>
 		<property name="outputFormat">
 			<value>2</value>
@@ -84,7 +84,7 @@
 	</object>
 	<object class="MultiSound" id="{3dd706d2-eac2-40a3-a968-6f8baa5778e5}">
 		<relationship name="sounds">
-			<destination>{133d540f-6717-46d3-9c9d-d8a752af87b1}</destination>
+			<destination>{cd4c90d9-ddf7-4631-b00e-3c8436cda418}</destination>
 		</relationship>
 	</object>
 	<object class="MixerBusEffectChain" id="{a87e480c-bed2-4b4f-a567-38a291454c02}">
@@ -100,23 +100,12 @@
 		</relationship>
 	</object>
 	<object class="MixerBusPanner" id="{48b475ff-424c-40c0-a55b-b0a4eef7dfce}" />
-	<object class="MultiSound" id="{133d540f-6717-46d3-9c9d-d8a752af87b1}">
-		<relationship name="sounds">
-			<destination>{99cf645e-68d5-4434-a4f3-d34eef47ab41}</destination>
-			<destination>{c415c88a-c76f-4f0a-aa7d-438184f19b83}</destination>
+	<object class="SingleSound" id="{cd4c90d9-ddf7-4631-b00e-3c8436cda418}">
+		<relationship name="audioFile">
+			<destination>{c9eef351-6494-45b6-b7ba-fa31be612fc7}</destination>
 		</relationship>
 	</object>
 	<object class="MixerBusFader" id="{ce8a5dc6-ea7f-4503-aeaf-92a4fc3a4caf}" />
 	<object class="MixerBusFader" id="{8c17664d-e1cb-40db-a499-822d8ca07dbc}" />
 	<object class="SpatialiserEffect" id="{a0cefc2d-ec9c-410c-b6a4-856346d56125}" />
-	<object class="SingleSound" id="{99cf645e-68d5-4434-a4f3-d34eef47ab41}">
-		<relationship name="audioFile">
-			<destination>{e21b6c95-f5a9-478d-8a22-e3f2868d4d3b}</destination>
-		</relationship>
-	</object>
-	<object class="SingleSound" id="{c415c88a-c76f-4f0a-aa7d-438184f19b83}">
-		<relationship name="audioFile">
-			<destination>{cf1b27d5-ab22-4f51-a7b2-b2a47a0a334b}</destination>
-		</relationship>
-	</object>
 </objects>

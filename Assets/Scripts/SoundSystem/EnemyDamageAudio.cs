@@ -53,7 +53,7 @@ public sealed class EnemyDamageAudio : MonoBehaviour
 
     /// <summary>
     /// context의 피해 지점과 적용 후 체력으로 일반 피격 또는 치명타격을 한 번 재생한다.
-    /// 사망 확정 음원은 Died 사건에서 처리하고 치명타에는 일반 피격음을 중복 재생하지 않는다.
+    /// 생존 피격에는 검 적중음과 적 고통 음성을 재생하고 치명타·사망에는 일반 고통 음성을 추가하지 않는다.
     /// </summary>
     private void HandleDamage(DamageContext context)
     {
@@ -62,7 +62,11 @@ public sealed class EnemyDamageAudio : MonoBehaviour
         if (_health.CurrentHealth <= 0f)
             Managers.Sound.PlayCue(CombatSoundCue.EnemyFinished, context.Point, context.Instigator);
         else
+        {
             Managers.Sound.Play(_damageSound, context.Point, _volume, context.Instigator, pitch: _pitch);
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyDamaged, forceStop: true);
+            Managers.Sound.PlayAttached(SoundId.EnemyDamaged, gameObject);
+        }
     }
 
     /// <summary>
@@ -77,7 +81,7 @@ public sealed class EnemyDamageAudio : MonoBehaviour
     }
 
     /// <summary>
-    /// state가 실제 시야 확보 후 추적·공격으로 전환되면 발견 전조음을 한 번 재생한다.
+    /// state가 실제 시야 확보 후 추적으로 전환되면 발견 전조음을 한 번 재생한다.
     /// 수색·대기·순찰로 돌아가면 재발견을 허용하며 반복 공격 전환에서는 중복 재생하지 않는다.
     /// </summary>
     private void HandleState(EnemyState state)
@@ -87,7 +91,7 @@ public sealed class EnemyDamageAudio : MonoBehaviour
             _discoveryPlayed = false;
             return;
         }
-        if (_discoveryPlayed || !_health.IsAlive || !_sensor.CanSeeTarget()) return;
+        if (state != EnemyState.Chasing || _discoveryPlayed || !_health.IsAlive || !_sensor.CanSeeTarget()) return;
         _discoveryPlayed = true;
         Managers.Sound.PlayCue(CombatSoundCue.EnemyPrepare, transform.position, gameObject, true);
     }

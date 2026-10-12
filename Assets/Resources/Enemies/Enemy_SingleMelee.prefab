@@ -323,8 +323,8 @@ MonoBehaviour:
   _cooldown: 0.4
   _cancelWhenHidden: 1
   _useHeartbeatTelegraph: 1
-  _minimumHeartbeatTelegraph: 1
-  _maximumHeartbeatTelegraph: 2
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
   _attackVoiceLeadTime: 0.05
   _telegraphVolume: 0.85
   _actionVolume: 1

@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _heartbeat: 26
   _attackVoice: 27
-  _meleeTelegraph: 8
+  _meleeTelegraph: 0
   _meleeAction: 9
   _rangedTelegraph: 0
-  _rangedAction: 0
-  _chargeTelegraph: 5
-  _chargeAction: 0
+  _rangedAction: 28
+  _chargeTelegraph: 0
+  _chargeAction: 18
   _footstep: 7
-  _rhythmChargeTelegraph: 5
-  _rhythmChargeAction: 0
+  _rhythmChargeTelegraph: 0
+  _rhythmChargeAction: 18

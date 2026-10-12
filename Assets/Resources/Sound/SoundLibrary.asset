@@ -389,7 +389,7 @@ MonoBehaviour:
         Data2: 1162375132
         Data3: 313470876
         Data4: -1069072751
-      Path: event:/Enemy/EnemyRangedAttackVoice
+      Path: event:/Enemy/EnemyRangedAttack
     _enabled: 1
     _volumeMultiplier: 1
     _pitchMultiplier: 1

@@ -34,8 +34,10 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
 
     [Header("두 박동 공격 전조")]
     [SerializeField] private bool _useHeartbeatTelegraph;
-    [SerializeField, Range(1f, 2f)] private float _minimumHeartbeatTelegraph = 1f;
-    [SerializeField, Range(1f, 2f)] private float _maximumHeartbeatTelegraph = 2f;
+    [SerializeField, Min(1f), Tooltip("첫 심장박동부터 공격까지의 최소 시간입니다. 1초 이상으로 설정하며 상한은 없습니다.")]
+    private float _minimumHeartbeatTelegraph = 1f;
+    [SerializeField, Min(1f), Tooltip("첫 심장박동부터 공격까지의 최대 시간입니다. 최소 준비 시간보다 작으면 최소값을 사용합니다.")]
+    private float _maximumHeartbeatTelegraph = 2f;
     [SerializeField, Min(0f), Tooltip("공격 시작보다 기합을 먼저 재생할 시간입니다. 두 번째 박동 이후로 제한합니다.")]
     private float _attackVoiceLeadTime = 0.05f;
     private bool _usesHeartbeatForCurrentAttack;
@@ -76,8 +78,8 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     protected virtual float ActiveDuration => 0f;
     protected virtual bool HasFinishedActiveAttack => Time.time >= _phaseEndTime;
     protected virtual EnemySoundAction SoundAction => EnemySoundAction.None;
-    private float MinimumHeartbeatTelegraph => Mathf.Clamp(_minimumHeartbeatTelegraph, 1f, 2f);
-    private float MaximumHeartbeatTelegraph => Mathf.Max(MinimumHeartbeatTelegraph, Mathf.Clamp(_maximumHeartbeatTelegraph, 1f, 2f));
+    private float MinimumHeartbeatTelegraph => Mathf.Max(1f, _minimumHeartbeatTelegraph);
+    private float MaximumHeartbeatTelegraph => Mathf.Max(MinimumHeartbeatTelegraph, _maximumHeartbeatTelegraph);
 
     protected virtual void Awake()
     {
@@ -148,25 +150,35 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
 
     /// <summary>
     /// target의 사거리, 쿨타임 및 시야가 유효하면 조준 위치를 고정하고 전조를 시작한다.
-    /// 다음 사용 시간과 전조 종료 시간을 예약하며 시작에 성공하면 true를 반환한다.
+    /// immediateMeleeAttack이면 근접 전조와 박동을 생략하고 기합과 공격을 즉시 실행하며 성공 시 true를 반환한다.
     /// </summary>
-    internal bool TryAttack(Transform target)
+    internal bool TryAttack(Transform target, bool immediateMeleeAttack = false)
     {
-        if (_useHeartbeatTelegraph && Time.timeScale <= 0f) return false;
+        bool attackImmediately = immediateMeleeAttack && this is EnemyMeleeAttack;
+        if ((_useHeartbeatTelegraph || attackImmediately) && Time.timeScale <= 0f) return false;
         if (!IsAvailable || !CanAttack(target) || target != _sensor.Target || !_sensor.CanSeeTarget())
             return false;
 
         if (_playingHeartbeatSounds.Count > 0) StopActionSound(true);
-        _usesHeartbeatForCurrentAttack = _useHeartbeatTelegraph;
-        float telegraphDuration = _usesHeartbeatForCurrentAttack
-            ? UnityEngine.Random.Range(MinimumHeartbeatTelegraph, MaximumHeartbeatTelegraph)
-            : Mathf.Max(0.1f, _telegraphDuration);
+        _usesHeartbeatForCurrentAttack = _useHeartbeatTelegraph || attackImmediately;
+        float telegraphDuration = attackImmediately ? 0f
+            : (_usesHeartbeatForCurrentAttack
+                ? UnityEngine.Random.Range(MinimumHeartbeatTelegraph, MaximumHeartbeatTelegraph)
+                : Mathf.Max(0.1f, _telegraphDuration));
         _context = new EnemyAttackContext(this, target, telegraphDuration);
         _phase = EnemyAttackPhase.Telegraph;
         _phaseEndTime = Time.time + telegraphDuration;
         _nextAttackTime = Time.time + _cooldown;
         EnemyAttackContext context = _context;
         PrepareTelegraph(context);
+        if (attackImmediately)
+        {
+            PlayActionSound(EnemySoundStage.AttackVoice);
+            TelegraphStarted?.Invoke(context);
+            if (_phase != EnemyAttackPhase.Telegraph) return false;
+            CommitAttack();
+            return true;
+        }
         if (_usesHeartbeatForCurrentAttack)
         {
             float interval = telegraphDuration * 0.5f;
@@ -174,6 +186,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
             _attackVoiceTime = _phaseEndTime - Mathf.Clamp(_attackVoiceLeadTime, 0f, interval * 0.5f);
             _secondHeartbeatPlayed = false;
             _attackVoicePlayed = false;
+            if (SoundAction == EnemySoundAction.Ranged) PlayActionSound(EnemySoundStage.Telegraph);
             PlayActionSound(EnemySoundStage.Heartbeat);
         }
         else
@@ -196,7 +209,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
 
         EnemyAttackContext context = _context;
         _phase = EnemyAttackPhase.Ready;
-        StopActionSound(_usesHeartbeatForCurrentAttack);
+        StopActionSound(_usesHeartbeatForCurrentAttack || _playingHeartbeatSounds.Count > 0);
         _usesHeartbeatForCurrentAttack = false;
         _secondHeartbeatPlayed = false;
         _attackVoicePlayed = false;
@@ -231,7 +244,8 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         if (!_attackVoicePlayed && now >= _attackVoiceTime)
         {
             _attackVoicePlayed = true;
-            PlayActionSound(EnemySoundStage.AttackVoice);
+            if (SoundAction == EnemySoundAction.Melee || SoundAction == EnemySoundAction.Ranged)
+                PlayActionSound(EnemySoundStage.AttackVoice);
         }
         if (_secondHeartbeatPlayed && now >= _phaseEndTime)
             CommitAttack();
@@ -256,6 +270,8 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phaseEndTime = Time.time + ActiveDuration;
         EnemyAttackContext context = _context;
         if (SoundAction == EnemySoundAction.Melee && !_usesHeartbeatForCurrentAttack) StopActionSound();
+        if (!_usesHeartbeatForCurrentAttack && (SoundAction == EnemySoundAction.Melee || SoundAction == EnemySoundAction.Ranged))
+            PlayActionSound(EnemySoundStage.AttackVoice);
         PlayActionSound(EnemySoundStage.Action);
         PerformAttack(context);
         if (_phase != EnemyAttackPhase.Active)
@@ -285,13 +301,14 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
 
     /// <summary>
     /// 행동 종류와 stage로 공통 설정의 소리를 찾아 기존 매니저에 적 위치의 단발 효과음을 요청한다.
-    /// 전조·베기 음량과 근접 SwingType A/B를 적용하며 리듬 공격은 여러 신호의 ID를 독립적으로 보관한다.
+    /// 전조·베기 음량과 근접 SwingType A/B를 적용하며 박동·기합·관련 실행음의 ID를 독립적으로 보관한다.
     /// </summary>
     private void PlayActionSound(EnemySoundStage stage)
     {
         SoundId soundId = EnemySoundSettings.GetSound(SoundAction, stage);
         if (soundId == SoundId.None) return;
-        if (_usesHeartbeatForCurrentAttack) _playingHeartbeatSounds.Add(soundId);
+        if (_usesHeartbeatForCurrentAttack || stage == EnemySoundStage.AttackVoice || _playingHeartbeatSounds.Count > 0)
+            _playingHeartbeatSounds.Add(soundId);
         else _playingActionSound = soundId;
         float volume = stage == EnemySoundStage.Telegraph || stage == EnemySoundStage.Heartbeat ? _telegraphVolume : _actionVolume;
         if (this is EnemyMeleeAttack melee && stage == EnemySoundStage.Action && soundId == SoundId.EnemySwordSwing)
@@ -301,8 +318,8 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// 현재 패턴이 시작한 소리 ID만 정지하고 재생 상태를 비운다.
-    /// forceStop이면 자연 종료를 무시해 박동·기합·공격음과 해당 예약을 정리하며 발걸음·방어음은 유지한다.
+    /// 현재 패턴이 시작한 소리만 정지하며 일반 정지에서는 자연 종료 신호의 ID를 취소용으로 보관한다.
+    /// forceStop이면 자연 종료를 무시해 박동·기합·공격음과 예약 및 보관 ID를 정리하며 발걸음·방어음은 유지한다.
     /// </summary>
     private void StopActionSound(bool forceStop = false)
     {
@@ -314,7 +331,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
                 Managers.Sound.StopFor(gameObject, soundId, forceStop: forceStop);
         }
         _playingActionSound = SoundId.None;
-        _playingHeartbeatSounds.Clear();
+        if (forceStop) _playingHeartbeatSounds.Clear();
     }
 
     /// <summary>

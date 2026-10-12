@@ -12,6 +12,8 @@ public enum BossState { Idle, Roaming, Charging, ChainCharge, Duel, Stunned, Dea
 [RequireComponent(typeof(EnemyHealth), typeof(EnemyMotor), typeof(EnemySensor))]
 public sealed class BossController : MonoBehaviour
 {
+    private const float MAX_RHYTHM_DELAY = 0.1f;
+
     [Header("전투 연결")]
     [SerializeField] private BossMeleeAttack _melee;
     private EnemyHealth _health;
@@ -39,6 +41,16 @@ public sealed class BossController : MonoBehaviour
     private float _patternWaitMax = 2f;
     private BossState _nextPattern = BossState.Roaming;
 
+    [Header("두 박동 공격 전조")]
+    [SerializeField] private bool _useHeartbeatTelegraph = true;
+    [SerializeField, Min(1f), Tooltip("첫 박동부터 발사·돌진까지의 최소 준비 시간(초)")]
+    private float _minimumHeartbeatTelegraph = 1.4f;
+    [SerializeField, Min(1f), Tooltip("최대 준비 시간(초). 한 번의 연사는 같은 준비 시간을 사용합니다.")]
+    private float _maximumHeartbeatTelegraph = 2.2f;
+    private bool _preparationSucceeded;
+    public event Action Heartbeat;
+    public event Action PreparationCancelled;
+
     [Header("배회")]
     [SerializeField, Min(0.1f), Tooltip("마지막 피격 이후 돌진까지의 시간(초)")]
     private float _roamDuration = 7f;
@@ -54,11 +66,13 @@ public sealed class BossController : MonoBehaviour
     [SerializeField, Min(0f)] private float _rangedDamage = 10f;
     [SerializeField, Min(0.1f)] private float _rangedPreparation = 0.8f;
     [SerializeField, Min(1)] private int _rangedShots = 3;
-    [SerializeField, Min(0.1f)] private float _rangedInterval = 0.8f;
+    [SerializeField, Min(0.1f), Tooltip("발사 후 다음 전조까지의 휴식 시간(초)")]
+    private float _rangedInterval = 0.8f;
     public event Action RangedPreparing;
+    public event Action RangedFiring;
 
     [Header("돌진")]
-    [SerializeField, Min(0.1f), Tooltip("기합 이후 돌진 준비 시간(초)")]
+    [SerializeField, Min(0.1f), Tooltip("두 박동 전조를 끈 경우 사용하는 돌진 준비 시간(초)")]
     private float _chargePreparation = 0.9f;
     [SerializeField, Min(0.1f)] private float _chargeSpeed = 14f;
     [SerializeField, Min(0.1f)] private float _chargeDistance = 12f;
@@ -72,6 +86,7 @@ public sealed class BossController : MonoBehaviour
     private readonly Collider[] _chargeContacts = new Collider[16];
 
     public event Action ChargePreparing;
+    public event Action ChargeStarted;
     public event Action Teleported;
 
     [Header("빠른 재배치")]
@@ -251,14 +266,17 @@ public sealed class BossController : MonoBehaviour
     {
         ChangeState(BossState.Ranged);
         _motor.Stop();
+        float preparation = GetPreparationDuration(_rangedPreparation);
         for (int i = 0; i < _rangedShots; i++)
         {
             RangedPreparing?.Invoke();
-            yield return new WaitForSeconds(_rangedPreparation);
+            yield return PrepareAttack(preparation);
+            if (!_preparationSucceeded) yield break;
             Vector3 origin = transform.position + Vector3.up;
             Vector3 direction = (_player.transform.position + Vector3.up - origin).normalized;
             if (direction.sqrMagnitude < 0.0001f) yield break;
             transform.rotation = Quaternion.LookRotation(direction);
+            RangedFiring?.Invoke();
             EnemyProjectile projectile = Instantiate(_projectilePrefab, origin, Quaternion.LookRotation(direction));
             projectile.Initialize(new DamageContext(_rangedDamage, gameObject, origin, direction, "BossRanged"),
                 direction, _player.transform);
@@ -266,17 +284,19 @@ public sealed class BossController : MonoBehaviour
         }
     }
 
-    /// <summary>기합과 준비 시간 뒤 목표 방향을 고정해 장애물 경계까지 돌진하고 접촉 피해를 한 번 적용한다.</summary>
+    /// <summary>준비 시간 뒤 목표 방향을 고정하고 시작 사건을 알린 후 장애물 경계까지 돌진하며 접촉 피해를 한 번 적용한다.</summary>
     private IEnumerator Charge()
     {
         _motor.Stop();
         ChargePreparing?.Invoke();
-        yield return new WaitForSeconds(_chargePreparation);
+        yield return PrepareAttack(GetPreparationDuration(_chargePreparation));
+        if (!_preparationSucceeded) yield break;
         Vector3 direction = Vector3.ProjectOnPlane(_player.transform.position - transform.position, Vector3.up).normalized;
         if (direction.sqrMagnitude < 0.001f) yield break;
         transform.rotation = Quaternion.LookRotation(direction);
         float remaining = _chargeDistance;
         float until = Time.time + _chargeDuration;
+        ChargeStarted?.Invoke();
         while (Time.time < until && remaining > 0.01f)
         {
             Vector3 previous = transform.position;
@@ -456,7 +476,7 @@ public sealed class BossController : MonoBehaviour
             for (_strike = 1; _strike <= 3; _strike++)
             {
                 _strikeResolved = false;
-                float until = Time.time + _duelPreparation;
+                float until = Time.time + (_melee.UsesHeartbeatTelegraph ? 0f : _duelPreparation);
                 while (Time.time < until)
                 {
                     PlaceInFront();
@@ -520,6 +540,7 @@ public sealed class BossController : MonoBehaviour
         }
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
+        PreparationCancelled?.Invoke();
         RestoreNavigation();
         _melee.CancelAttack();
         _motor.Stop();
@@ -542,6 +563,7 @@ public sealed class BossController : MonoBehaviour
         if (_routine == null || context.Instigator != _player.gameObject) return;
         StopCoroutine(_routine);
         _routine = null;
+        PreparationCancelled?.Invoke();
         _motor.Stop();
         IsRepositioning = false;
         RestoreAfterDisappearance(true);
@@ -620,6 +642,7 @@ public sealed class BossController : MonoBehaviour
     {
         if (_routine != null) StopCoroutine(_routine);
         _routine = null;
+        PreparationCancelled?.Invoke();
         IsRepositioning = false;
         RestoreAfterDisappearance(true);
         RestoreNavigation();
@@ -633,5 +656,68 @@ public sealed class BossController : MonoBehaviour
         _strike = 0;
         _strikeResolved = false;
         if (_state != BossState.Dead) ChangeState(BossState.Idle);
+    }
+
+    /// <summary>
+    /// 박동 사용 설정과 최소·최대 준비 시간으로 이번 패턴의 전조 시간을 반환한다.
+    /// 박동을 끄면 legacyDuration을 사용하며 호출당 한 번만 랜덤 값을 선택한다.
+    /// </summary>
+    private float GetPreparationDuration(float legacyDuration)
+    {
+        if (!_useHeartbeatTelegraph) return Mathf.Max(0.1f, legacyDuration);
+        float minimum = Mathf.Max(1f, _minimumHeartbeatTelegraph);
+        return UnityEngine.Random.Range(minimum, Mathf.Max(minimum, _maximumHeartbeatTelegraph));
+    }
+
+    /// <summary>
+    /// duration의 시작·절반 시점에 박동을 알리고 종료 시 공격 준비 성공 상태를 저장한다.
+    /// 일시정지 후 같은 간격의 첫 박동부터 재개하며 큰 프레임 지연에서는 준비를 취소한다.
+    /// </summary>
+    private IEnumerator PrepareAttack(float duration)
+    {
+        _preparationSucceeded = false;
+        if (!_useHeartbeatTelegraph)
+        {
+            yield return new WaitForSeconds(duration);
+            _preparationSucceeded = true;
+            yield break;
+        }
+        float started = Time.time;
+        bool secondPlayed = false;
+        Heartbeat?.Invoke();
+        while (true)
+        {
+            yield return null;
+            if (Time.timeScale <= 0f)
+            {
+                PreparationCancelled?.Invoke();
+                while (Time.timeScale <= 0f) yield return null;
+                started = Time.time;
+                secondPlayed = false;
+                Heartbeat?.Invoke();
+                continue;
+            }
+            float now = Time.time;
+            float secondAt = started + duration * 0.5f;
+            float attackAt = started + duration;
+            if (!secondPlayed && now >= secondAt)
+            {
+                if (now >= attackAt || now - secondAt > MAX_RHYTHM_DELAY)
+                {
+                    PreparationCancelled?.Invoke();
+                    yield break;
+                }
+                secondPlayed = true;
+                Heartbeat?.Invoke();
+            }
+            if (now < attackAt) continue;
+            if (now - attackAt > MAX_RHYTHM_DELAY)
+            {
+                PreparationCancelled?.Invoke();
+                yield break;
+            }
+            _preparationSucceeded = secondPlayed;
+            yield break;
+        }
     }
 }

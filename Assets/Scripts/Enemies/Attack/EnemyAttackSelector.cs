@@ -42,9 +42,9 @@ public sealed class EnemyAttackSelector : MonoBehaviour
 
     /// <summary>
     /// target의 사거리와 패턴 쿨타임, 우선순위를 사용하여 한 패턴의 전조를 시작한다.
-    /// 같은 우선순위는 마지막 선택 다음 순서로 순환하며 성공 시 현재 패턴을 저장하고 true를 반환한다.
+    /// immediateMeleeAttack이면 선택된 근접 공격만 준비 없이 실행하며 성공 시 현재 패턴을 저장하고 true를 반환한다.
     /// </summary>
-    public bool TryAttack(Transform target)
+    public bool TryAttack(Transform target, bool immediateMeleeAttack = false)
     {
         if (!isActiveAndEnabled || IsBusy || Time.time < _staggerUntil)
             return false;
@@ -66,9 +66,11 @@ public sealed class EnemyAttackSelector : MonoBehaviour
         if (selectedIndex < 0)
             return false;
 
+        if (_currentAttack != null && _currentAttack != _patterns[selectedIndex])
+            _currentAttack.CancelAttack();
         _currentAttack = _patterns[selectedIndex];
         _lastSelectedIndex = selectedIndex;
-        return _currentAttack.TryAttack(target);
+        return _currentAttack.TryAttack(target, immediateMeleeAttack && _currentAttack is EnemyMeleeAttack);
     }
 
     /// <summary>

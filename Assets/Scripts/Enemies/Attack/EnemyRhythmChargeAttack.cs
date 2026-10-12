@@ -121,7 +121,7 @@ public class EnemyRhythmChargeAttack : EnemyAttackBehaviour
 
     /// <summary>
     /// context와 현재 이동 번호로 고정 조준 위치까지 거리를 배분하고 장애물 앞까지 목적지를 제한한다.
-    /// 첫 이동의 소리는 공통 실행 호출을 사용하며 나머지는 이동 직전에 같은 공통 소리를 요청한다.
+    /// 돌진 기합은 패턴 시작의 공통 실행 호출만 사용하며 각 이동의 박자와 발걸음 처리는 유지한다.
     /// </summary>
     private void BeginPulse(EnemyAttackContext context)
     {
@@ -148,13 +148,6 @@ public class EnemyRhythmChargeAttack : EnemyAttackBehaviour
         Vector3 destination = _agent.nextPosition + _direction * distance;
         if (NavMesh.Raycast(_agent.nextPosition, destination, out NavMeshHit boundary, GetNavigationFilter()))
             destination = Vector3.MoveTowards(boundary.position, _agent.nextPosition, 0.1f);
-
-        if (_pulseIndex > 0)
-        {
-            SoundId soundId = EnemySoundSettings.GetSound(SoundAction, EnemySoundStage.Action);
-            if (soundId != SoundId.None)
-                Managers.Sound.PlayAttached(soundId, gameObject);
-        }
 
         _pulseEndTime = Time.time + _pulseDuration;
         float pause = _pulseIndex == 2 ? _doublePause : _beatPause;

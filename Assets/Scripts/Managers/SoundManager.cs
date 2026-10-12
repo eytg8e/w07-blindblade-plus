@@ -283,6 +283,12 @@ public class SoundManager
         _hasBgmOwner = false;
     }
 
+    /// <summary>현재 유효한 BGM의 소유자가 owner인지 반환한다. 씬 종료에서 다른 소유자의 음악을 덮어쓰지 않도록 사용한다.</summary>
+    public bool IsBgmOwnedBy(GameObject owner)
+    {
+        return owner != null && _hasBgmOwner && _bgmOwner == owner && _bgm.isValid();
+    }
+
     /// <summary>
     /// owner의 효과음과 BGM만 allowFadeOut 설정으로 정지한다.
     /// 오브젝트 비활성화 등의 정리에 사용하며, 다른 소유자의 재생은 유지하고 null 요청은 무시한다.

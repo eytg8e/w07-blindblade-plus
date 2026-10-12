@@ -205,7 +205,8 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             if (_player.CurrentState == PlayerActionState.Free)
             {
                 _waitAfterRecovery = false;
-                BeginWaiting();
+                if (!_waiting)
+                    BeginWaiting();
             }
         }
 
@@ -596,7 +597,16 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             case PlayerActionStage.GuardEnded:
                 _parryOpen = false;
                 Publish(KatanaStage.GuardEnded);
-                BeginWaiting();
+                if (CounterRemaining > 0f)
+                {
+                    BeginWaiting();
+                    // 반격 기회가 끝나면 추가 대기 없이 바로 납도한다.
+                    _waitStarted = _clock - _normalSheatheDelay;
+                }
+                else
+                {
+                    BeginSheathe();
+                }
                 break;
             case PlayerActionStage.GuardSucceeded:
                 Publish(KatanaStage.GuardSucceeded);
