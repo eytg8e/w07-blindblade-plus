@@ -10,6 +10,7 @@ using UnityEngine;
         private const int MAX_SOUND_REGIONS = 16;
         private static readonly int _observerRegionId = Shader.PropertyToID("_OutlineObserverRegion");
         private static readonly int _soundRegionsId = Shader.PropertyToID("_OutlineSoundRegions");
+        private static readonly int _soundRegionRadiiId = Shader.PropertyToID("_OutlineSoundRegionRadii");
         private static readonly int _soundCountId = Shader.PropertyToID("_OutlineSoundCount");
         private static readonly int _soundStartRadiusId = Shader.PropertyToID("_OutlineSoundStartRadius");
         private static readonly int _soundEndRadiusId = Shader.PropertyToID("_OutlineSoundEndRadius");
@@ -30,6 +31,7 @@ using UnityEngine;
         [SerializeField, Min(0.01f), Tooltip("파동 확산이 끝난 뒤 시야가 서서히 사라지는 시간(초).")]
         private float _soundFadeDuration = 0.6f;
         private readonly Vector4[] _soundRegions = new Vector4[MAX_SOUND_REGIONS];
+        private readonly Vector4[] _soundRegionRadii = new Vector4[MAX_SOUND_REGIONS];
         private int _soundCount;
         private bool _footstepOnly;
 
@@ -88,6 +90,16 @@ using UnityEngine;
         }
 
         /// <summary>
+        /// position 주변 시야와 지형 기억을 지정 radius까지 확장하며 공통 파동 반경은 변경하지 않는다.
+        /// radius는 미터 단위의 최대 반경이며 0 이하이면 새 영역을 등록하지 않는다.
+        /// </summary>
+        public void RevealFootstep(Vector3 position, float radius)
+        {
+            if (_sensoryManager.IsReady && radius > 0f)
+                RegisterRegion(position, radius);
+        }
+
+        /// <summary>
         /// position의 현재 인지 가시성을 셰이더와 같은 반경·확산·페이드 규칙으로 반환한다.
         /// 지형 기억은 포함하지 않으며 인지 매니저가 준비되지 않으면 0을 반환한다.
         /// </summary>
@@ -107,7 +119,10 @@ using UnityEngine;
                 Vector4 region = _soundRegions[i];
                 float age = Mathf.Max(0f, Time.time - region.w);
                 float expansion = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(age / Mathf.Max(lifetime, 0.0001f)));
-                float radius = Mathf.Lerp(startRadius, endRadius, expansion);
+                Vector4 regionRadii = _soundRegionRadii[i];
+                float radius = regionRadii.z > 0f
+                    ? Mathf.Lerp(regionRadii.x, regionRadii.y, expansion)
+                    : Mathf.Lerp(startRadius, endRadius, expansion);
                 float fade = 1f - Mathf.SmoothStep(0f, 1f,
                     Mathf.Clamp01((age - lifetime) / Mathf.Max(_soundFadeDuration, 0.0001f)));
                 visibility = Mathf.Max(visibility,
@@ -140,18 +155,30 @@ using UnityEngine;
         }
 
         /// <summary>
-        /// position에 임시 표시 영역을 등록하고 파동의 확산을 지형 기억에 전달한다.
+        /// position에 임시 표시 영역을 등록하고 radius가 지정되면 해당 반경의 확산을 지형 기억에 전달한다.
         /// 가장 오래된 임시 표시 영역은 버퍼가 가득 차면 교체한다.
         /// </summary>
-        private void RegisterRegion(Vector3 position)
+        private void RegisterRegion(Vector3 position, float radius = -1f)
         {
             if (_soundCount == MAX_SOUND_REGIONS)
             {
                 for (int i = 1; i < _soundCount; i++)
+                {
                     _soundRegions[i - 1] = _soundRegions[i];
+                    _soundRegionRadii[i - 1] = _soundRegionRadii[i];
+                }
                 _soundCount--;
             }
 
+            float startRadius = _sensoryManager.WaveStartRadius;
+            float endRadius = _sensoryManager.WaveEndRadius;
+            bool hasCustomRadius = radius >= 0f;
+            if (hasCustomRadius)
+            {
+                endRadius = radius;
+                startRadius = Mathf.Min(startRadius, endRadius);
+            }
+            _soundRegionRadii[_soundCount] = new Vector4(startRadius, endRadius, hasCustomRadius ? 1f : 0f, 0f);
             _soundRegions[_soundCount++] = new Vector4(position.x, position.y, position.z, Time.time);
             if (_terrainMemory == null)
                 _terrainMemory = FindAnyObjectByType<TerrainMemory>();
@@ -159,8 +186,8 @@ using UnityEngine;
             {
                 _terrainMemory.RememberExpandingWave(
                     position,
-                    _sensoryManager.WaveStartRadius,
-                    _sensoryManager.WaveEndRadius,
+                    startRadius,
+                    endRadius,
                     _sensoryManager.CrouchPulseInterval);
             }
             PublishMask();
@@ -183,7 +210,10 @@ using UnityEngine;
             for (int i = 0; i < _soundCount; i++)
             {
                 if (currentTime - _soundRegions[i].w < revealLifetime + _soundFadeDuration)
+                {
+                    _soundRegionRadii[remainingCount] = _soundRegionRadii[i];
                     _soundRegions[remainingCount++] = _soundRegions[i];
+                }
             }
             _soundCount = remainingCount;
 
@@ -203,7 +233,10 @@ using UnityEngine;
             Shader.SetGlobalFloat(_perceptionTimeId, currentTime);
             Shader.SetGlobalInt(_soundCountId, _soundCount);
             if (_soundCount > 0)
+            {
                 Shader.SetGlobalVectorArray(_soundRegionsId, _soundRegions);
+                Shader.SetGlobalVectorArray(_soundRegionRadiiId, _soundRegionRadii);
+            }
         }
 
         /// <summary>

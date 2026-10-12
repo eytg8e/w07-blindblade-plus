@@ -156,6 +156,8 @@ MonoBehaviour:
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 0
+  _hearingDistance: 20
+  _showHearingRange: 1
 --- !u!114 &5109041760811172805
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -287,7 +289,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc51ccf9bfc5a4e68a3779ed7c80dc8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _melee: {fileID: 4283722663164136279}
   _hitRecoveryDuration: 0.25
   _patternWaitMin: 1
   _patternWaitMax: 2
@@ -297,10 +298,6 @@ MonoBehaviour:
   _minimumHeartbeatInterval: 1
   _maximumHeartbeatInterval: 1.2
   _postHeartbeatAttackDelay: 0.5
-  _roamDuration: 7
-  _roamRadius: 7
-  _roamDestinationInterval: 2.5
-  _roamSpeed: 2
   _projectilePrefab: {fileID: 2115214498364783961, guid: 2ba542a427653624eb6c9beb63ffa91e, type: 3}
   _rangedDamage: 15
   _rangedPreparation: 0.8
@@ -323,11 +320,6 @@ MonoBehaviour:
   _hitDeflectDuration: 2
   _teleportRadius: 6
   _teleportArc: 180
-  _chargeInterval: 0.7
-  _duelDistance: 1.6
-  _duelPreparation: 0.6
-  _strikeInterval: 0.45
-  _stunDuration: 3
 --- !u!114 &805973891534154810
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -343,6 +335,7 @@ MonoBehaviour:
   _bodyRenderers:
   - {fileID: 1415526665678134583}
   _soundRevealRadius: 2
+  _rangedRevealRadius: 5
   _stepDistance: 0.8
   _groundMask:
     serializedVersion: 2
@@ -367,9 +360,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _size: {x: 420, y: 16}
   _topOffset: 36
-  _followColor: {r: 1, g: 0, b: 0, a: 1}
   _followDuration: 0.8
-
+  _followColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!114 &3826241647446682600
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -385,6 +377,9 @@ MonoBehaviour:
   _damageSound: 4
   _volume: 1.1
   _pitch: 1.15
+  _minimumDeathPitchSemitones: -4
+  _maximumDeathPitchSemitones: -1
+  _originalDeathPitchChance: 0.3
 --- !u!1 &3117573445288783337
 GameObject:
   m_ObjectHideFlags: 0

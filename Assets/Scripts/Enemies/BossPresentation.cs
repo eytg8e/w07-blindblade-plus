@@ -26,6 +26,10 @@ public sealed class BossPresentation : MonoBehaviour
     private float _previousSoundRadius;
     private SoundId _playingHeartbeat;
 
+    [Header("원거리 패턴 시야")]
+    [SerializeField, Min(0f), Tooltip("원거리 준비 시 보스 주변 시야가 확장되는 최대 반경(미터). 0이면 공개하지 않는다.")]
+    private float _rangedRevealRadius = 12f;
+
     [Header("보행")]
     [SerializeField, Min(0.1f), Tooltip("걸음 사이 이동 거리(미터)")]
     private float _stepDistance = 0.8f;
@@ -157,11 +161,11 @@ public sealed class BossPresentation : MonoBehaviour
         }
     }
 
-    /// <summary>원거리 발사 준비마다 이전 신호를 정리하고 위치 인지를 갱신한다. 준비 단계에서는 음성을 재생하지 않는다.</summary>
+    /// <summary>원거리 발사 준비마다 이전 신호를 정리하고 _rangedRevealRadius로 보스 위치의 시야를 공개한다.</summary>
     private void HandleRangedPreparing()
     {
         StopPreparationSounds();
-        if (_perceptionMask != null) _perceptionMask.RevealFootstep(transform.position);
+        if (_perceptionMask != null) _perceptionMask.RevealFootstep(transform.position, _rangedRevealRadius);
     }
 
     /// <summary>원거리 투사체 발사 직전 사건에서 Throw2가 연결된 기존 원거리 이벤트를 보스 위치에 한 번 재생한다.</summary>

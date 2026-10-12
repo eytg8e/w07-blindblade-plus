@@ -48,6 +48,7 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
             #define MAX_SOUND_REGIONS 16
             float4 _OutlineObserverRegion;
             float4 _OutlineSoundRegions[MAX_SOUND_REGIONS];
+            float4 _OutlineSoundRegionRadii[MAX_SOUND_REGIONS];
             int _OutlineSoundCount;
             float _OutlineSoundStartRadius;
             float _OutlineSoundEndRadius;
@@ -90,7 +91,10 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                     float age = max(0.0, _OutlinePerceptionTime - _OutlineSoundRegions[i].w);
                     float progress = saturate(age / max(_OutlineSoundLifetime, 0.0001));
                     float expansion = smoothstep(0.0, 1.0, progress);
-                    float revealRadius = lerp(_OutlineSoundStartRadius, _OutlineSoundEndRadius, expansion);
+                    float4 regionRadii = _OutlineSoundRegionRadii[i];
+                    float revealRadius = regionRadii.z > 0.0
+                        ? lerp(regionRadii.x, regionRadii.y, expansion)
+                        : lerp(_OutlineSoundStartRadius, _OutlineSoundEndRadius, expansion);
                     float timeVisibility = 1.0 - smoothstep(_OutlineSoundLifetime,
                         _OutlineSoundLifetime + max(_OutlineSoundFadeDuration, 0.0001), age);
                     float soundVisibility = RegionVisibility(
