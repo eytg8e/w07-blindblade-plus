@@ -113,7 +113,7 @@ private Vector3 _attackLungeDirection;
     private bool _stepInProgress;
     private PlayerLocomotionMode _stepMode;
     private bool _leftStep;
-    private readonly Collider[] _crouchOverlapBuffer = new Collider[16];
+    private readonly Collider[] _crouchOverlapBuffer = new Collider[64];
     private Vector3 _standingCharacterCenter;
     private Vector3 _standingCameraLocalPosition;
     private float _standingCharacterHeight;

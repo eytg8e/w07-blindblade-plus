@@ -319,6 +319,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _lookSensitivity: 0.12
+  _verticalLookLimit: 80
   _stepInterval: 0.36
   _normalFootstepNoise: 0.6
   _quietFootstepNoise: 0.2
@@ -523,7 +524,7 @@ MonoBehaviour:
   _slashVfx: {fileID: 8623487348853501226}
   _secondSlashVfx: {fileID: 8032878143575903317}
   _thirdSlashVfx: {fileID: 3649354136773276188}
-  _useOutlineShader: 0
+  _useOutlineShader: 1
 --- !u!114 &9012958133378258241
 MonoBehaviour:
   m_ObjectHideFlags: 0

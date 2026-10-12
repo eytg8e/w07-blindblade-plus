@@ -10,7 +10,6 @@
 | --- | --- | --- |
 | Assets/Scripts/GameManagers/MonologueUI.cs | MonologueUI / Initialize, SetText, Show, Shutdown | 본문 및 표시 수명 관리 |
 | Assets/Scripts/GameManagers/MonologueIndicator.cs | SetLastLine, OnPopulateMesh, Update | 삼각형 방향과 깜빡임 |
-| Assets/Scripts/GameManagers/MonologuePanelStyle.cs | ModifyMesh | 테두리와 반투명 배경 그라데이션 |
 | Assets/Resources/Prefabs/GameManagers/UIManager.prefab | Canvas와 세 화면의 중첩 프리팹 | 씬에 미리 배치하는 공통 UI 원본 |
 | Assets/Resources/Prefabs/UI/MonologueUI.prefab | MonologueUI, TMP 본문 | 공통 Canvas 하위에 미리 배치되는 화면 원본 |
 | Assets/Scripts/GameManagers/UIManager.cs | Get<T>, Show<T>, Hide<T>, Shutdown | 타입별 배치 화면 조회·표시·세션 정리 |
@@ -97,3 +96,31 @@ Game.Instance.UIManager.Hide<MonologueUI>();
 - 기본 어두운 장면 및 SensoryPerceptionMask.RevealFootstep으로 윤곽선 영역을 표시한 장면을 캡처했다. 캡처를 위해 인지 반경과 지속 시간을 런타임에서만 임시 늘렸다. 검의 윤곽이 반투명 패널 뒤로 보였고 본문을 확인할 수 있었다. 고명도 전체 배경과 실제 소리 재생에 따른 연출은 미확인이다.
 - 패널 면적은 1920×1080 화면의 약 15.12%, 높이는 약 20.74%다. 중앙 시야는 남지만 하단 검과 환경은 부분적으로 겹친다. 현재 크기·투명도는 사용자 피드백대로 유지했다. 한글 평가 문구의 대체 글리프는 발견하지 못했다.
 - Play 중 FMOD.Studio.System.create의 ERR_MEMORY 및 SystemNotInitializedException이 반복되어 종료했다. 컴파일 실패는 없었지만 오디오 정상 작동까지 검증한 것은 아니다. 씬·폰트·UI 프리팹·환경 설정은 이번 점검에서 수정하지 않았고 테스트 코드를 생성하지 않았다.
+
+
+### 동양풍 먹칠 창 (TASK_0110)
+
+- UIManager의 중첩 원본 MonologueUI.prefab에 검은 먹색 배경과 미색 본문을 적용했다. 패널 크기·위치·폰트·본문 기능·다음 안내는 유지한다.
+- MonologuePanelStyle의 회색 이중 테두리를 제거하고 고정된 불규칙 상하 가장자리·옅은 먹 번짐·좌우 끝의 알파 변화를 메시로 표현한다. 새 이미지·재질은 추가하지 않는다. Edge Width는 번짐 폭이며 기본 7픽셀이다.
+- Unity 컴파일 완료·오류 없음과 UIManager의 독백·스타일 연결, 본문 색상, 누락 스크립트 0을 확인했다. 격리 미리보기 렌더는 검은 화면으로 출력되어 외형 시각 검증은 완료하지 못했다. 추가 Inspector 연결은 없다.
+
+
+### 불규칙 먹칠 이미지 배경 (TASK_0111)
+
+- imagegen으로 투명 배경의 겹친 원형 먹 얼룩·붓 자국 이미지를 생성하고 Assets/UI/Monologue/InkPanel.png에 저장했다. 중앙은 검게 채우고 양끝과 가장자리의 불규칙한 형태를 유지한다.
+- 이미지의 투명 여백을 Sprite 가져오기 영역에서 제외해 2127×384 영역을 사용하며 원본 PNG는 보존한다. MonologueUI.prefab Panel Image에 연결하고 기존 MonologuePanelStyle은 비활성화했다. 크기·본문·표시 API는 유지한다.
+- 생성 이미지를 시각 확인하고 Unity에서 스프라이트 가져오기·프리팹 저장을 완료했다. 실제 Game View 외형 검증은 미완료이며 추가 Inspector 연결은 없다.
+
+
+### 스테이지 1 시작 독백 (TASK_0112)
+
+- Stage_1.unity에 StageStartMonologue를 한 개 배치해 공통 초기화 이후 테스트 문구 두 줄을 한 번 표시한다. 실행 순서 110이며 GameSceneInitializer의 100 이후 실행된다.
+- 문구는 Inspector Message에서 변경하며 자동 종료·입력 제어는 추가하지 않았다. 다른 씬과 공용 매니저 코드는 변경하지 않았다. 추가 Inspector 연결은 없다.
+- Unity 컴파일 오류 없음, 미리보기 씬의 시작 컴포넌트·독백 UI 각 1개를 확인했다. 실제 Stage_1 Play에서 독백 활성 true와 설정된 두 줄 문구를 확인하고 종료했다.
+
+
+### 독백 UI 불필요 코드 정리 (TASK_0113, 최신 상태)
+
+- StageStartMonologue.cs와 메타, Stage_1의 전용 테스트 오브젝트를 제거했다. 스테이지 시작의 테스트 문구 자동 표시는 더 이상 실행하지 않는다.
+- 이미지 배경으로 대체되어 비활성 상태였던 MonologuePanelStyle.cs와 메타 및 프리팹 컴포넌트를 제거했다. 사용 중인 InkPanel 이미지·본문·안내 표시·독백 API와 사용자가 조정한 배치는 유지한다.
+- 코드·프리팹·씬에서 삭제 코드 참조가 남지 않은 것을 검색으로 확인했다. Unity recompile은 30초 시간 초과로 완료하지 못했고 상태는 triggered이다. 프리팹 조회도 메인 스레드 시간 초과로 완료하지 못했다. 추가 Inspector 연결은 없다. 이전 구현 기록은 당시 동작이다.
