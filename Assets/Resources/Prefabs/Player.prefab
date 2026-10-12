@@ -332,6 +332,7 @@ MonoBehaviour:
   _dodgeDistance: 2.4
   _dodgeDuration: 0.18
   _dodgeCooldown: 0.6
+  _dodgeGroundGraceDuration: 0.12
   _attackLungeDistance: 0.45
   _attackLungeDuration: 0.22
   _attackFollowThroughSpeedMultiplier: 0.3
