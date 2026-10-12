@@ -409,16 +409,19 @@ public sealed class PlayerController : MonoBehaviour
         return RequestNormalAttack();
     }
 
-    /// <summary>actionId가 현재 일반 공격과 일치하면 공격 판정을 취소하고 일반 공격 Recovery를 적용합니다.</summary>
-    /// <summary>actionId가 현재 일반 공격과 일치하면 공격 판정을 취소하고 이동 가능한 일반 공격 회복을 적용한다.</summary>
-    public bool CancelNormalAttack(int actionId)
+    /// <summary>actionId의 미적중 일반 공격을 취소합니다. skipRecovery는 가드 전환 시 공격 후딜 없이 즉시 상태를 넘깁니다.</summary>
+    public bool CancelNormalAttack(int actionId, bool skipRecovery = false)
     {
-        if (_state != PlayerActionState.NormalAttack || actionId != _currentActionId || _attackActionFinished)
+        if (_state != PlayerActionState.NormalAttack
+            || actionId != _currentActionId
+            || _attackActionFinished
+            || _attackImpactResolved)
             return false;
 
         _attackImpactResolved = true;
         _currentAttackOutcome = PlayerAttackOutcome.None;
-        FinishAttackAction(_normalAttackRecovery, PlayerAttackOutcome.None, true);
+        float recovery = skipRecovery ? 0f : _normalAttackRecovery;
+        FinishAttackAction(recovery, PlayerAttackOutcome.None, true);
         return true;
     }
     /// <summary>현재 일반 공격의 적중 프레임에서 적 시스템에 판정을 요청합니다. actionId가 현재 행동과 다르면 무시합니다.</summary>

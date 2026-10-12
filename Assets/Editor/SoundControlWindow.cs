@@ -109,7 +109,7 @@ public sealed class SoundControlWindow : EditorWindow
             SerializedProperty sound = sounds.GetArrayElementAtIndex(i);
             int id = sound.FindPropertyRelative("_id").intValue;
             if (id == 1 || id == 5 || id == 6 || id == 7 || id == 8 || id == 12 || IsPatternSound((SoundId)id)) continue;
-            library.Add(new PropertyField(sound, ((SoundId)id).ToString()));
+            library.Add(new PropertyField(sound, GetSoundName((SoundId)id)));
         }
         library.Add(new HelpBox("전투 상태를 검사하지 않습니다. Combat Cue 소리가 날 때마다 아래 시간 동안 플레이어·적 발소리를 감쇠합니다. 음량 배율 1이면 감쇠하지 않습니다.", HelpBoxMessageType.Info));
         library.Add(new PropertyField(_libraryObject.FindProperty("_combatFocusDuration"), "전투음 직후 발소리 감쇠 시간"));
@@ -179,6 +179,23 @@ public sealed class SoundControlWindow : EditorWindow
     }
 
     /// <summary>
+    /// soundId에 대응하는 최신 FMOD 이벤트 표시 이름을 반환한다.
+    /// 적 공격과 베기는 변경된 이름을 사용하고 다른 ID는 기존 이름을 반환한다.
+    /// </summary>
+    private static string GetSoundName(SoundId soundId)
+    {
+        switch (soundId)
+        {
+            case SoundId.EnemySwordSwing:
+                return "EnemyAttackSwing";
+            case SoundId.EnemyAttackVoice:
+                return "EnemyAttack";
+            default:
+                return soundId.ToString();
+        }
+    }
+
+    /// <summary>
     /// sound의 이벤트·사용 여부·음량·pitch·정지 정책을 독립 편집하는 영역을 반환한다.
     /// index로 미리 듣기를 연결하고 효과음의 이동 중 재생·발소리 감쇠 설정을 노출한다.
     /// </summary>
@@ -186,7 +203,7 @@ public sealed class SoundControlWindow : EditorWindow
     {
         SoundId soundId = (SoundId)sound.FindPropertyRelative("_id").intValue;
         bool bgm = soundId == SoundId.BossBgm;
-        var foldout = new Foldout { text = bgm ? "BossBGM" : soundId.ToString(), value = false };
+        var foldout = new Foldout { text = bgm ? "BossBGM" : GetSoundName(soundId), value = false };
         foldout.AddToClassList("cue");
         foldout.Add(new PropertyField(sound.FindPropertyRelative("_enabled"), "재생 사용"));
         foldout.Add(new PropertyField(sound.FindPropertyRelative("_event"), "FMOD 이벤트"));

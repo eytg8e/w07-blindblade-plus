@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public enum SoundId
 {
     None = 0,
@@ -9,6 +11,7 @@ public enum SoundId
     SwordUnsheath = 6,
     EnemyFootstep = 7,
     EnemyAttackPrepare = 8,
+    [InspectorName("EnemyAttackSwing")]
     EnemySwordSwing = 9,
     SwordClash = 10,
     ParryClash = 11,
@@ -27,6 +30,7 @@ public enum SoundId
     EnemyDamaged = 24,
     EnemyGetParryed = 25,
     EnemyHeartbeat = 26,
+    [InspectorName("EnemyAttack")]
     EnemyAttackVoice = 27,
     EnemyRangedAttackVoice = 28,
 }
