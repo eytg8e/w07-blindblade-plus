@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 451d8bada2daf324d92d0aaf366d55ff
+timeCreated: 1499125732
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 89418
+  packageName: Shuriken pack
+  packageVersion: 2.0
+  assetPath: Assets/Shurikens pack/Demo Scene/Prototyping/green.mat
+  uploadId: 202987
