@@ -32,18 +32,26 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     private float _phaseEndTime;
     private float _nextAttackTime;
 
-    [Header("두 박동 공격 전조")]
-    [SerializeField] private bool _useHeartbeatTelegraph;
-    [SerializeField, Min(1f), Tooltip("첫 심장박동부터 공격까지의 최소 시간입니다. 1초 이상으로 설정하며 상한은 없습니다.")]
-    private float _minimumHeartbeatTelegraph = 1f;
-    [SerializeField, Min(1f), Tooltip("첫 심장박동부터 공격까지의 최대 시간입니다. 최소 준비 시간보다 작으면 최소값을 사용합니다.")]
-    private float _maximumHeartbeatTelegraph = 2f;
-    [SerializeField, Min(0f), Tooltip("공격 시작보다 기합을 먼저 재생할 시간입니다. 두 번째 박동 이후로 제한합니다.")]
+    [Header("박동 공격 전조")]
+    [SerializeField, Tooltip("근접·원거리·돌진 공격에 박동 전조를 적용합니다. 횟수와 간격은 이 컴포넌트의 설정을 사용합니다.")]
+    private bool _useHeartbeatTelegraph;
+    [SerializeField, Min(1), Tooltip("공격 전에 재생할 박동 횟수입니다. 마지막 박동 이후 공격 지연을 적용합니다.")]
+    private int _heartbeatCount = 1;
+    [SerializeField, Min(0f), Tooltip("공격 준비 시작부터 첫 박동까지의 고정 대기 시간입니다. 박동 사이 간격과 독립적으로 설정합니다.")]
+    private float _firstHeartbeatDelay = 0.2f;
+    [SerializeField, Min(0.1f), Tooltip("첫 박동과 두 번째 박동 사이의 최소 간격입니다. 공격마다 한 번 선택합니다.")]
+    private float _minimumHeartbeatInterval = 0.4f;
+    [SerializeField, Min(0.1f), Tooltip("두 박동 사이의 최대 간격입니다. 최소값보다 작으면 최소값을 사용합니다.")]
+    private float _maximumHeartbeatInterval = 0.55f;
+    [SerializeField, Min(0.05f), Tooltip("마지막 박동부터 실제 공격까지의 고정 지연입니다. 박동 간격과 독립적으로 설정합니다.")]
+    private float _postHeartbeatAttackDelay = 0.2f;
+    [SerializeField, Min(0f), Tooltip("공격 시작보다 기합을 먼저 재생할 시간입니다. 마지막 박동 이후로 제한합니다.")]
     private float _attackVoiceLeadTime = 0.05f;
     private bool _usesHeartbeatForCurrentAttack;
-    private bool _secondHeartbeatPlayed;
+    private int _heartbeatsPlayed;
+    private int _currentHeartbeatCount;
     private bool _attackVoicePlayed;
-    private float _secondHeartbeatTime;
+    private float _nextHeartbeatTime;
     private float _attackVoiceTime;
 
     [Header("공격 청각 신호")]
@@ -60,11 +68,13 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     public bool IsAvailable => isActiveAndEnabled && !IsBusy && Time.time >= _nextAttackTime;
     public virtual bool AllowsMovement => false;
     public EnemyAttackContext Context => _context;
+    public float LastHeartbeatInterval { get; private set; }
+    public int HeartbeatCount => Mathf.Max(1, _heartbeatCount);
     public float ExecutionDuration => ActiveDuration;
     public bool UsesHeartbeatTelegraph => _useHeartbeatTelegraph;
     public Vector2 ExpectedAttackInterval => new Vector2(
-        GetExpectedAttackInterval(_useHeartbeatTelegraph ? MinimumHeartbeatTelegraph : Mathf.Max(0.1f, _telegraphDuration)),
-        GetExpectedAttackInterval(_useHeartbeatTelegraph ? MaximumHeartbeatTelegraph : Mathf.Max(0.1f, _telegraphDuration)));
+        GetExpectedAttackInterval(UsesHeartbeatTelegraph ? FirstHeartbeatDelay + (HeartbeatCount - 1) * MinimumHeartbeatInterval + PostHeartbeatAttackDelay : Mathf.Max(0.1f, _telegraphDuration)),
+        GetExpectedAttackInterval(UsesHeartbeatTelegraph ? FirstHeartbeatDelay + (HeartbeatCount - 1) * MaximumHeartbeatInterval + PostHeartbeatAttackDelay : Mathf.Max(0.1f, _telegraphDuration)));
     public float RecoveryRemaining => _phase == EnemyAttackPhase.Recovery ? Mathf.Max(0f, _phaseEndTime - Time.time) : 0f;
     public float TelegraphProgress => _phase == EnemyAttackPhase.Telegraph
         ? Mathf.Clamp01(1f - (_phaseEndTime - Time.time) / Mathf.Max(0.1f, _context.TelegraphDuration)) : 1f;
@@ -78,8 +88,10 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     protected virtual float ActiveDuration => 0f;
     protected virtual bool HasFinishedActiveAttack => Time.time >= _phaseEndTime;
     protected virtual EnemySoundAction SoundAction => EnemySoundAction.None;
-    private float MinimumHeartbeatTelegraph => Mathf.Max(1f, _minimumHeartbeatTelegraph);
-    private float MaximumHeartbeatTelegraph => Mathf.Max(MinimumHeartbeatTelegraph, _maximumHeartbeatTelegraph);
+    private float MinimumHeartbeatInterval => Mathf.Max(0.1f, _minimumHeartbeatInterval);
+    private float MaximumHeartbeatInterval => Mathf.Max(MinimumHeartbeatInterval, _maximumHeartbeatInterval);
+    private float FirstHeartbeatDelay => Mathf.Max(0f, _firstHeartbeatDelay);
+    private float PostHeartbeatAttackDelay => Mathf.Max(0.05f, _postHeartbeatAttackDelay);
 
     protected virtual void Awake()
     {
@@ -91,7 +103,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phase = EnemyAttackPhase.Ready;
         _nextAttackTime = 0f;
         _usesHeartbeatForCurrentAttack = false;
-        _secondHeartbeatPlayed = false;
+        _heartbeatsPlayed = 0;
         _attackVoicePlayed = false;
     }
 
@@ -155,15 +167,18 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
     internal bool TryAttack(Transform target, bool immediateMeleeAttack = false)
     {
         bool attackImmediately = immediateMeleeAttack && this is EnemyMeleeAttack;
-        if ((_useHeartbeatTelegraph || attackImmediately) && Time.timeScale <= 0f) return false;
+        if ((UsesHeartbeatTelegraph || attackImmediately) && Time.timeScale <= 0f) return false;
         if (!IsAvailable || !CanAttack(target) || target != _sensor.Target || !_sensor.CanSeeTarget())
             return false;
 
         if (_playingHeartbeatSounds.Count > 0) StopActionSound(true);
-        _usesHeartbeatForCurrentAttack = _useHeartbeatTelegraph || attackImmediately;
+        _usesHeartbeatForCurrentAttack = UsesHeartbeatTelegraph || attackImmediately;
+        _currentHeartbeatCount = HeartbeatCount;
+        LastHeartbeatInterval = UsesHeartbeatTelegraph && !attackImmediately && _currentHeartbeatCount > 1
+            ? UnityEngine.Random.Range(MinimumHeartbeatInterval, MaximumHeartbeatInterval) : 0f;
         float telegraphDuration = attackImmediately ? 0f
             : (_usesHeartbeatForCurrentAttack
-                ? UnityEngine.Random.Range(MinimumHeartbeatTelegraph, MaximumHeartbeatTelegraph)
+                ? FirstHeartbeatDelay + (_currentHeartbeatCount - 1) * LastHeartbeatInterval + PostHeartbeatAttackDelay
                 : Mathf.Max(0.1f, _telegraphDuration));
         _context = new EnemyAttackContext(this, target, telegraphDuration);
         _phase = EnemyAttackPhase.Telegraph;
@@ -181,13 +196,10 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         }
         if (_usesHeartbeatForCurrentAttack)
         {
-            float interval = telegraphDuration * 0.5f;
-            _secondHeartbeatTime = Time.time + interval;
-            _attackVoiceTime = _phaseEndTime - Mathf.Clamp(_attackVoiceLeadTime, 0f, interval * 0.5f);
-            _secondHeartbeatPlayed = false;
+            _nextHeartbeatTime = Time.time + FirstHeartbeatDelay;
+            _attackVoiceTime = _phaseEndTime - Mathf.Clamp(_attackVoiceLeadTime, 0f, PostHeartbeatAttackDelay * 0.5f);
+            _heartbeatsPlayed = 0;
             _attackVoicePlayed = false;
-            if (SoundAction == EnemySoundAction.Ranged) PlayActionSound(EnemySoundStage.Telegraph);
-            PlayActionSound(EnemySoundStage.Heartbeat);
         }
         else
             PlayActionSound(EnemySoundStage.Telegraph);
@@ -211,29 +223,30 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
         _phase = EnemyAttackPhase.Ready;
         StopActionSound(_usesHeartbeatForCurrentAttack || _playingHeartbeatSounds.Count > 0);
         _usesHeartbeatForCurrentAttack = false;
-        _secondHeartbeatPlayed = false;
+        _heartbeatsPlayed = 0;
         _attackVoicePlayed = false;
-        _secondHeartbeatTime = 0f;
+        _nextHeartbeatTime = 0f;
         _attackVoiceTime = 0f;
         OnAttackEnded(context, true);
         AttackCancelled?.Invoke(context);
     }
 
     /// <summary>
-    /// 저장된 두 번째 박동·기합·공격 시각에 각 신호를 한 번 실행한다.
+    /// 첫 박동 대기가 지난 뒤 선택한 간격과 횟수로 박동을 실행하고 마지막 박동 이후 기합과 공격을 실행한다.
     /// 게임 시간을 사용하며 박동이나 공격이 0.1초 넘게 지연되면 현재 공격을 취소하여 몰아서 실행하지 않는다.
     /// </summary>
     private void UpdateHeartbeatTelegraph()
     {
         float now = Time.time;
-        if (!_secondHeartbeatPlayed && now >= _secondHeartbeatTime)
+        if (_heartbeatsPlayed < _currentHeartbeatCount && now >= _nextHeartbeatTime)
         {
-            if (now >= _phaseEndTime || now - _secondHeartbeatTime > MAX_RHYTHM_DELAY)
+            if (now >= _phaseEndTime || now - _nextHeartbeatTime > MAX_RHYTHM_DELAY)
             {
                 CancelAttack();
                 return;
             }
-            _secondHeartbeatPlayed = true;
+            _heartbeatsPlayed++;
+            _nextHeartbeatTime += LastHeartbeatInterval;
             PlayActionSound(EnemySoundStage.Heartbeat);
         }
         if (now >= _phaseEndTime && now - _phaseEndTime > MAX_RHYTHM_DELAY)
@@ -247,7 +260,7 @@ public abstract class EnemyAttackBehaviour : MonoBehaviour
             if (SoundAction == EnemySoundAction.Melee || SoundAction == EnemySoundAction.Ranged)
                 PlayActionSound(EnemySoundStage.AttackVoice);
         }
-        if (_secondHeartbeatPlayed && now >= _phaseEndTime)
+        if (_heartbeatsPlayed >= _currentHeartbeatCount && now >= _phaseEndTime)
             CommitAttack();
     }
 
