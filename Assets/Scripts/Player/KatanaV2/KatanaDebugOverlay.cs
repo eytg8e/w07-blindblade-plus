@@ -53,7 +53,8 @@ public sealed class KatanaDebugOverlay : MonoBehaviour
 
     void OnGUI()
     {
-        if (_showCombatFeedback) DrawCombatFeedback();
+        // 모든 씬에서 가드·패링·반격 안내 텍스트 표시를 비활성화한다.
+        // if (_showCombatFeedback) DrawCombatFeedback();
         if (!_showOverlay) return;
         _text.Clear();
         _text.AppendLine("MELEE | LMB attack / RMB guard + timed parry / Ctrl + C crouch / Esc cursor");
@@ -66,8 +67,8 @@ public sealed class KatanaDebugOverlay : MonoBehaviour
         _text.Append("Animator: ").AppendLine(_visual.AnimatorState);
         _text.AppendLine(_lastResult);
         foreach (string line in _recent) _text.AppendLine(line);
-        GUI.Box(new Rect(12f, 12f, 575f, 265f), GUIContent.none);
-        GUI.Label(new Rect(24f, 22f, 550f, 245f), _text.ToString());
+        // GUI.Box(new Rect(12f, 12f, 575f, 265f), GUIContent.none);
+        // GUI.Label(new Rect(24f, 22f, 550f, 245f), _text.ToString());
     }
 
     /// <summary>실제 방어 성공 result의 종류를 기록하고 짧은 성공 알림을 예약한다. 게임 판정은 변경하지 않는다.</summary>

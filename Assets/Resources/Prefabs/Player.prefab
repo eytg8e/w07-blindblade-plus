@@ -362,6 +362,7 @@ MonoBehaviour:
   _iaidoAttackRange: 2
   _targetStandOff: 0.15
   _attackOriginHeight: 1.1
+  _crouchReentryInterval: 0.5
   _normalAttackRecovery: 0
   _guardStartRecovery: 0
   _guardEndRecovery: 0
@@ -1203,19 +1204,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5494881668148582848, guid: 641ef78c43feafe4fbcf82c9b47f2227, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.19237487
+      value: 0.26461598
       objectReference: {fileID: 0}
     - target: {fileID: 5494881668148582848, guid: 641ef78c43feafe4fbcf82c9b47f2227, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.14470759
+      value: 0.14076816
       objectReference: {fileID: 0}
     - target: {fileID: 5494881668148582848, guid: 641ef78c43feafe4fbcf82c9b47f2227, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.12876327
+      value: 0.018229868
       objectReference: {fileID: 0}
     - target: {fileID: 5494881668148582848, guid: 641ef78c43feafe4fbcf82c9b47f2227, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.9620144
+      value: -0.9538503
       objectReference: {fileID: 0}
     - target: {fileID: 5494881668148582848, guid: 641ef78c43feafe4fbcf82c9b47f2227, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

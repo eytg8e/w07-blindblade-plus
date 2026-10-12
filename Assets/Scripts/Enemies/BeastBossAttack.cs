@@ -10,6 +10,8 @@ using UnityEngine.AI;
 [RequireComponent(typeof(EnemyHealth), typeof(EnemyMotor), typeof(NavMeshAgent))]
 public sealed class BeastBossAttack : MonoBehaviour
 {
+    private const float MAX_RHYTHM_DELAY = 0.1f;
+
     [Header("협력 이동")]
     [SerializeField] private Transform _riderSeat;
     [SerializeField, Min(0.5f)] private float _orbitRadius = 6f;
@@ -39,6 +41,21 @@ public sealed class BeastBossAttack : MonoBehaviour
     private readonly RaycastHit[] _hits = new RaycastHit[32];
     private readonly Collider[] _contacts = new Collider[32];
     private bool _attackResolved;
+
+    [Header("근접 공격 박동 전조")]
+    [SerializeField] private bool _useHeartbeatTelegraph = true;
+    [SerializeField, Min(1), InspectorName("박동 횟수")]
+    private int _heartbeatCount = 1;
+    [SerializeField, Min(0f), InspectorName("첫 박동 전 대기 (초)")]
+    private float _firstHeartbeatDelay = 0.2f;
+    [SerializeField, Min(0.1f), InspectorName("박동 간격 최소 (초)")]
+    private float _minimumHeartbeatInterval = 1f;
+    [SerializeField, Min(0.1f), InspectorName("박동 간격 최대 (초)")]
+    private float _maximumHeartbeatInterval = 1.2f;
+    [SerializeField, Min(0.05f), InspectorName("마지막 박동 후 공격 지연 (초)"), Tooltip("점프는 이 시간 뒤 도약하며 실제 피해는 기존 착지 시점에 적용합니다.")]
+    private float _postHeartbeatAttackDelay = 0.5f;
+    private bool _preparationSucceeded;
+    private SoundId _playingHeartbeat;
 
     [Header("점프")]
     [SerializeField, Min(0.1f)] private float _jumpPreparation = 1f;
@@ -107,7 +124,8 @@ public sealed class BeastBossAttack : MonoBehaviour
         AttackPreparing?.Invoke();
         if (_preparationSound != SoundId.None)
             Managers.Sound.Play(_preparationSound, transform.position, 1f, gameObject);
-        yield return new WaitForSeconds(_chargePreparation);
+        yield return PrepareMeleeAttack(player, _chargePreparation);
+        if (!_preparationSucceeded) yield break;
         if (!CanAttack(player)) yield break;
         Vector3 start = transform.position;
         Vector3 forward = Vector3.ProjectOnPlane(player.transform.position - start, Vector3.up).normalized;
@@ -151,7 +169,8 @@ public sealed class BeastBossAttack : MonoBehaviour
         AttackPreparing?.Invoke();
         if (_preparationSound != SoundId.None)
             Managers.Sound.Play(_preparationSound, transform.position, 1f, gameObject);
-        yield return new WaitForSeconds(_jumpPreparation);
+        yield return PrepareMeleeAttack(player, _jumpPreparation);
+        if (!_preparationSucceeded) yield break;
         if (!CanAttack(player) || !TryDestination(player.transform.position, out Vector3 destination)) yield break;
         Vector3 start = transform.position;
         Vector3 direction = Vector3.ProjectOnPlane(destination - start, Vector3.up).normalized;
@@ -195,6 +214,67 @@ public sealed class BeastBossAttack : MonoBehaviour
         {
             RestoreNavigation();
         }
+    }
+
+    /// <summary>
+    /// player 생존과 이동 상태를 확인하며 설정한 첫 대기·횟수·간격·마지막 지연으로 점프·돌진 준비를 실행한다.
+    /// 박동을 끄면 legacyDuration을 사용하고 성공 여부를 저장하며 중단·큰 지연은 잔여 박동을 정리한다.
+    /// </summary>
+    private IEnumerator PrepareMeleeAttack(KatanaDamageReceiver player, float legacyDuration)
+    {
+        StopHeartbeat();
+        _preparationSucceeded = false;
+        if (!_useHeartbeatTelegraph)
+        {
+            yield return new WaitForSeconds(Mathf.Max(0.1f, legacyDuration));
+            _preparationSucceeded = CanAttack(player);
+            yield break;
+        }
+        int count = Mathf.Max(1, _heartbeatCount);
+        float firstDelay = Mathf.Max(0f, _firstHeartbeatDelay);
+        float minimum = Mathf.Max(0.1f, _minimumHeartbeatInterval);
+        float interval = count > 1
+            ? UnityEngine.Random.Range(minimum, Mathf.Max(minimum, _maximumHeartbeatInterval)) : 0f;
+        float duration = firstDelay + (count - 1) * interval + Mathf.Max(0.05f, _postHeartbeatAttackDelay);
+        float started = Time.time;
+        int played = 0;
+        while (CanAttack(player))
+        {
+            yield return null;
+            if (!CanAttack(player)) break;
+            if (Time.timeScale <= 0f)
+            {
+                StopHeartbeat();
+                while (Time.timeScale <= 0f && CanAttack(player)) yield return null;
+                if (!CanAttack(player)) break;
+                started = Time.time;
+                played = 0;
+                continue;
+            }
+            float now = Time.time;
+            float nextAt = started + firstDelay + interval * played;
+            float attackAt = started + duration;
+            if (played < count && now >= nextAt)
+            {
+                if (now >= attackAt || now - nextAt > MAX_RHYTHM_DELAY) break;
+                played++;
+                _playingHeartbeat = EnemySoundSettings.GetSound(EnemySoundAction.Charge, EnemySoundStage.Heartbeat);
+                if (_playingHeartbeat != SoundId.None) Managers.Sound.PlayAttached(_playingHeartbeat, gameObject);
+            }
+            if (now < attackAt) continue;
+            if (now - attackAt > MAX_RHYTHM_DELAY || played < count) break;
+            _preparationSucceeded = true;
+            yield break;
+        }
+        StopHeartbeat();
+    }
+
+    /// <summary>보관한 박동 ID와 현재 짐승 소유자만 강제 정지하고 ID를 비운다. 피격·패링·다른 보스의 소리는 유지한다.</summary>
+    private void StopHeartbeat()
+    {
+        if (_playingHeartbeat != SoundId.None && Managers.IsInitialized)
+            Managers.Sound.StopFor(gameObject, _playingHeartbeat, forceStop: true);
+        _playingHeartbeat = SoundId.None;
     }
 
     /// <summary>player와 자신이 생존하고 지면 이동이 가능한지 반환한다.</summary>
@@ -299,6 +379,8 @@ public sealed class BeastBossAttack : MonoBehaviour
     /// <summary>원형 이동·점프를 중단하고 기존 NavMesh 설정과 이동 정지 상태를 복원한다.</summary>
     public void CancelAttack()
     {
+        _preparationSucceeded = false;
+        StopHeartbeat();
         EndOrbit();
         RestoreNavigation();
         _motor.Stop();
