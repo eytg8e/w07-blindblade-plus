@@ -128,13 +128,14 @@ public sealed class InputManager : MonoBehaviour
         SetGameplayInputEnabled(state == GameplayState.Playing);
     }
 
-    /// <summary>allowed와 게임 상태로 입력 허용 여부를 결정한다. 차단 시 유지 입력을 정리하고 정책 변경을 알린다.</summary>
+    /// <summary>allowed와 게임 상태로 입력 허용 여부를 결정한다. 차단 시 유지 입력을 정리하고 활성화 시 커서를 잠근 뒤 정책 변경을 알린다.</summary>
     public void SetGameplayInputEnabled(bool allowed)
     {
         bool enabled = allowed && _state != null && _state.State == GameplayState.Playing;
         if (!enabled) ClearHeldInput();
         if (IsGameplayInputEnabled == enabled) return;
         IsGameplayInputEnabled = enabled;
+        if (enabled) SetCursor(true);
         GameplayInputEnabledChanged?.Invoke(enabled);
     }
 
