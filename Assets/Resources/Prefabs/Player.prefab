@@ -425,6 +425,8 @@ MonoBehaviour:
   _parryWindow: 0.18
   _blockInputRecovery: 0.18
   _counterWindow: 0.5
+  _automaticCounterDelay: 0.12
+  _parryStaggerDuration: 0.9
   _sheatheDuration: 0.3
 --- !u!114 &2388544270244161858
 MonoBehaviour:
@@ -461,6 +463,7 @@ MonoBehaviour:
   _combat: {fileID: 5663976393034796336}
   _actionDriver: {fileID: 1993857972930843498}
   _animator: {fileID: 8362338574495906464}
+  _counterAttackClip: {fileID: 7400000, guid: 56a37a9bb1fcea74dae1b73f0c0c3fb2, type: 2}
   _idleClip: {fileID: 7400000, guid: 8c03e20cc5701384195e95a718f911ce, type: 2}
   _firstAttackClip: {fileID: 7400000, guid: c83264164fb7e824ab09176b14e72719, type: 2}
   _firstAttackReturnsToIdle: 1
@@ -471,7 +474,7 @@ MonoBehaviour:
   _blendTime: 0.025
   _iaidoImpactProgress: 0.88461536
   _normal1ImpactProgress: 0.75
-  _counterImpactProgress: 0.4
+  _counterImpactProgress: 0.75
   _drawnSheatheProgress: 0.2
   _minimumCancelSheatheDuration: 0.12
   _openingImpactProgress: 0.5

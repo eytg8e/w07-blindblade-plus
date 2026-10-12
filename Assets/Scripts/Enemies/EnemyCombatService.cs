@@ -127,6 +127,12 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         return ResolveAttack(request, true);
     }
 
+    /// <summary>request의 대상 방향·일반 사거리로 반격 접촉을 검사한다. finalSample 또는 접촉에서 피해를 한 번 확정하고 결과를 반환한다.</summary>
+    public PlayerAttackResolution ResolvePlayerDirectedAttack(PlayerAttackRequest request, bool finalSample)
+    {
+        return ResolveAttack(request, finalSample);
+    }
+
     /// <summary>request의 시점 방향 접촉을 검사하고 접촉 또는 finalSample에서 피해·결과·이벤트를 한 번 확정한다.</summary>
     private PlayerAttackResolution ResolveAttack(PlayerAttackRequest request, bool finalSample)
     {
