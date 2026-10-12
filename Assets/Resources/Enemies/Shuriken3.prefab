@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4232590506518869109}
   - component: {fileID: 2115214498364783961}
+  - component: {fileID: 681678070729298543}
   m_Layer: 0
   m_Name: Shuriken3
   m_TagString: Untagged
@@ -52,6 +53,24 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _showAttackGizmos: 1
+--- !u!114 &681678070729298543
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2143551642523500134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56ba57b4cae8f074e98993776dca04e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _waveVisualPrefab: {fileID: 402, guid: 2363502e95a345d2b96fbe5cf9542e60, type: 3}
+  _pulseInterval: 0.3
+  _pulseDuration: 0.25
+  _startRadius: 0.04
+  _endRadius: 0.25
+  _pulseColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &2447002370748162444
 GameObject:
   m_ObjectHideFlags: 0

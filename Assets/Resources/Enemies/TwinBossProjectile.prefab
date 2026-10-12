@@ -112,6 +112,7 @@ GameObject:
   - component: {fileID: 7615927966566333477}
   - component: {fileID: 2285517556864344112}
   - component: {fileID: 2285517556864344113}
+  - component: {fileID: 6221432540510008360}
   m_Layer: 0
   m_Name: TwinBossProjectile
   m_TagString: Untagged
@@ -160,9 +161,27 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9035632415214600233}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: db16b22a0bc65e848923ce4a72f46787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _ignorePerception: 1
+--- !u!114 &6221432540510008360
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9035632415214600233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56ba57b4cae8f074e98993776dca04e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _waveVisualPrefab: {fileID: 402, guid: 2363502e95a345d2b96fbe5cf9542e60, type: 3}
+  _pulseInterval: 0.3
+  _pulseDuration: 0.25
+  _startRadius: 0.04
+  _endRadius: 0.25
+  _pulseColor: {r: 1, g: 1, b: 1, a: 1}

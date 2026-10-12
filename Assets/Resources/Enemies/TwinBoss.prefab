@@ -68,7 +68,7 @@ MonoBehaviour:
   _moveTimeout: 2
   _movementObstacleMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 51
 --- !u!114 &103
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -264,7 +264,7 @@ MonoBehaviour:
   _teleportArc: 180
   _teleportObstacleMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 51
   _dismountDistance: 2
 --- !u!114 &208
 MonoBehaviour:
@@ -610,7 +610,7 @@ MonoBehaviour:
   _contactRadius: 0.7
   _obstacleMask:
     serializedVersion: 2
-    m_Bits: 4294967291
+    m_Bits: 51
   _preparationSound: 0
   _parrySound: 33
   _useHeartbeatTelegraph: 1

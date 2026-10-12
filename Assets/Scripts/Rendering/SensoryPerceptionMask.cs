@@ -88,6 +88,48 @@ using UnityEngine;
         }
 
         /// <summary>
+        /// position의 현재 인지 가시성을 셰이더와 같은 반경·확산·페이드 규칙으로 반환한다.
+        /// 지형 기억은 포함하지 않으며 인지 매니저가 준비되지 않으면 0을 반환한다.
+        /// </summary>
+        public float GetVisibility(Vector3 position)
+        {
+            if (!isActiveAndEnabled || !_sensoryManager.IsReady)
+                return 0f;
+
+            float visibility = RegionVisibility(position, _sensoryManager.Observer.position,
+                _footstepOnly ? 0f : _playerRadius);
+            float lifetime = _sensoryManager.CrouchPulseInterval;
+            float waveEndRadius = _sensoryManager.WaveEndRadius;
+            float endRadius = waveEndRadius > 0f ? waveEndRadius : _soundRadius;
+            float startRadius = waveEndRadius > 0f ? _sensoryManager.WaveStartRadius : endRadius;
+            for (int i = 0; i < _soundCount; i++)
+            {
+                Vector4 region = _soundRegions[i];
+                float age = Mathf.Max(0f, Time.time - region.w);
+                float expansion = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(age / Mathf.Max(lifetime, 0.0001f)));
+                float radius = Mathf.Lerp(startRadius, endRadius, expansion);
+                float fade = 1f - Mathf.SmoothStep(0f, 1f,
+                    Mathf.Clamp01((age - lifetime) / Mathf.Max(_soundFadeDuration, 0.0001f)));
+                visibility = Mathf.Max(visibility,
+                    RegionVisibility(position, new Vector3(region.x, region.y, region.z), radius) * fade);
+            }
+            return visibility;
+        }
+
+        /// <summary>
+        /// position과 center의 3D 거리로 radius 안쪽의 가시성을 반환한다.
+        /// 인지 경계의 _edgeFade 구간에서 셰이더와 동일하게 부드럽게 감소한다.
+        /// </summary>
+        private float RegionVisibility(Vector3 position, Vector3 center, float radius)
+        {
+            if (radius <= 0f)
+                return 0f;
+            float innerRadius = Mathf.Max(0f, radius - Mathf.Max(_edgeFade, 0.0001f));
+            float progress = Mathf.InverseLerp(innerRadius, radius, Vector3.Distance(position, center));
+            return 1f - Mathf.SmoothStep(0f, 1f, progress);
+        }
+
+        /// <summary>
         /// 사건의 월드 위치와 발생 시간을 버퍼에 등록하고 가장 오래된 영역부터 교체한다.
         /// </summary>
         private void HandlePerceptionRequested(SensoryEvent sensoryEvent)
