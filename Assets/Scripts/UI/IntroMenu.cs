@@ -15,11 +15,15 @@ public class IntroMenu : MonoBehaviour
     [SerializeField] private string _gameSceneName = "SampleScene";
 
     [Header("텍스트 절단")]
-    [SerializeField, Min(0.01f), Tooltip("절단 연출 시간(초)")] private float _sliceDuration = 0.35f;
+    [SerializeField, Min(0.01f), Tooltip("절단 연출 시간(초)")] private float _sliceDuration = 0.2f;
     [SerializeField, Range(-90f, 90f), Tooltip("절단선 각도(도)")] private float _sliceAngle = -15f;
     [SerializeField, Min(0f), Tooltip("각 조각의 이동 거리(UI 로컬 단위)")] private float _sliceDistance = 28f;
     [SerializeField, Min(0.01f), Tooltip("빛나는 절단면 폭(UI 로컬 단위)")] private float _sliceGlowWidth = 2f;
     [SerializeField] private Color _sliceGlowColor = new Color(1f, 0.8f, 0.4f, 1f);
+    [SerializeField, Min(0f), Tooltip("절단 조각이 튀어나가는 거리 배율")] private float _sliceKickMultiplier = 1.8f;
+    [SerializeField, Min(1f), Tooltip("절단 순간 최대 확대 배율")] private float _slicePopScale = 1.18f;
+    [SerializeField, Range(0f, 1f), Tooltip("사라질 때 최종 크기 배율")] private float _sliceEndScale = 0.65f;
+    [SerializeField, Range(0f, 45f), Tooltip("각 조각이 반대로 회전하는 최종 각도(도)")] private float _sliceRotation = 12f;
     private readonly List<GameObject> _sliceObjects = new List<GameObject>();
     private readonly List<Vector3> _sliceOffsets = new List<Vector3>();
     private readonly List<Mesh> _sliceMeshes = new List<Mesh>();
@@ -218,10 +222,19 @@ public class IntroMenu : MonoBehaviour
         {
             elapsed += Time.unscaledDeltaTime;
             float progress = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, _sliceDuration));
+            float remaining = 1f - progress;
+            float kick = 1f - remaining * remaining * remaining;
+            float scale = progress < 0.15f
+                ? Mathf.Lerp(1f, _slicePopScale, progress / 0.15f)
+                : Mathf.Lerp(_slicePopScale, _sliceEndScale, (progress - 0.15f) / 0.85f);
             for (int i = 0; i < _sliceMaterials.Count; i++)
             {
                 _sliceMaterials[i].SetFloat("_SliceProgress", progress);
-                _sliceObjects[i].transform.localPosition = _sliceOffsets[i] * progress;
+                Transform piece = _sliceObjects[i].transform;
+                piece.localPosition = _sliceOffsets[i] * (kick * _sliceKickMultiplier);
+                piece.localScale = Vector3.one * scale;
+                float side = i % 2 == 0 ? -1f : 1f;
+                piece.localRotation = Quaternion.Euler(0f, 0f, side * _sliceRotation * kick);
             }
             yield return null;
         }

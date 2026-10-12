@@ -946,7 +946,7 @@ MonoBehaviour:
   startButton: {fileID: 1900274950}
   quitButton: {fileID: 183067728}
   _gameSceneName: Stage_1
-  _sliceDuration: 0.35
+  _sliceDuration: 0.2
   _sliceAngle: -15
   _sliceDistance: 28
   _sliceGlowWidth: 2
@@ -1455,7 +1455,7 @@ MonoBehaviour:
   startButton: {fileID: 1900274950}
   quitButton: {fileID: 183067728}
   _gameSceneName: SampleScene
-  _sliceDuration: 0.35
+  _sliceDuration: 0.2
   _sliceAngle: -15
   _sliceDistance: 28
   _sliceGlowWidth: 2
