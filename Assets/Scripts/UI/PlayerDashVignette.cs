@@ -10,10 +10,9 @@ public sealed class PlayerDashVignette : MonoBehaviour
     [Header("대시 집중선")]
     [SerializeField] private Color _lineColor = new Color(1f, 1f, 1f, 0.6f);
     [SerializeField, Range(16, 128)] private int _lineCount = 64;
-    [SerializeField, Range(0.2f, 0.9f), Tooltip("집중선이 시작되는 화면 중심으로부터의 비율")] private float _innerRadius = 0.8f;
-    [SerializeField, Min(0f), Tooltip("집중선 흐름 속도")] private float _flowSpeed = 4f;
-    [SerializeField, Min(0.01f), Tooltip("집중선이 나타나는 시간(초)")] private float _fadeInDuration = 0.04f;
-    [SerializeField, Min(0.01f), Tooltip("집중선이 사라지는 시간(초)")] private float _fadeOutDuration = 0.12f;
+    [SerializeField, Range(0.2f, 0.9f), Tooltip("집중선이 시작되는 화면 중심으로부터의 비율")] private float _innerRadius = 0.85f;
+    [SerializeField, Min(0.01f), Tooltip("전체 비네팅이 나타나는 시간(초)")] private float _fadeInDuration = 0.06f;
+    [SerializeField, Min(0.01f), Tooltip("전체 비네팅이 사라지는 시간(초)")] private float _fadeOutDuration = 0.15f;
     private PlayerMotor _motor;
     private PlayerController _player;
     private GameObject _canvasObject;
@@ -36,7 +35,6 @@ public sealed class PlayerDashVignette : MonoBehaviour
         _material.SetColor("_Color", _lineColor);
         _material.SetFloat("_LineCount", _lineCount);
         _material.SetFloat("_InnerRadius", _innerRadius);
-        _material.SetFloat("_FlowSpeed", _flowSpeed);
         _canvasObject = new GameObject("DashVignetteCanvas", typeof(RectTransform), typeof(Canvas));
         _canvasObject.transform.SetParent(transform, false);
         Canvas canvas = _canvasObject.GetComponent<Canvas>();

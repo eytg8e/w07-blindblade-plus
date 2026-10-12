@@ -6,8 +6,7 @@ Shader "BlindBlade/Dash Vignette"
         _Color ("집중선 색상", Color) = (1,1,1,0.6)
         _Intensity ("강도", Range(0,1)) = 0
         _LineCount ("집중선 수", Float) = 64
-        _InnerRadius ("중앙 여백", Range(0.2,0.9)) = 0.8
-        _FlowSpeed ("흐름 속도", Float) = 4
+        _InnerRadius ("중앙 여백", Range(0.2,0.9)) = 0.85
     }
     SubShader
     {
@@ -23,7 +22,7 @@ Shader "BlindBlade/Dash Vignette"
             #pragma fragment Frag
             #include "UnityCG.cginc"
             fixed4 _Color;
-            float _Intensity, _LineCount, _InnerRadius, _FlowSpeed;
+            float _Intensity, _LineCount, _InnerRadius;
             struct Attributes { float4 vertex : POSITION; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
             struct Varyings { float4 vertex : SV_POSITION; float2 uv : TEXCOORD0; fixed4 color : COLOR; };
             Varyings Vert(Attributes input)
@@ -42,14 +41,14 @@ Shader "BlindBlade/Dash Vignette"
                 float sector = angle * _LineCount;
                 float random = frac(sin(floor(sector) * 127.1) * 43758.5453);
                 float start = lerp(_InnerRadius, min(0.98, _InnerRadius + 0.25), random);
-                start += 0.04 * sin(_Time.y * _FlowSpeed * 6.2831853 + random * 6.2831853);
                 float outerRadius = radius / max(max(abs(p.x), abs(p.y)), 0.0001);
                 float taper = saturate((radius - start) / max(outerRadius - start, 0.01));
-                float width = lerp(0.025, 0.13, random) * taper;
+                float width = lerp(0.025, 0.13, random) * taper * 0.6;
                 float angularDistance = abs(frac(sector) - 0.5);
                 float lineMask = 1 - smoothstep(width, width + max(fwidth(sector), 0.01), angularDistance);
-                float edge = step(start, radius);
-                return fixed4(input.color.rgb, saturate(input.color.a * _Intensity * lineMask * edge));
+                float edge = smoothstep(0.0, 1.0, taper);
+                float lineAlpha = saturate(input.color.a * _Intensity * lineMask * edge);
+                return fixed4(input.color.rgb, lineAlpha);
             }
             ENDCG
         }

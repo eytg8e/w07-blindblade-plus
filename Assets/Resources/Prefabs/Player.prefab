@@ -1298,7 +1298,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _lineColor: {r: 1, g: 1, b: 1, a: 0.6}
   _lineCount: 64
-  _innerRadius: 0.8
-  _flowSpeed: 4
-  _fadeInDuration: 0.04
-  _fadeOutDuration: 0.12
+  _innerRadius: 0.85
+  _fadeInDuration: 0.06
+  _fadeOutDuration: 0.15
