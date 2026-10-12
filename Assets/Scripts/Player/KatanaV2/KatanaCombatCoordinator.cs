@@ -60,9 +60,6 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     [SerializeField, Min(0f)] private float _normalSheatheDelay = 0.8f;
 
     [Header("발도 시작 2타 연계")]
-    [SerializeField, InspectorName("1단 공격만 허용")]
-    [Tooltip("체크하면 좌클릭마다 1타만 사용합니다. 공격·회복 중 다음 클릭 하나를 예약하고, 회복이 끝나면 연계·납도 대기 없이 실행합니다. 대상 돌진과 패링 반격은 사용하지 않습니다.")]
-    private bool _onlyFirstAttack;
     [SerializeField, Min(0f)] private float _comboBufferWindow = 0.2f;
     [SerializeField, Min(0f), InspectorName("다음 타 연계 지연 (초)")]
     [Tooltip("각 베기의 타격 구간 종료부터 다음 타 시작까지의 지연입니다. 값이 커지면 연계가 느려집니다. 동작이 끝났다면 회복 종료도 기다립니다.")]
@@ -123,7 +120,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     public KatanaWeaponState WeaponState => _weaponState;
     public int Strike => _strike;
     public bool HasBufferedAttack => _queuedAttack || _queuedOpeningAttack;
-    public bool IsFirstAttackFollowupBuffered => !_onlyFirstAttack && _queuedAttack && !_queuedTargetedAttack
+    public bool IsFirstAttackFollowupBuffered => _queuedAttack && !_queuedTargetedAttack
         && IsOpeningAttack && _weaponVisual != null && _weaponVisual.HasFirstAttackFollowup;
     public bool IsFirstAttackFollowupTransition => _chainTransition && _strike == 2
         && _weaponVisual != null && _weaponVisual.HasFirstAttackFollowup;
@@ -180,7 +177,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         if (_queuedAttack && !IsFirstAttackFollowupBuffered && _queuedActionId == _player.CurrentActionId && _clock >= _queuedReadyAt
             && (_player.CurrentState == PlayerActionState.NormalAttack || CanStartAction))
             TryStartQueuedAttack();
-        if (!_onlyFirstAttack && _player.CurrentState == PlayerActionState.Free && _comboExpiresAt > 0f
+        if (_player.CurrentState == PlayerActionState.Free && _comboExpiresAt > 0f
             && _clock >= _comboExpiresAt && !_queuedAttack)
             BeginSheathe();
         if (_parryOpen && !IsParryWindowOpen)
@@ -225,7 +222,6 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     {
         if (!isActiveAndEnabled || _player.IsPaused || Time.timeScale <= 0f)
             return Reject("Attack: input unavailable");
-        if (_onlyFirstAttack) return RequestFirstAttack();
         if (CanCounterAttack) return RequestCounterAttack();
         if (_queuedOpeningAttack) return Reject("Attack: opening already buffered");
         if (_player.CurrentState == PlayerActionState.Free && _weaponState == KatanaWeaponState.Sheathing)
@@ -293,39 +289,6 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         return accepted;
     }
 
-    /// <summary>
-    /// 1단 공격 전용 입력을 받아 1타를 시작하거나 공격·회복 중 다음 클릭 하나를 예약한다.
-    /// 기존 공격과 회복 시간은 유지하고 연계·납도 대기를 생략하며 입력 수락 여부를 반환한다.
-    /// </summary>
-    private bool RequestFirstAttack()
-    {
-        if (_player.IsGuarding && CanCounterAttack) EndDefense();
-        if (_queuedOpeningAttack) return Reject("Attack: opening already buffered");
-        if (_player.CurrentState == PlayerActionState.NormalAttack
-            || _player.CurrentState == PlayerActionState.Recovery)
-        {
-            _queuedAttack = false;
-            _queuedTargetedAttack = false;
-            _queuedOpeningAttack = true;
-            return true;
-        }
-        if (_weaponState == KatanaWeaponState.Sheathing
-            && _player.CurrentState == PlayerActionState.Free)
-        {
-            _weaponState = KatanaWeaponState.Sheathed;
-            Publish(KatanaStage.SheatheEnded);
-        }
-        if (!CanStartAction) return Reject("Attack: current action blocks input");
-
-        ResetChain();
-        _attackWasDrawn = false;
-        _strike = 1;
-        _normalRequested = true;
-        bool accepted = _player.RequestNormalAttack();
-        _normalRequested = false;
-        return accepted;
-    }
-
     /// <summary>패링 기회 중 가드를 해제하고 기존 Normal2 모션으로 한 번의 빠른 반격을 시작한다. 피해는 기존 일반 공격 판정으로 처리하고 수락 여부를 반환한다.</summary>
     private bool RequestCounterAttack()
     {
@@ -373,13 +336,6 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     /// <summary>예약된 공격 ID의 판정이 끝났으면 다음 타로 연결한다. 동작 종료 후에는 자유 상태에서 시작하며 실패 시 예약과 타수를 유지한다.</summary>
     private void TryStartQueuedAttack()
     {
-        if (_onlyFirstAttack)
-        {
-            _queuedAttack = false;
-            _queuedTargetedAttack = false;
-            RequestFirstAttack();
-            return;
-        }
         if (_queuedTargetedAttack)
         {
             _queuedTargetedAttack = false;
@@ -498,7 +454,8 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     /// <summary>공격 회복 후 클립이 Idle 복귀까지 완료했으면 납도 상태를 확정한다. 그 외에는 타수와 기존 납도 대기로 표현 이벤트를 발행한다.</summary>
     private void BeginWaiting()
     {
-        if (_onlyFirstAttack || _weaponVisual != null && _weaponVisual.HasFinishedAttackAtIdle)
+        if (_weaponVisual != null && _weaponVisual.HasFinishedAttackAtIdle
+            && _comboExpiresAt <= _clock && !_queuedAttack)
         {
             bool queuedOpeningAttack = _queuedOpeningAttack;
             ResetChain();
@@ -665,10 +622,9 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
                     if (!_chainTransition)
                     {
                         if (e.Outcome == PlayerAttackOutcome.None || _strike >= MAX_COMBO_STRIKES || _counterAttack) _queuedAttack = false;
-                        _comboExpiresAt = !_onlyFirstAttack && !(_weaponVisual != null && _weaponVisual.HasFinishedAttackAtIdle)
-                            && _strike < MAX_COMBO_STRIKES && !_counterAttack && e.Outcome != PlayerAttackOutcome.None
+                        _comboExpiresAt = _strike < MAX_COMBO_STRIKES && !_counterAttack && e.Outcome != PlayerAttackOutcome.None
                             ? _clock + _comboResetDelay : 0f;
-                        _sheatheAfterRecovery = !_onlyFirstAttack && _strike == MAX_COMBO_STRIKES && !_counterAttack;
+                        _sheatheAfterRecovery = _strike == MAX_COMBO_STRIKES && !_counterAttack;
                         _waitAfterRecovery = true;
                     }
                 }

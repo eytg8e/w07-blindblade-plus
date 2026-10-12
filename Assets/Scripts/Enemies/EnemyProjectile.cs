@@ -15,6 +15,7 @@ public class EnemyProjectile : MonoBehaviour
     private Vector3 _direction;
     private float _elapsedTime;
     private bool _isFlying;
+    private bool _reflected;
 
     [Header("공격 판정 기즈모")]
     [SerializeField] private bool _showAttackGizmos = true;
@@ -100,6 +101,7 @@ public class EnemyProjectile : MonoBehaviour
     public virtual void Initialize(DamageContext damage, Vector3 direction, Transform target = null)
     {
         _damage = damage;
+        _reflected = false;
         _target = target;
         _direction = direction.normalized;
         _elapsedTime = 0f;
@@ -114,31 +116,58 @@ public class EnemyProjectile : MonoBehaviour
     }
 
     /// <summary>
-    /// collider가 자신·공격자·다른 적 또는 지정 대상 밖의 피해 수신자인지 검사한다.
-    /// 제외 대상이면 false를 반환하며 지정 대상과 벽의 충돌은 허용한다.
+    /// collider가 자신·공격자 또는 지정 대상 밖의 피해 수신자인지 검사한다.
+    /// 원래 투사체는 다른 적을 제외하고 반사된 투사체는 적과 벽 충돌을 허용한다.
     /// </summary>
     protected virtual bool CanHit(Collider collider)
     {
         return !collider.transform.IsChildOf(transform) &&
             (_damage.Instigator == null || !collider.transform.IsChildOf(_damage.Instigator.transform)) &&
-            collider.GetComponentInParent<EnemyHealth>() == null &&
+            (_reflected || collider.GetComponentInParent<EnemyHealth>() == null) &&
             (_target == null || collider.GetComponentInParent<IDamageable>() == null || collider.transform.IsChildOf(_target));
     }
 
     /// <summary>
     /// collider의 피해 수신자에게 point와 저장한 피해 정보를 전달하고 충돌 이벤트를 발생시킨다.
-    /// 기본 구현은 최초 충돌에서 비행을 중지하고 투사체를 반환한다.
+    /// 정확한 패링이면 피해 없이 반사하고 그 외 최초 충돌에서는 비행을 중지하고 반환한다.
     /// </summary>
     protected virtual void ProcessHit(Collider collider, Vector3 point)
     {
-        _isFlying = false;
         DamageContext damage = new DamageContext(_damage.Amount, _damage.Instigator,
             point, _direction, _damage.PatternId);
         IDamageable receiver = collider.GetComponentInParent<IDamageable>();
-        receiver?.TakeDamage(damage);
+        bool parried = false;
+        bool defended = receiver is KatanaDamageReceiver katana
+            && katana.TryDefendProjectile(damage, out parried);
+        if (defended)
+        {
+            if (parried)
+            {
+                Reflect(((KatanaDamageReceiver)receiver).gameObject);
+                return;
+            }
+        }
+        else receiver?.TakeDamage(damage);
+        _isFlying = false;
         Hit?.Invoke(collider, damage);
         Impact?.Invoke(point);
         Release();
+    }
+
+    /// <summary>
+    /// defender를 새 공격자로 지정하고 원래 피해량으로 투사체를 반대 방향에 반사한다.
+    /// 적 충돌을 허용하고 지정 대상 제한과 수명을 초기화하며 비행을 유지한다.
+    /// </summary>
+    private void Reflect(GameObject defender)
+    {
+        _direction = -_direction;
+        _damage = new DamageContext(_damage.Amount, defender, transform.position,
+            _direction, "ReflectedProjectile");
+        _target = null;
+        _reflected = true;
+        _elapsedTime = 0f;
+        transform.rotation = Quaternion.LookRotation(_direction);
+        _isFlying = true;
     }
 
     /// <summary>

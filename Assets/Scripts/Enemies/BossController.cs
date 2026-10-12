@@ -30,7 +30,7 @@ public sealed class BossController : MonoBehaviour
     private BossState _state;
     private bool _started;
     [SerializeField, Min(0f), Tooltip("피격 후 다음 패턴으로 넘어가기 전 회복 시간(초)")]
-    private float _hitRecoveryDuration = 0.5f;
+    private float _hitRecoveryDuration = 0.25f;
     private BossState _resumeState;
     [Header("패턴 사이 대기")]
     [SerializeField, Min(0f), Tooltip("패턴 사이 최소 대기 시간(초)")]
@@ -65,6 +65,8 @@ public sealed class BossController : MonoBehaviour
     [SerializeField, Min(0.05f)] private float _chargeDuration = 1f;
     [SerializeField, Min(0f)] private float _chargeDamage = 15f;
     [SerializeField, Min(0.1f)] private float _chargeHitRadius = 0.65f;
+    [SerializeField, Min(0f)] private float _chargePushDistance = 3f;
+    [SerializeField, Min(0.01f)] private float _chargePushDuration = 0.16f;
     [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
     private readonly RaycastHit[] _obstacleHits = new RaycastHit[16];
     private readonly Collider[] _chargeContacts = new Collider[16];
@@ -76,7 +78,12 @@ public sealed class BossController : MonoBehaviour
     [SerializeField, Min(0.1f), Tooltip("패턴 위치로 이동하는 속도(미터/초)")]
     private float _repositionSpeed = 25f;
     private bool _repositionReached;
+
     public bool IsRepositioning { get; private set; }
+
+    [Header("무적 중 공격 쳐내기")]
+    [SerializeField, Min(0f)] private float _deflectPushDistance = 3f; // 뒤로 밀리는 거리 
+    [SerializeField, Min(0.01f)] private float _deflectPushDuration = 0.16f;
 
     [Header("연속 돌진")]
     [SerializeField, Min(1f)] private float _teleportRadius = 6f;
@@ -148,16 +155,25 @@ public sealed class BossController : MonoBehaviour
         }
         _sensor.SetTarget(_player.transform);
         _health.Damaged += HandleBossDamaged;
+        _health.DamageBlocked += HandleBossDamageBlocked;
         _health.Died += HandleBossDied;
         _playerHealth.DamageReceived += HandlePlayerDamaged;
         _combat.DefenseSucceeded += HandleDefense;
         _routine = StartCoroutine(RunBattle());
     }
 
-    /// <summary>생존 중 단일 행동 흐름을 유지하고 전투 종료 시 코루틴 참조를 정리한다.</summary>
-    private IEnumerator RunBattle(BossState startingState = BossState.Roaming)
+    /// <summary>
+    /// startingState부터 단일 행동 흐름을 실행하고 전투 종료 시 코루틴 참조를 정리한다.
+    /// resumeAfterHit이면 무적을 해제하고 첫 배회·패턴 대기·돌진 재배치를 생략해 공격을 재개한다.
+    /// </summary>
+    private IEnumerator RunBattle(BossState startingState = BossState.Roaming, bool resumeAfterHit = false)
     {
         yield return null;
+        if (resumeAfterHit)
+        {
+            RestoreAfterDisappearance();
+            if (startingState == BossState.Roaming) startingState = BossState.Ranged;
+        }
         while (_health.IsAlive && _playerHealth.IsAlive)
         {
             if (startingState == BossState.Roaming)
@@ -167,15 +183,25 @@ public sealed class BossController : MonoBehaviour
             }
             if (startingState == BossState.Roaming || startingState == BossState.Ranged)
             {
-                yield return WaitForPattern(BossState.Ranged);
+                if (!resumeAfterHit) yield return WaitForPattern(BossState.Ranged);
+                resumeAfterHit = false;
                 yield return Ranged();
             }
-            yield return WaitForPattern(BossState.Charging);
-            if (TryTeleportAround(out Vector3 position))
+            if (resumeAfterHit)
             {
                 ChangeState(BossState.Charging);
-                yield return MoveQuickly(position);
-                if (_repositionReached) yield return Charge();
+                yield return Charge();
+                resumeAfterHit = false;
+            }
+            else
+            {
+                yield return WaitForPattern(BossState.Charging);
+                if (TryTeleportAround(out Vector3 position))
+                {
+                    ChangeState(BossState.Charging);
+                    yield return MoveQuickly(position);
+                    if (_repositionReached) yield return Charge();
+                }
             }
             startingState = BossState.Roaming;
         }
@@ -246,7 +272,6 @@ public sealed class BossController : MonoBehaviour
         transform.rotation = Quaternion.LookRotation(direction);
         float remaining = _chargeDistance;
         float until = Time.time + _chargeDuration;
-        bool hitPlayer = false;
         while (Time.time < until && remaining > 0.01f)
         {
             Vector3 previous = transform.position;
@@ -263,25 +288,51 @@ public sealed class BossController : MonoBehaviour
             Vector3 destination = previous + direction * distance;
             if (_agent.Raycast(destination, out NavMeshHit boundary))
                 destination = Vector3.MoveTowards(boundary.position, previous, 0.05f);
+            float travelDistance = Mathf.Max(0f, Vector3.Dot(destination - previous, direction));
+            if (TryGetChargePlayerContact(direction, travelDistance, out float contactDistance, out Vector3 point))
+            {
+                _agent.Move(direction * Mathf.Max(0f, contactDistance - 0.05f));
+                _motor.Stop();
+                _playerHealth.TakeDamage(new DamageContext(_chargeDamage, gameObject, point, direction, "BossCharge"));
+                if (_playerHealth.IsAlive)
+                    _playerMotor.ApplyCombatPush(direction, _chargePushDistance, _chargePushDuration);
+                yield break;
+            }
             _agent.Move(destination - previous);
             remaining -= Vector3.Distance(previous, transform.position);
-            if (!hitPlayer)
-            {
-                count = Physics.OverlapCapsuleNonAlloc(center, transform.position + Vector3.up,
-                    _chargeHitRadius, _chargeContacts, ~0, QueryTriggerInteraction.Ignore);
-                for (int i = 0; i < count; i++)
-                {
-                    if (!_chargeContacts[i].transform.IsChildOf(_player.transform)) continue;
-                    hitPlayer = true;
-                    _playerHealth.TakeDamage(new DamageContext(_chargeDamage, gameObject,
-                        _chargeContacts[i].ClosestPoint(center), direction, "BossCharge"));
-                    break;
-                }
-            }
             if (distance < 0.01f || (transform.position - previous).sqrMagnitude < 0.000001f) break;
             yield return null;
         }
         _motor.Stop();
+    }
+
+    /// <summary>
+    /// direction과 distance 구간의 보스 캡슐로 플레이어와 겹치기 전 접촉을 검사한다.
+    /// 현재 겹침 또는 가장 가까운 이동 접촉의 거리와 위치를 출력하고 발견 여부를 반환한다.
+    /// </summary>
+    private bool TryGetChargePlayerContact(Vector3 direction, float distance, out float contactDistance, out Vector3 point)
+    {
+        float radius = Mathf.Max(_agent.radius, _chargeHitRadius);
+        Vector3 bottom = transform.position + Vector3.up * radius;
+        Vector3 top = transform.position + Vector3.up * Mathf.Max(radius, _agent.height - radius);
+        contactDistance = float.PositiveInfinity;
+        point = transform.position;
+        int count = Physics.OverlapCapsuleNonAlloc(bottom, top, radius, _chargeContacts, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            if (!_chargeContacts[i].transform.IsChildOf(_player.transform)) continue;
+            contactDistance = 0f;
+            point = _chargeContacts[i].ClosestPoint(bottom);
+            return true;
+        }
+        foreach (RaycastHit hit in Physics.CapsuleCastAll(bottom, top, radius, direction,
+            distance, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (!hit.transform.IsChildOf(_player.transform) || hit.distance >= contactDistance) continue;
+            contactDistance = hit.distance;
+            point = hit.point;
+        }
+        return !float.IsPositiveInfinity(contactDistance);
     }
 
     /// <summary>desired 주변의 같은 에이전트 유형·영역에 속한 지면을 찾아 position으로 반환한다.</summary>
@@ -476,18 +527,44 @@ public sealed class BossController : MonoBehaviour
         _routine = StartCoroutine(RecoverFromHit());
     }
 
-    /// <summary>피격 후 빠르게 재배치하고 회복 시간이 지나면 예약된 다음 패턴부터 재개한다.</summary>
+    /// <summary>
+    /// context가 플레이어의 무적 중 타격이면 검을 쳐내고 플레이어를 밀어낸다.
+    /// 현재 재배치를 중단하고 즉시 무적을 해제한 뒤 예약된 다음 패턴을 준비한다.
+    /// </summary>
+    private void HandleBossDamageBlocked(DamageContext context)
+    {
+        if (_routine == null || context.Instigator != _player.gameObject) return;
+        StopCoroutine(_routine);
+        _routine = null;
+        _motor.Stop();
+        IsRepositioning = false;
+        RestoreAfterDisappearance();
+        Vector3 direction = -_playerMotor.ViewForward;
+        _playerMotor.ApplyCombatPush(direction, _deflectPushDistance, _deflectPushDuration);
+        KatanaWeaponVisual weapon = _player.GetComponent<KatanaWeaponVisual>();
+        if (weapon != null) weapon.PlayAttackDeflection();
+        Game.Instance.EffectManager.Play(EffectId.ParryClash, context.Point, Quaternion.LookRotation(direction));
+        Managers.Sound.Play(SoundId.ParryClash, context.Point, 1f, gameObject);
+        _routine = StartCoroutine(RunBattle(_resumeState));
+    }
+
+    /// <summary>
+    /// 실제 피격 후 빈 공간과 NavMesh 경로가 확인된 랜덤 위치로 순간이동한다.
+    /// 기존 후보 반경과 회복 시간을 사용하며 이동 성공을 알리고 예약된 다음 패턴을 재개한다.
+    /// </summary>
     private IEnumerator RecoverFromHit()
     {
-        if (TryTeleportAround(out Vector3 position)) yield return MoveQuickly(position);
+        if (TryTeleportAround(out Vector3 position) && _agent.Warp(position))
+            Teleported?.Invoke();
         yield return new WaitForSeconds(_hitRecoveryDuration);
-        if (_health.IsAlive && _playerHealth.IsAlive) yield return RunBattle(_resumeState);
+        if (_health.IsAlive && _playerHealth.IsAlive) yield return RunBattle(_resumeState, true);
         _routine = null;
     }
 
     /// <summary>패턴 대기 종료 또는 전투 중단 시 피격 후 무적을 해제한다. 위치와 외형은 유지한다.</summary>
     private void RestoreAfterDisappearance()
     {
+
         _health.SetInvulnerable(false);
     }
 
@@ -538,6 +615,7 @@ public sealed class BossController : MonoBehaviour
         if (_melee != null) _melee.CancelAttack();
         _motor.Stop();
         _health.Damaged -= HandleBossDamaged;
+        _health.DamageBlocked -= HandleBossDamageBlocked;
         _health.Died -= HandleBossDied;
         if (_playerHealth != null) _playerHealth.DamageReceived -= HandlePlayerDamaged;
         if (_combat != null) _combat.DefenseSucceeded -= HandleDefense;

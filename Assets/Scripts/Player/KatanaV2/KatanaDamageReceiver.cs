@@ -36,6 +36,23 @@ public sealed class KatanaDamageReceiver : PlayerHealth
         base.TakeDamage(context);
     }
 
+    /// <summary>
+    /// context의 투사체 진입 방향으로 전방 가드·패링을 검사하고 방어 성공 여부를 반환한다.
+    /// parried에 정확한 패링 여부를 출력하며 기존 방어 효과와 반격 기회를 적용한다.
+    /// </summary>
+    public bool TryDefendProjectile(DamageContext context, out bool parried)
+    {
+        parried = false;
+        if (!isActiveAndEnabled) return false;
+        Vector3 incoming = Vector3.ProjectOnPlane(-context.Direction, Vector3.up);
+        bool eligible = incoming.sqrMagnitude > 0.0001f
+            && Vector3.Angle(_motor.ViewForward, incoming) <= _frontArc * 0.5f;
+        bool perfect = _combat.IsParryWindowOpen;
+        if (!_combat.TryDefendIncoming(context, eligible)) return false;
+        parried = perfect;
+        return true;
+    }
+
     /// <summary>context의 공격자가 실행 중인 유일한 패턴이 근접 공격이고 전방 각도 안에 있는지 반환한다.</summary>
     private bool IsFrontMelee(DamageContext context)
     {
