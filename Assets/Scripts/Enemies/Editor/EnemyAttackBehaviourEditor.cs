@@ -16,6 +16,11 @@ public sealed class EnemyAttackBehaviourEditor : Editor
     {
         var root = new VisualElement();
         InspectorElement.FillDefaultInspector(root, serializedObject, this);
+        foreach (PropertyField field in root.Query<PropertyField>().ToList())
+        {
+            if (field.bindingPath == "_minimumHeartbeatTelegraph") field.label = "최소 준비 시간 (초)";
+            else if (field.bindingPath == "_maximumHeartbeatTelegraph") field.label = "최대 준비 시간 (초)";
+        }
         var interval = new Label { name = "expectedAttackInterval" };
         var rhythm = new Label { name = "heartbeatTiming" };
         var chosen = new Label { name = "chosenTelegraphDuration" };
@@ -44,6 +49,6 @@ public sealed class EnemyAttackBehaviourEditor : Editor
         float duration = attack.Context.TelegraphDuration;
         chosen.text = duration > 0f
             ? $"최근 선택 전조: {duration:F2}초" + (attack.UsesHeartbeatTelegraph ? $" / 박동 간격: {duration * 0.5f:F2}초" : "")
-            : "최근 선택 전조: 공격 시작 후 표시";
+            : (attack.Context.Pattern != null ? "최근 공격: 추격 도착 즉시 공격 (박동 생략)" : "최근 선택 전조: 공격 시작 후 표시");
     }
 }

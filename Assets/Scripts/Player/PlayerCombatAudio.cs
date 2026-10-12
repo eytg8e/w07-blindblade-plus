@@ -186,10 +186,19 @@ public sealed class PlayerCombatAudio : MonoBehaviour
 
     /// <summary>
     /// result의 방어 종류와 접촉 위치로 가드 또는 패링 설정을 재생한다.
-    /// 각 상황의 중앙 음원·음량·pitch를 사용하며 피해와 반격 기회는 변경하지 않는다.
+    /// 정확한 패링이면 생존한 공격자 위치에 고통 음성도 재생하며 피해와 반격 기회는 변경하지 않는다.
     /// </summary>
     private void HandleDefense(KatanaDefenseResult result)
     {
+        if (result.IsParry && result.Incoming.Instigator != null)
+        {
+            EnemyHealth enemy = result.Incoming.Instigator.GetComponentInParent<EnemyHealth>();
+            if (enemy != null && enemy.IsAlive)
+            {
+                Managers.Sound.StopFor(enemy.gameObject, SoundId.EnemyGetParryed, forceStop: true);
+                Managers.Sound.PlayAttached(SoundId.EnemyGetParryed, enemy.gameObject);
+            }
+        }
         if (QueueCue(result.IsParry ? CombatSoundCue.Parry : CombatSoundCue.Guard, result.Point, false)) return;
         Managers.Sound.Play(result.IsParry ? SoundId.ParryClash : _hitSound, result.Point, _volume, gameObject);
     }

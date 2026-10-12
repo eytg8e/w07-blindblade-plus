@@ -258,6 +258,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _patterns:
   - {fileID: 8097694393400035710}
+  _meleeOnly: 0
 --- !u!114 &9203231712060768136
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -297,6 +298,12 @@ MonoBehaviour:
   _recoveryDuration: 1
   _cooldown: 4
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
+  _telegraphVolume: 1
+  _actionVolume: 1
   _chargeSpeed: 12
   _pulseDuration: 0.16
   _beatPause: 0.38
@@ -338,6 +345,10 @@ MonoBehaviour:
   _dieOnAnyHit: 0
   _hitCollider: {fileID: 7002509349255642647}
   _cancelAttackOnHit: 0
+  _hitRecovery: 0.16
+  _hitInterruptCooldown: 0.45
+  _hitPushDistance: 0.12
+  _hitPushDuration: 0.12
 --- !u!114 &7429742852752373956
 MonoBehaviour:
   m_ObjectHideFlags: 0

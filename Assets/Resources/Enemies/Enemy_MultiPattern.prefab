@@ -325,6 +325,10 @@ MonoBehaviour:
   _recoveryDuration: 0.55
   _cooldown: 0.4
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
   _telegraphVolume: 0.85
   _actionVolume: 1
   _attackRange: 2
@@ -384,6 +388,10 @@ MonoBehaviour:
   _recoveryDuration: 0.75
   _cooldown: 2.5
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
   _telegraphVolume: 1
   _actionVolume: 1
   _attackRange: 8
@@ -411,6 +419,10 @@ MonoBehaviour:
   _recoveryDuration: 0.75
   _cooldown: 5
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
   _telegraphVolume: 1
   _actionVolume: 1
   _attackRange: 10
@@ -555,6 +567,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _damageSound: 4
   _volume: 0.8
+  _pitch: 1
 --- !u!1 &8140427288079008813
 GameObject:
   m_ObjectHideFlags: 0

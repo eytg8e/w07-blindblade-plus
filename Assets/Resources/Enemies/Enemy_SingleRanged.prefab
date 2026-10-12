@@ -263,6 +263,12 @@ MonoBehaviour:
   _recoveryDuration: 0.75
   _cooldown: 2.5
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
+  _telegraphVolume: 1
+  _actionVolume: 1
   _attackRange: 8
   _damage: 10
   _useBuiltInProjectile: 1
@@ -283,6 +289,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _patterns:
   - {fileID: 3714832997971215518}
+  _meleeOnly: 0
 --- !u!114 &1925365551691218873
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -334,6 +341,10 @@ MonoBehaviour:
   _dieOnAnyHit: 0
   _hitCollider: {fileID: 3463872705100445242}
   _cancelAttackOnHit: 0
+  _hitRecovery: 0.16
+  _hitInterruptCooldown: 0.45
+  _hitPushDistance: 0.12
+  _hitPushDuration: 0.12
 --- !u!1 &7100173192179143851
 GameObject:
   m_ObjectHideFlags: 0

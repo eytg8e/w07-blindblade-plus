@@ -243,6 +243,10 @@ MonoBehaviour:
   _recoveryDuration: 0.1
   _cooldown: 0.02
   _cancelWhenHidden: 0
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
   _telegraphVolume: 1
   _actionVolume: 1
   _attackRange: 2.3
@@ -279,24 +283,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _melee: {fileID: 4283722663164136279}
+  _hitRecoveryDuration: 0.25
   _patternWaitMin: 1
   _patternWaitMax: 2
-  _projectilePrefab: {fileID: 2285517556864344112, guid: 6c377b39585c5364eb80b5f8c8fcde63, type: 3}
-  _rangedDamage: 15
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
   _roamDuration: 7
   _roamRadius: 7
   _roamDestinationInterval: 2.5
   _roamSpeed: 2
+  _projectilePrefab: {fileID: 2285517556864344112, guid: 6c377b39585c5364eb80b5f8c8fcde63, type: 3}
+  _rangedDamage: 15
+  _rangedPreparation: 0.8
+  _rangedShots: 3
+  _rangedInterval: 0.8
   _chargePreparation: 0.9
   _chargeSpeed: 14
   _chargeDistance: 12
   _chargeDuration: 1
   _chargeDamage: 25
   _chargeHitRadius: 0.65
+  _chargePushDistance: 3
+  _chargePushDuration: 0.16
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 4294967291
+  _repositionSpeed: 25
+  _deflectPushDistance: 3
+  _deflectPushDuration: 0.16
+  _hitDeflectDuration: 2
   _teleportRadius: 6
+  _teleportArc: 180
   _chargeInterval: 0.7
   _duelDistance: 1.6
   _duelPreparation: 0.6
@@ -316,19 +334,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _bodyRenderers:
   - {fileID: 1415526665678134583}
+  _soundRevealRadius: 2
   _stepDistance: 0.8
   _groundMask:
     serializedVersion: 2
     m_Bits: 1
   _footstepSound: 7
+  _minimumStepSoundInterval: 0.18
   _chargeCry: 18
   _chargeCryPitch: 0.85
   _melee: {fileID: 4283722663164136279}
-  _duelCry: 19
-  _duelCryPitch: 1.25
   _strikeCue: 9
-  _stunCry: 20
-  _stunCryPitch: 0.55
+--- !u!114 &900100100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1251805882621175175}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bf433078aee4c0780b6c08863813ba4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _size: {x: 420, y: 16}
+  _topOffset: 36
 --- !u!1 &3117573445288783337
 GameObject:
   m_ObjectHideFlags: 0
@@ -429,17 +459,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _ignorePerception: 0
---- !u!114 &900100100
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1251805882621175175}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6bf433078aee4c0780b6c08863813ba4, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  _size: {x: 420, y: 16}
-  _topOffset: 36

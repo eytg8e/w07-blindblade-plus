@@ -33,6 +33,8 @@ public class EnemyController : MonoBehaviour
     private float _nextRepathTime;
     private Vector3 _heardPosition;
     private float _noiseAlertUntil = float.NegativeInfinity;
+    private bool _openingAttackPending;
+    private bool _openingAttackPerformed;
 
     public EnemyState State => _state;
     private bool AllowsWalkingChase => _allowWalkingChase || _attackSelector.MeleeOnly;
@@ -59,6 +61,8 @@ public class EnemyController : MonoBehaviour
         _lastKnownPosition = transform.position;
         _hasVisibleTarget = false;
         _noiseAlertUntil = float.NegativeInfinity;
+        _openingAttackPending = false;
+        _openingAttackPerformed = false;
     }
 
     protected virtual void Update()
@@ -107,7 +111,12 @@ public class EnemyController : MonoBehaviour
         if (_state == EnemyState.Attacking)
         {
             _motor.Stop();
-            _attackSelector.TryAttack(_sensor.Target);
+            if (_attackSelector.TryAttack(_sensor.Target, _openingAttackPending)
+                && _openingAttackPending && _attackSelector.CurrentAttack is EnemyMeleeAttack)
+            {
+                _openingAttackPending = false;
+                _openingAttackPerformed = true;
+            }
             return;
         }
 
@@ -149,6 +158,8 @@ public class EnemyController : MonoBehaviour
         _lastSeenTime = float.NegativeInfinity;
         _nextPerceptionTime = 0f;
         _hasVisibleTarget = false;
+        _openingAttackPending = false;
+        _openingAttackPerformed = false;
         _motor.Stop();
         ChangeState(EnemyState.Idle);
     }
@@ -207,12 +218,20 @@ public class EnemyController : MonoBehaviour
     /// <summary>
     /// nextState가 현재 상태와 다르면 상태를 변경하고 C# 이벤트와 파생 클래스의 상태 반응을 호출한다.
     /// Idle에서는 이동을 중지하고 Searching에서는 이전 경로의 도착 상태를 초기화한다.
-    /// 다른 상태에서는 다음 경로 갱신을 즉시 허용한다.
+    /// 새 추격의 첫 근접 공격을 예약하고 수색·대기·순찰에서는 해당 추격의 공격 기록을 초기화한다.
     /// </summary>
     protected void ChangeState(EnemyState nextState)
     {
         if (_state == nextState)
             return;
+
+        if (nextState == EnemyState.Idle || nextState == EnemyState.Searching || nextState == EnemyState.Patrolling)
+        {
+            _openingAttackPending = false;
+            _openingAttackPerformed = false;
+        }
+        else if (nextState == EnemyState.Chasing && !_openingAttackPerformed)
+            _openingAttackPending = true;
 
         if (_state == EnemyState.Patrolling && _patrol != null)
             _patrol.Pause();

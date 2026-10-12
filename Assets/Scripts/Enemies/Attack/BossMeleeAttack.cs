@@ -1,5 +1,5 @@
-/// <summary>보스의 칼날 판정은 기존 근접 공격을 사용하고 전조 소리는 보스 표현 담당자에게 맡긴다.</summary>
+/// <summary>보스의 칼날 판정과 두 박동·기합·실행음을 공통 근접 공격 흐름으로 처리한다.</summary>
 public sealed class BossMeleeAttack : EnemyMeleeAttack
 {
-    protected override EnemySoundAction SoundAction => EnemySoundAction.None;
+    protected override EnemySoundAction SoundAction => EnemySoundAction.Melee;
 }

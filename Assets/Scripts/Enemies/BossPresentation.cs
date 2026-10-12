@@ -24,6 +24,7 @@ public sealed class BossPresentation : MonoBehaviour
     private float _soundRevealRadius = 2f;
     private SensoryPerceptionMask _perceptionMask;
     private float _previousSoundRadius;
+    private SoundId _playingHeartbeat;
 
     [Header("보행")]
     [SerializeField, Min(0.1f), Tooltip("걸음 사이 이동 거리(미터)")]
@@ -37,15 +38,9 @@ public sealed class BossPresentation : MonoBehaviour
     [SerializeField] private SoundId _chargeCry = SoundId.BossChargeCry;
     [SerializeField, Range(0.1f, 3f)] private float _chargeCryPitch = 0.85f;
 
-    [Header("정면승부 기합2와 공격 직전음")]
+    [Header("근접 공격 신호")]
     [SerializeField] private BossMeleeAttack _melee;
-    [SerializeField] private SoundId _duelCry = SoundId.BossDuelCry;
-    [SerializeField, Range(0.1f, 3f)] private float _duelCryPitch = 1.25f;
     [SerializeField] private SoundId _strikeCue = SoundId.EnemySwordSwing;
-
-    [Header("스턴 비명1")]
-    [SerializeField] private SoundId _stunCry = SoundId.BossStunCry;
-    [SerializeField, Range(0.1f, 3f)] private float _stunCryPitch = 0.55f;
 
     void Awake()
     {
@@ -69,7 +64,11 @@ public sealed class BossPresentation : MonoBehaviour
     {
         _boss.StateChanged += HandleState;
         _boss.ChargePreparing += HandleChargePreparing;
+        _boss.ChargeStarted += HandleChargeStarted;
         _boss.RangedPreparing += HandleRangedPreparing;
+        _boss.RangedFiring += HandleRangedFiring;
+        _boss.Heartbeat += HandleHeartbeat;
+        _boss.PreparationCancelled += StopPreparationSounds;
         _boss.Teleported += ResetSteps;
         _melee.TelegraphStarted += HandleStrikePreparing;
         ResetSteps();
@@ -85,16 +84,21 @@ public sealed class BossPresentation : MonoBehaviour
         _overlayRoutine = null;
         _boss.StateChanged -= HandleState;
         _boss.ChargePreparing -= HandleChargePreparing;
+        _boss.ChargeStarted -= HandleChargeStarted;
         _boss.RangedPreparing -= HandleRangedPreparing;
+        _boss.RangedFiring -= HandleRangedFiring;
+        _boss.Heartbeat -= HandleHeartbeat;
+        _boss.PreparationCancelled -= StopPreparationSounds;
         _boss.Teleported -= ResetSteps;
         _melee.TelegraphStarted -= HandleStrikePreparing;
         if (Managers.IsInitialized)
         {
+            StopHeartbeat();
             Managers.Sound.StopFor(gameObject, SoundId.EnemyDetected);
             Managers.Sound.StopFor(gameObject, _footstepSound);
-            Managers.Sound.StopFor(gameObject, _chargeCry);
-            Managers.Sound.StopFor(gameObject, _duelCry);
-            Managers.Sound.StopFor(gameObject, _stunCry);
+            Managers.Sound.StopFor(gameObject, _chargeCry, forceStop: true);
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyRangedAttackVoice, forceStop: true);
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyAttackVoice, forceStop: true);
             Managers.Sound.StopFor(gameObject, _strikeCue);
         }
     }
@@ -143,39 +147,45 @@ public sealed class BossPresentation : MonoBehaviour
         ResetSteps();
         if (Managers.IsInitialized)
         {
+            StopHeartbeat();
             Managers.Sound.StopFor(gameObject, SoundId.EnemyDetected);
             Managers.Sound.StopFor(gameObject, _footstepSound);
-            Managers.Sound.StopFor(gameObject, _chargeCry);
-            Managers.Sound.StopFor(gameObject, _duelCry);
-            Managers.Sound.StopFor(gameObject, _stunCry);
+            Managers.Sound.StopFor(gameObject, _chargeCry, forceStop: true);
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyRangedAttackVoice, forceStop: true);
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyAttackVoice, forceStop: true);
             Managers.Sound.StopFor(gameObject, _strikeCue);
         }
-        if (state == BossState.Duel)
-            Managers.Sound.Play(_duelCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _duelCryPitch);
-        else if (state == BossState.Stunned)
-            Managers.Sound.Play(_stunCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _stunCryPitch);
     }
 
-    /// <summary>원거리 발사 준비마다 기존 공격 전조음을 보스 위치에서 재생한다.</summary>
+    /// <summary>원거리 발사 준비마다 이전 신호를 정리하고 위치 인지를 갱신한다. 준비 단계에서는 음성을 재생하지 않는다.</summary>
     private void HandleRangedPreparing()
     {
         StopPreparationSounds();
-        Managers.Sound.Play(SoundId.EnemyDetected, transform.position, owner: gameObject, playDuringMovement: true);
         if (_perceptionMask != null) _perceptionMask.RevealFootstep(transform.position);
     }
 
-    /// <summary>돌진 준비 시 현재 보스 위치에서 기합1을 재생한다.</summary>
+    /// <summary>원거리 투사체 발사 직전 사건에서 Throw2가 연결된 기존 원거리 이벤트를 보스 위치에 한 번 재생한다.</summary>
+    private void HandleRangedFiring()
+    {
+        Managers.Sound.PlayAttached(SoundId.EnemyRangedAttackVoice, gameObject);
+    }
+
+    /// <summary>돌진 준비 시 이전 전조·발소리를 정리한다. 실제 돌진 기합은 이동 시작 사건에서 재생한다.</summary>
     private void HandleChargePreparing()
     {
         StopPreparationSounds();
+    }
+
+    /// <summary>실제 돌진 이동 시작 사건에서 현재 보스 위치에 돌진 기합을 한 번 재생한다.</summary>
+    private void HandleChargeStarted()
+    {
         Managers.Sound.Play(_chargeCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _chargeCryPitch);
     }
 
-    /// <summary>context의 타격 전조가 시작되면 실제 칼날 판정 전에 공격 직전음을 재생한다.</summary>
+    /// <summary>context의 근접 전조 시작에 이전 준비 신호를 정리한다. 기합과 공격음은 실제 공격 코드에서 재생한다.</summary>
     private void HandleStrikePreparing(EnemyAttackContext context)
     {
         StopPreparationSounds();
-        Managers.Sound.Play(_strikeCue, transform.position, owner: gameObject, playDuringMovement: true);
     }
 
     /// <summary>
@@ -184,13 +194,29 @@ public sealed class BossPresentation : MonoBehaviour
     /// </summary>
     private void StopPreparationSounds()
     {
+        StopHeartbeat();
         Managers.Sound.StopFor(gameObject, SoundId.EnemyDetected);
-        Managers.Sound.StopFor(gameObject, _chargeCry);
-        Managers.Sound.StopFor(gameObject, _duelCry);
-        Managers.Sound.StopFor(gameObject, _stunCry);
+        Managers.Sound.StopFor(gameObject, _chargeCry, forceStop: true);
+        Managers.Sound.StopFor(gameObject, SoundId.EnemyRangedAttackVoice, forceStop: true);
+        Managers.Sound.StopFor(gameObject, SoundId.EnemyAttackVoice, forceStop: true);
         Managers.Sound.StopFor(gameObject, _strikeCue);
         Managers.Sound.StopFor(gameObject, _footstepSound);
         _nextStepSoundTime = Time.time + _minimumStepSoundInterval;
+    }
+
+    /// <summary>보스 준비 박동 사건에서 중앙 설정의 심장박동을 보스 위치에 한 번 재생하고 ID를 보관한다.</summary>
+    private void HandleHeartbeat()
+    {
+        _playingHeartbeat = EnemySoundSettings.GetSound(EnemySoundAction.Ranged, EnemySoundStage.Heartbeat);
+        if (_playingHeartbeat != SoundId.None) Managers.Sound.PlayAttached(_playingHeartbeat, gameObject);
+    }
+
+    /// <summary>현재 보스가 재생한 박동 ID만 강제로 정지하고 보관 ID를 비운다. 피격·패링 및 다른 적 소리는 유지한다.</summary>
+    private void StopHeartbeat()
+    {
+        if (_playingHeartbeat != SoundId.None && Managers.IsInitialized)
+            Managers.Sound.StopFor(gameObject, _playingHeartbeat, forceStop: true);
+        _playingHeartbeat = SoundId.None;
     }
 
     /// <summary>현재 상태가 시각적 발자국을 남기는 돌진 패턴인지 반환한다.</summary>

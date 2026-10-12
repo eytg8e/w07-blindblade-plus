@@ -2946,6 +2946,10 @@ MonoBehaviour:
   _recoveryDuration: 0.15
   _cooldown: 1.5
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
   _telegraphVolume: 1
   _actionVolume: 1
   _attackRange: 6
@@ -2968,6 +2972,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _damageSound: 4
   _volume: 0.8
+  _pitch: 1
 --- !u!114 &2142987413
 MonoBehaviour:
   m_ObjectHideFlags: 0

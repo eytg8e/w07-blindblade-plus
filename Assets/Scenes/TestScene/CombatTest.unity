@@ -2950,6 +2950,10 @@ MonoBehaviour:
   _recoveryDuration: 0.15
   _cooldown: 1.5
   _cancelWhenHidden: 1
+  _useHeartbeatTelegraph: 1
+  _minimumHeartbeatTelegraph: 1.4
+  _maximumHeartbeatTelegraph: 2.2
+  _attackVoiceLeadTime: 0.05
   _telegraphVolume: 1
   _actionVolume: 1
   _attackRange: 6
