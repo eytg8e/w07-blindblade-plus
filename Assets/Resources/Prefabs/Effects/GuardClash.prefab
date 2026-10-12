@@ -19532,7 +19532,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db16b22a0bc65e848923ce4a72f46787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _ignorePerception: 1
+  _ignorePerception: 0
 --- !u!1 &9153779416844240288
 GameObject:
   m_ObjectHideFlags: 0

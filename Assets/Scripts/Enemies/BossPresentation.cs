@@ -30,6 +30,8 @@ public sealed class BossPresentation : MonoBehaviour
     private float _stepDistance = 0.8f;
     [SerializeField] private LayerMask _groundMask = 1;
     [SerializeField] private SoundId _footstepSound = SoundId.EnemyFootstep;
+    [SerializeField, Min(0.05f)] private float _minimumStepSoundInterval = 0.18f;
+    private float _nextStepSoundTime;
 
     [Header("돌진 기합1")]
     [SerializeField] private SoundId _chargeCry = SoundId.BossChargeCry;
@@ -88,6 +90,8 @@ public sealed class BossPresentation : MonoBehaviour
         _melee.TelegraphStarted -= HandleStrikePreparing;
         if (Managers.IsInitialized)
         {
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyDetected);
+            Managers.Sound.StopFor(gameObject, _footstepSound);
             Managers.Sound.StopFor(gameObject, _chargeCry);
             Managers.Sound.StopFor(gameObject, _duelCry);
             Managers.Sound.StopFor(gameObject, _stunCry);
@@ -110,7 +114,12 @@ public sealed class BossPresentation : MonoBehaviour
         _stepDistanceAccumulated += movement.magnitude;
         if (_stepDistanceAccumulated < _stepDistance) return;
         _stepDistanceAccumulated %= _stepDistance;
-        Managers.Sound.Play(_footstepSound, transform.position, owner: gameObject, playDuringMovement: true);
+        if (Time.time >= _nextStepSoundTime)
+        {
+            _nextStepSoundTime = Time.time + _minimumStepSoundInterval;
+            Managers.Sound.StopFor(gameObject, _footstepSound);
+            Managers.Sound.Play(_footstepSound, transform.position, owner: gameObject, playDuringMovement: true);
+        }
         if (!Game.IsInitialized) return;
         Vector3 direction = movement.normalized;
         EmitFootprint(direction);
@@ -134,6 +143,8 @@ public sealed class BossPresentation : MonoBehaviour
         ResetSteps();
         if (Managers.IsInitialized)
         {
+            Managers.Sound.StopFor(gameObject, SoundId.EnemyDetected);
+            Managers.Sound.StopFor(gameObject, _footstepSound);
             Managers.Sound.StopFor(gameObject, _chargeCry);
             Managers.Sound.StopFor(gameObject, _duelCry);
             Managers.Sound.StopFor(gameObject, _stunCry);
@@ -148,6 +159,7 @@ public sealed class BossPresentation : MonoBehaviour
     /// <summary>원거리 발사 준비마다 기존 공격 전조음을 보스 위치에서 재생한다.</summary>
     private void HandleRangedPreparing()
     {
+        StopPreparationSounds();
         Managers.Sound.Play(SoundId.EnemyDetected, transform.position, owner: gameObject, playDuringMovement: true);
         if (_perceptionMask != null) _perceptionMask.RevealFootstep(transform.position);
     }
@@ -155,15 +167,30 @@ public sealed class BossPresentation : MonoBehaviour
     /// <summary>돌진 준비 시 현재 보스 위치에서 기합1을 재생한다.</summary>
     private void HandleChargePreparing()
     {
-        Managers.Sound.StopFor(gameObject, _chargeCry);
+        StopPreparationSounds();
         Managers.Sound.Play(_chargeCry, transform.position, owner: gameObject, playDuringMovement: true, pitch: _chargeCryPitch);
     }
 
     /// <summary>context의 타격 전조가 시작되면 실제 칼날 판정 전에 공격 직전음을 재생한다.</summary>
     private void HandleStrikePreparing(EnemyAttackContext context)
     {
-        Managers.Sound.StopFor(gameObject, _duelCry);
+        StopPreparationSounds();
         Managers.Sound.Play(_strikeCue, transform.position, owner: gameObject, playDuringMovement: true);
+    }
+
+    /// <summary>
+    /// 보스 소유의 이전 전조·기합·발소리를 종료해 새 공격 신호의 중첩을 방지한다.
+    /// 입력 없이 보스 소리만 정리하고 짧은 발소리 간격을 적용한다.
+    /// </summary>
+    private void StopPreparationSounds()
+    {
+        Managers.Sound.StopFor(gameObject, SoundId.EnemyDetected);
+        Managers.Sound.StopFor(gameObject, _chargeCry);
+        Managers.Sound.StopFor(gameObject, _duelCry);
+        Managers.Sound.StopFor(gameObject, _stunCry);
+        Managers.Sound.StopFor(gameObject, _strikeCue);
+        Managers.Sound.StopFor(gameObject, _footstepSound);
+        _nextStepSoundTime = Time.time + _minimumStepSoundInterval;
     }
 
     /// <summary>현재 상태가 시각적 발자국을 남기는 돌진 패턴인지 반환한다.</summary>

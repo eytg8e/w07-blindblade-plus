@@ -198,9 +198,16 @@ public sealed class PlayerController : MonoBehaviour
     /// <summary>이동 입력을 저장하고 이동 장치에 전달합니다. 회복, 정지, 사망, 발도 동작 중에는 입력을 0으로 제한합니다.</summary>
     public void SetMovementInput(Vector2 value)
     {
+        if (_state == PlayerActionState.IaidoDash)
+        {
+            _requestedMoveInput = Vector2.ClampMagnitude(value, 1f);
+            _moveInput = Vector2.zero;
+            _motor.SetMoveInput(Vector2.zero);
+            return;
+        }
+
         if (_state == PlayerActionState.Paused
             || _state == PlayerActionState.Dead
-            || _state == PlayerActionState.IaidoDash
             || _state == PlayerActionState.IaidoSlash)
         {
             _requestedMoveInput = Vector2.zero;
@@ -221,11 +228,14 @@ public sealed class PlayerController : MonoBehaviour
         _motor?.SetMoveInput(_moveInput);
     }
 
-    /// <summary>자유·가드·일반 공격 중 현재 이동 입력으로 짧은 회피를 요청한다. 충전·회복·발도·사망·일시정지에서는 false를 반환한다.</summary>
+    /// <summary>
+    /// 현재 이동 입력으로 짧은 회피를 요청하고 수락 여부를 반환한다.
+    /// 공격 대시 중에는 좌우 회피 후 같은 공격을 이어가며 충전·회복·베기·사망·일시정지에서는 거부한다.
+    /// </summary>
     public bool RequestDodge()
     {
         if (Time.timeScale <= 0f || (_state != PlayerActionState.Free && _state != PlayerActionState.Guarding
-            && _state != PlayerActionState.NormalAttack)) return false;
+            && _state != PlayerActionState.NormalAttack && _state != PlayerActionState.IaidoDash)) return false;
         return _motor.TryBeginDodge(_requestedMoveInput);
     }
 
@@ -532,17 +542,31 @@ public sealed class PlayerController : MonoBehaviour
         return false;
     }
 
-    /// <summary>발도 베기의 적중 프레임에서 고정 대상 또는 전방 공격 판정을 적 시스템에 요청합니다. actionId가 다르면 무시합니다.</summary>
+    /// <summary>
+    /// actionId가 현재 발도 행동과 같으면 적 시스템에 한 번의 베기 판정을 요청한다.
+    /// 대상 지정 공격은 현재 대상 충돌체 중심 방향을 사용하며 판정 결과를 공격 상태에 저장한다.
+    /// </summary>
     public void NotifyIaidoSlashImpact(int actionId)
     {
         if (_state != PlayerActionState.IaidoSlash || actionId != _currentActionId || _attackImpactResolved)
             return;
 
+        Vector3 direction = _lockedAttackDirection;
+        if (_targetedDashAttack
+            && _combatService.TryGetTarget(_preferredTargetId, out PlayerCombatTarget target)
+            && target.IsAlive && target.HitCollider != null)
+        {
+            Vector3 origin = _viewCamera != null
+                ? _viewCamera.transform.position
+                : transform.position + Vector3.up * _attackOriginHeight;
+            direction = (target.HitCollider.bounds.center - origin).normalized;
+        }
+
         PlayerAttackResolution resolution = ResolveAttack(
             PlayerAttackKind.IaidoFinisher,
             _preferredTargetId,
             _iaidoAttackRange,
-            _lockedAttackDirection);
+            direction);
         ApplyAttackResolution(resolution);
     }
 
@@ -555,7 +579,7 @@ public sealed class PlayerController : MonoBehaviour
         if (!_attackImpactResolved)
             ApplyAttackResolution(new PlayerAttackResolution(_currentActionId, false, null, false));
 
-        if (_currentAttackOutcome != PlayerAttackOutcome.Hit || !_attackDeathConfirmed)
+        if (_currentAttackOutcome != PlayerAttackOutcome.Hit)
             _targetedComboStrike = 0;
         float recovery = _currentAttackOutcome == PlayerAttackOutcome.Hit ? _iaidoHitRecovery : _iaidoMissRecovery;
         FinishAttackAction(recovery, _currentAttackOutcome);
@@ -648,6 +672,8 @@ public sealed class PlayerController : MonoBehaviour
 
         if (resolution.HitConfirmed)
         {
+            _preferredTargetId = null;
+            _targetedDashAttack = false;
             Publish(PlayerActionStage.HitConfirmed, _currentAttackOutcome, resolution.HitTargetId);
             if (resolution.DeathConfirmed)
                 Publish(PlayerActionStage.DeathConfirmed, _currentAttackOutcome, resolution.HitTargetId);
@@ -720,6 +746,8 @@ public sealed class PlayerController : MonoBehaviour
         if (_state != PlayerActionState.IaidoDash)
             return;
 
+        _lockedAttackDirection = _motor.DashDirection;
+
         if (result.Reason == PlayerDashEndReason.WallBlocked)
         {
             if (_targetedDashAttack
@@ -750,7 +778,10 @@ public sealed class PlayerController : MonoBehaviour
             NotifyIaidoSlashImpact(_currentActionId);
     }
 
-    /// <summary>유효한 감지 대상 중 중앙 1/3, 전방, 최대 거리 조건과 안정적인 우선순위로 목표를 선택합니다. 선택 결과와 위치를 출력합니다.</summary>
+    /// <summary>
+    /// 유효한 감지 대상의 현재 위치로 전방·최대 거리·장애물 없는 경로를 검사한다.
+    /// 가까운 대상과 화면 중심 우선순위로 selected와 perceivedPosition을 출력하고 선택 여부를 반환한다.
+    /// </summary>
     private bool TrySelectIaidoTarget(out PlayerCombatTarget selected, out Vector3 perceivedPosition)
     {
         selected = default;
@@ -780,18 +811,21 @@ public sealed class PlayerController : MonoBehaviour
             if (string.IsNullOrEmpty(perceived.TargetId) || now > perceived.ValidUntil)
                 continue;
 
-            Vector3 screen = camera.WorldToViewportPoint(perceived.WorldPosition);
-            if (screen.z <= 0f)
+            if (!_combatService.TryGetTarget(perceived.TargetId, out PlayerCombatTarget combatTarget)
+                || !combatTarget.IsAlive || _motor == null || !_motor.CanDashToTarget(combatTarget))
                 continue;
 
-            Vector3 toTarget = perceived.WorldPosition - transform.position;
+            Vector3 targetPosition = combatTarget.HitCollider != null
+                ? combatTarget.HitCollider.bounds.center : combatTarget.WorldPosition;
+            Vector3 screen = camera.WorldToViewportPoint(targetPosition);
+            if (screen.z < camera.nearClipPlane || screen.z > camera.farClipPlane
+                || screen.x < 0f || screen.x > 1f || screen.y < 0f || screen.y > 1f)
+                continue;
+
+            Vector3 toTarget = combatTarget.WorldPosition - transform.position;
             toTarget.y = 0f;
             float distance = toTarget.magnitude;
             if (distance > maxDistance)
-                continue;
-
-            if (!_combatService.TryGetTarget(perceived.TargetId, out PlayerCombatTarget combatTarget)
-                || !combatTarget.IsAlive)
                 continue;
 
             float centerOffset = Mathf.Abs(screen.x - 0.5f);
@@ -810,7 +844,7 @@ public sealed class PlayerController : MonoBehaviour
             bestDistance = distance;
             bestId = perceived.TargetId;
             selected = combatTarget;
-            perceivedPosition = perceived.WorldPosition;
+            perceivedPosition = combatTarget.WorldPosition;
         }
 
         return found;
