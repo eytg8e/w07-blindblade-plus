@@ -51,7 +51,7 @@ Shader "BlindBlade/Dash Vignette"
                 float length = _StrokeLength * lerp(0.45, 1.15, variation);
                 float stroke = saturate((radius - start) / max(length, 0.01));
                 float taper = pow(saturate(sin(stroke * 3.14159265)), 0.7);
-                float width = lerp(0.012, 0.07, random) * taper;
+                float width = lerp(0.004, 0.02, random) * taper;
                 float offset = lerp(0.25, 0.75, variation);
                 float angularDistance = abs(frac(sector) - offset);
                 float lineMask = 1 - smoothstep(width, width + max(fwidth(sector) * 0.5, 0.005), angularDistance);
@@ -77,9 +77,9 @@ Shader "BlindBlade/Dash Vignette"
                     * (1 - smoothstep(0.65, 1.0, sideStroke));
                 float sideAlpha = saturate(input.color.a * _Intensity * sideMask * sideEnds
                     * lerp(0.45, 1.0, rowVariation) * smoothstep(0.15, 0.35, radius));
-                float lateralWeight = abs(_DashDirection.x)
-                    / max(abs(_DashDirection.x) + abs(_DashDirection.y), 0.001);
-                return fixed4(input.color.rgb, lerp(lineAlpha, sideAlpha, lateralWeight));
+                // 대각선도 한 형태만 표시하며 성분이 비슷하면 전후 방향을 우선한다.
+                bool lateral = abs(_DashDirection.x) > abs(_DashDirection.y) + 0.05;
+                return fixed4(input.color.rgb, lateral ? sideAlpha : lineAlpha);
             }
             ENDCG
         }
