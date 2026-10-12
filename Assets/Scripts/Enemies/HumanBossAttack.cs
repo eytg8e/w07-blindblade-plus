@@ -82,7 +82,7 @@ public sealed class HumanBossAttack : MonoBehaviour
         _shooting = StartCoroutine(Shoot(continuous, teleportBetweenShots));
     }
 
-    /// <summary>continuous로 전조·발사·휴식을 반복하고 teleportBetweenShots이면 단독 사격 사이에 순간이동하며 실행 참조를 정리한다.</summary>
+    /// <summary>continuous로 플레이어 시점보다 0.1m 아래를 향한 전조·직선 발사·휴식을 반복하고 teleportBetweenShots이면 사격 사이에 순간이동하며 실행 참조를 정리한다.</summary>
     private IEnumerator Shoot(bool continuous, bool teleportBetweenShots)
     {
         yield return null;
@@ -94,13 +94,14 @@ public sealed class HumanBossAttack : MonoBehaviour
                 Managers.Sound.Play(_preparationSound, transform.position, 1f, gameObject);
             yield return new WaitForSeconds(_preparation);
             if (!_health.IsAlive || _player == null || !_player.IsAlive) break;
-            Vector3 direction = (_player.transform.position + Vector3.up - _muzzle.position).normalized;
+            Vector3 aimPosition = _playerMotor.ViewOrigin - Vector3.up * 0.1f;
+            Vector3 direction = (aimPosition - _muzzle.position).normalized;
             if (direction.sqrMagnitude > 0.000001f)
             {
                 Vector3 facing = Vector3.ProjectOnPlane(direction, Vector3.up);
                 if (!_mounted && facing.sqrMagnitude > 0.000001f)
                     transform.rotation = Quaternion.LookRotation(facing);
-                direction = (_player.transform.position + Vector3.up - _muzzle.position).normalized;
+                direction = (aimPosition - _muzzle.position).normalized;
                 TwinBossProjectile projectile = Instantiate(_projectilePrefab, _muzzle.position,
                     Quaternion.LookRotation(direction));
                 projectile.ReflectedHit += HandleReflectedHit;

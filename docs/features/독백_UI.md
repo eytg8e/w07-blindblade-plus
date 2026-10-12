@@ -47,6 +47,8 @@ Game.Instance.UIManager.Hide<MonologueUI>();
 
 #### 2026-10-12 6단계 최종 점검
 
+- TwinBossBattle 구성 요청에 따라 Assets/Scenes/Map/TwinBossBattle.unity에 공통 UIManager.prefab 한 개를 추가했다. 기존 Player·GameSceneInitializer는 유지하며, 별도 EventSystem이 없으므로 공통 프리팹의 입력 컴포넌트를 사용한다. 에디터에서 Canvas·EventSystem·InputSystemUIInputModule 참조와 독백·문 안내·게임오버 세 화면을 확인하고 저장했다. 씬 차이는 UI 프리팹 및 루트 연결 추가만 남겼다. 이번 씬의 Play 검증은 미실행이다.
+
 - 원격 dev 씬 선택 이후 Stage_3에서 공통 UIManager가 빠진 상태를 확인하여 Assets/Scenes/LevelDesign_HP/Stage_3.unity에 UIManager.prefab 한 개를 재배치했다. 기존 Player·GameSceneInitializer·EventSystem은 재사용한다. Canvas·EventSystem·입력 모듈 참조와 독백·문 안내·게임오버 세 화면 연결을 에디터에서 확인했다. UI 배치 외 씬 변경은 분리하여 보존했으며 이번 재배치의 Play 검증은 미실행이다.
 
 - 최종 프리팹의 본문·삼각형 직렬화 참조, CanvasRenderer, 배경 스타일, 지정 폰트, 1400×224 패널·1280×168 본문 영역 및 raycastTarget=false를 재확인했다. UIDesignTest에는 공통 화면 세 타입이 배치되어 있고 씬은 미저장 변경 없이 유지된다.
