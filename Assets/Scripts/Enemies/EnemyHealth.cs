@@ -72,6 +72,7 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
 
         _currentHealth = _dieOnAnyHit ? 0f : Mathf.Max(0f, _currentHealth - context.Amount);
         if (_currentHealth > 0f && _cancelAttackOnHit) ApplyHitReaction(context);
+        PlayDamageEffects(context);
         Damaged?.Invoke(context);
         HealthChanged?.Invoke(_currentHealth, _maxHealth);
         if (_currentHealth <= 0f)
@@ -79,6 +80,18 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
             Died?.Invoke(this);
             gameObject.SetActive(false);
         }
+    }
+
+    /// <summary>
+    /// 실제 피해 context의 위치에 혈흔을 재생하고 HP가 0이면 적 중심에 사망 효과를 요청한다.
+    /// 공용 EffectManager 풀을 사용하여 적 루트 비활성화 후에도 효과의 수명을 유지한다.
+    /// </summary>
+    private void PlayDamageEffects(DamageContext context)
+    {
+        EffectManager effects = Game.Instance.EffectManager;
+        effects.Play(EffectId.BloodHit, context.Point);
+        if (_currentHealth <= 0f)
+            effects.Play(EffectId.EnemyDeath, _hitCollider.bounds.center);
     }
 
     /// <summary>invulnerable 값으로 일시적인 피해 수신 차단을 설정한다. 체력과 생존 상태는 유지한다.</summary>
