@@ -152,6 +152,8 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
                 string id = health.TargetId;
                 float damage = _iaidoInstantKill && request.Kind == PlayerAttackKind.IaidoFinisher
                     && health.GetComponent<BossController>() == null
+                    && health.GetComponent<HumanBossAttack>() == null
+                    && health.GetComponent<BeastBossAttack>() == null
                     ? health.CurrentHealth
                     : _normalDamage;
                 health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
@@ -353,6 +355,8 @@ public sealed class EnemyCombatService : MonoBehaviour, IPlayerCombatService
         {
             float damage = _iaidoInstantKill && request.Kind == PlayerAttackKind.IaidoFinisher
                 && health.GetComponent<BossController>() == null
+                && health.GetComponent<HumanBossAttack>() == null
+                && health.GetComponent<BeastBossAttack>() == null
                 ? health.CurrentHealth
                 : _normalDamage;
             health.TakeDamage(new DamageContext(damage, _playerRoot.gameObject, point, request.Direction, request.Kind.ToString()));
