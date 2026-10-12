@@ -44,6 +44,10 @@ public sealed class PlayerController : MonoBehaviour
     [SerializeField, Min(0f)] private float _targetStandOff = 0.15f;
     [SerializeField, Min(0f)] private float _attackOriginHeight = 1.1f;
 
+    [Header("Crouch input")]
+    [SerializeField, Min(0f), Tooltip("웅크리기를 다시 시작할 수 있는 최소 간격. 일어서기는 즉시 허용합니다.")]
+    private float _crouchReentryInterval = 0.5f;
+
     [Header("Recovery (scaled game time)")]
     [SerializeField, Min(0f)] private float _normalAttackRecovery = 0.25f;
     [SerializeField, Min(0f)] private float _guardStartRecovery = 0f;
@@ -81,6 +85,7 @@ public sealed class PlayerController : MonoBehaviour
     private PlayerSenseContext _lastSenseContext;
     private bool _hasSenseContext;
     private bool _crouchInputActive;
+    private float _nextCrouchEntryTime;
     private float _nextCrouchPulseTime;
 
     public event Action<PlayerActionEvent> ActionEvent;
@@ -246,13 +251,16 @@ public sealed class PlayerController : MonoBehaviour
         return _motor.TryBeginDodge(_requestedMoveInput);
     }
 
-    /// <summary>웅크리기 상태를 이동 장치에 전달하고 진입 시 감각 파동을 발행합니다. 일시정지나 사망 상태에서는 요청을 무시합니다.</summary>
+    /// <summary>웅크리기 진입은 재입력 간격으로 제한하고, 해제는 즉시 이동 장치에 전달합니다.</summary>
     public void SetCrouchInput(bool isCrouching)
     {
         if (_state == PlayerActionState.Paused || _state == PlayerActionState.Dead)
             return;
 
         bool enteredCrouch = isCrouching && !_crouchInputActive;
+        if (enteredCrouch && Time.time < _nextCrouchEntryTime)
+            return;
+
         _crouchInputActive = isCrouching;
         _motor?.SetCrouchInput(isCrouching);
         if (!isCrouching)
@@ -262,7 +270,10 @@ public sealed class PlayerController : MonoBehaviour
         }
 
         if (enteredCrouch)
+        {
+            _nextCrouchEntryTime = Time.time + Mathf.Max(0f, _crouchReentryInterval);
             _nextCrouchPulseTime = Time.time + EmitCrouchPulse();
+        }
     }
 
     /// <summary>웅크리기 입력과 다음 발행 시각을 사용해 이전 파동 종료 후 감각 파동을 반복 발행한다.</summary>
