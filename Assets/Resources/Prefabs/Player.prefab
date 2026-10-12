@@ -426,7 +426,7 @@ MonoBehaviour:
   _comboFollowThrough: 0.12
   _comboResetDelay: 0.65
   _targetedAttackMinimumDuration: 0.45
-  _parryWindow: 0.18
+  _parryWindow: 0.25
   _blockInputRecovery: 0
   _guardPushDistance: 0.9
   _guardPushDuration: 0.12
