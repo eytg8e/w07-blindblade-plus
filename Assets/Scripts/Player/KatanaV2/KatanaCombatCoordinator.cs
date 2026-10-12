@@ -81,6 +81,8 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     [Header("방어")]
     [SerializeField, Min(0.01f)] private float _parryWindow = 0.18f;
     [SerializeField, Min(0f)] private float _blockInputRecovery = 0.18f;
+    [SerializeField, Min(0f), InspectorName("일반 적 가드 밀림 거리 (m)")] private float _guardPushDistance = 0.9f;
+    [SerializeField, Min(0.01f), InspectorName("일반 적 가드 밀림 시간 (초)")] private float _guardPushDuration = 0.12f;
     private PlayerMotor _motor;
     private PlayerHealth _health;
     private float _defenseReadyUntil;
@@ -710,7 +712,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
 
     /// <summary>
     /// incoming이 eligible인 전방 근접 접촉이고 가드 중이면 피해를 차단한다.
-    /// 패링 시간에 따라 적 회복·검 반동·카메라 및 공통 방어 피드백을 발생시키고 성공 여부를 반환한다.
+    /// 패링 시간에 따라 적 회복·반동·방어 피드백을 적용하고 일반 적의 근접 가드에 수평 밀림을 추가하여 성공 여부를 반환한다.
     /// </summary>
     public bool TryDefendIncoming(DamageContext incoming, bool eligible)
     {
@@ -728,7 +730,17 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         _player.NotifyGuardSuccess();
         _motor.AddCombatRecoil(incoming.Direction, perfect ? 0.9f : 0.6f);
         foreach (EnemyAttackBehaviour pattern in incoming.Instigator.GetComponents<EnemyAttackBehaviour>())
-            if (pattern.PatternId == incoming.PatternId && pattern is EnemyMeleeAttack melee) melee.Deflect(perfect, point);
+        {
+            if (pattern.PatternId != incoming.PatternId || !(pattern is EnemyMeleeAttack melee)) continue;
+            melee.Deflect(perfect, point);
+            if (!perfect && incoming.Instigator.GetComponentInParent<BossController>() == null)
+            {
+                Vector3 pushDirection = Vector3.ProjectOnPlane(
+                    _player.transform.position - incoming.Instigator.transform.position, Vector3.up);
+                if (pushDirection.sqrMagnitude < 0.0001f) pushDirection = incoming.Direction;
+                _motor.ApplyCombatPush(pushDirection, _guardPushDistance, _guardPushDuration);
+            }
+        }
         if (counterTarget != null && counterTarget.IsAlive
             && counterTarget.TryGetComponent(out EnemyAttackSelector selector))
             selector.Stagger(_parryStaggerDuration);
