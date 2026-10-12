@@ -2436,6 +2436,10 @@ PrefabInstance:
       propertyPath: _contactLayers.m_Bits
       value: 4294967295
       objectReference: {fileID: 0}
+    - target: {fileID: 5663976393034796336, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
+      propertyPath: _guardPushDistance
+      value: 0.9
+      objectReference: {fileID: 0}
     - target: {fileID: 5861297909810694122, guid: 63a8fea6414ce5644b9511f535c40bc1, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.055
@@ -2968,6 +2972,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _damageSound: 4
   _volume: 0.8
+  _pitch: 1
 --- !u!114 &2142987413
 MonoBehaviour:
   m_ObjectHideFlags: 0

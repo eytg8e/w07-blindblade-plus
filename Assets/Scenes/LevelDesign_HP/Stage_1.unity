@@ -9989,11 +9989,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4364763688821012378, guid: 92b8350f7dac642e0b97994d8218101d, type: 3}
       propertyPath: _memorySize.x
-      value: 24
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 4364763688821012378, guid: 92b8350f7dac642e0b97994d8218101d, type: 3}
       propertyPath: _memorySize.y
-      value: 24
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 4364763688821012378, guid: 92b8350f7dac642e0b97994d8218101d, type: 3}
       propertyPath: _servicesPrefab
@@ -10001,11 +10001,11 @@ PrefabInstance:
       objectReference: {fileID: 2549283961474758226, guid: b2907b23df401486480cb00e43bf8872, type: 3}
     - target: {fileID: 4364763688821012378, guid: 92b8350f7dac642e0b97994d8218101d, type: 3}
       propertyPath: _memoryMinimum.x
-      value: -12
+      value: -100
       objectReference: {fileID: 0}
     - target: {fileID: 4364763688821012378, guid: 92b8350f7dac642e0b97994d8218101d, type: 3}
       propertyPath: _memoryMinimum.y
-      value: -12
+      value: -100
       objectReference: {fileID: 0}
     - target: {fileID: 4364763688821012378, guid: 92b8350f7dac642e0b97994d8218101d, type: 3}
       propertyPath: _useCorridorRule

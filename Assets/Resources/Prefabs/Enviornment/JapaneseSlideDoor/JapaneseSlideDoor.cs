@@ -59,10 +59,14 @@ public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
         SetOpen(!_targetOpen);
     }
 
-    /// <summary>Uses open to choose the target state; edit mode applies the corresponding endpoint pose.</summary>
+    /// <summary>open으로 개폐 목표를 변경하고 Play 중 목표가 바뀌면 문 위치에서 해당 효과음을 한 번 재생한다. 편집 모드에서는 끝 자세만 적용한다.</summary>
     public void SetOpen(bool open)
     {
+        bool changed = _targetOpen != open;
         _targetOpen = open;
+        if (Application.isPlaying && changed)
+            Managers.Sound.Play(open ? SoundId.DoorOpen : SoundId.DoorClose,
+                transform.position, owner: gameObject, playDuringMovement: true);
         if (!Application.isPlaying)
         {
 #if UNITY_EDITOR

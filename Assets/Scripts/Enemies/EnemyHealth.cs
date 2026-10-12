@@ -29,8 +29,10 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
     public float CurrentHealth => _currentHealth;
     public float MaxHealth => _maxHealth;
     public bool IsAlive => isActiveAndEnabled && _currentHealth > 0f;
+    public bool IsInvulnerable => _invulnerable;
     public string TargetId => "Enemy_" + GetInstanceID();
     public event Action<DamageContext> Damaged;
+    public event Action<DamageContext> DamageBlocked;
     public event Action<float, float> HealthChanged;
     public event Action<EnemyHealth> Died;
 
@@ -54,12 +56,19 @@ public sealed class EnemyHealth : MonoBehaviour, IDamageable
 
     /// <summary>
     /// context의 양수 피해를 현재 HP에 반영하고 한 대 사망 설정이면 HP를 즉시 0으로 만든다.
+    /// 무적이면 피해 대신 DamageBlocked에 context를 전달하며 HP는 유지한다.
     /// 설정에 따라 공격을 취소하며 HP가 0이면 사망 이벤트 후 적 루트를 비활성화한다.
     /// </summary>
     public void TakeDamage(DamageContext context)
     {
-        if (!IsAlive || _invulnerable || !(context.Amount > 0f))
+        if (!IsAlive || !(context.Amount > 0f))
             return;
+
+        if (_invulnerable)
+        {
+            DamageBlocked?.Invoke(context);
+            return;
+        }
 
         _currentHealth = _dieOnAnyHit ? 0f : Mathf.Max(0f, _currentHealth - context.Amount);
         if (_currentHealth > 0f && _cancelAttackOnHit) ApplyHitReaction(context);

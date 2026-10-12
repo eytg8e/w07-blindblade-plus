@@ -104,7 +104,7 @@ public sealed class StageDoor : MonoBehaviour
         _promptUI.ShowFor(this, IsUnlocked);
     }
 
-    /// <summary>살아 있는 필수 적이 없고 플레이어가 문 근처에 있으면 개방을 시작하고 true를 반환한다.</summary>
+    /// <summary>필수 적이 없고 플레이어가 근처이면 문 개방과 열기 효과음을 시작하고 true를 반환한다. 개방 불가 상태에서는 false를 반환한다.</summary>
     public bool TryOpen()
     {
         if (_player == null || _opened || _loading || !IsUnlocked || _player.IsPaused
@@ -113,6 +113,7 @@ public sealed class StageDoor : MonoBehaviour
             return false;
         _opened = true;
         _openedAt = Time.time;
+        Managers.Sound.Play(SoundId.DoorOpen, transform.position, owner: gameObject, playDuringMovement: true);
         UpdatePrompt(false);
         return true;
     }
