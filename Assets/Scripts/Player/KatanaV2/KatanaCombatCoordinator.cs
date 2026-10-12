@@ -87,9 +87,12 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
 
     [Header("패링 반격")]
     [SerializeField, Min(0.01f), InspectorName("패링 후 반격 가능 시간 (초)")]
-    [Tooltip("정확한 패링 뒤 좌클릭으로 빠른 단발 반격을 시작할 수 있는 시간입니다.")]
+    [Tooltip("정확한 패링 뒤 자동 또는 좌클릭으로 빠른 단발 반격을 시작할 수 있는 시간입니다.")]
     private float _counterWindow = 0.5f;
+    [SerializeField, Min(0f)] private float _automaticCounterDelay = 0.12f;
     private float _counterUntil;
+    private bool _automaticCounterPending;
+    private float _automaticCounterReadyAt;
     private bool _counterAttack;
 
     [Header("Sheathe")]
@@ -174,6 +177,13 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
             return;
 
         _clock += Time.deltaTime;
+        if (_automaticCounterPending)
+        {
+            if (Time.time >= _counterUntil)
+                _automaticCounterPending = false;
+            else if (Time.time >= _automaticCounterReadyAt && CanCounterAttack)
+                RequestCounterAttack();
+        }
         if (_queuedAttack && !IsFirstAttackFollowupBuffered && _queuedActionId == _player.CurrentActionId && _clock >= _queuedReadyAt
             && (_player.CurrentState == PlayerActionState.NormalAttack || CanStartAction))
             TryStartQueuedAttack();
@@ -304,7 +314,11 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         _normalRequested = true;
         bool accepted = _player.RequestNormalAttack();
         _normalRequested = false;
-        if (accepted) _counterUntil = 0f;
+        if (accepted)
+        {
+            _counterUntil = 0f;
+            _automaticCounterPending = false;
+        }
         else _counterAttack = false;
         return accepted;
     }
@@ -361,6 +375,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     /// <summary>context의 실제 피격 알림을 받으면 연계 예약과 다음 타수 유지 시간을 취소한다. 진행 중인 공격은 Controller의 피격 처리를 따른다.</summary>
     private void HandleDamage(DamageContext context)
     {
+        _automaticCounterPending = false;
         _queuedAttack = false;
         _queuedTargetedAttack = false;
         _queuedOpeningAttack = false;
@@ -403,6 +418,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     /// <summary>입력 소유권 상실 시 연계 예약·타수 유지 시간·반격 기회를 지우고 패링 창을 닫는다. 현재 공격은 강제 종료하지 않는다.</summary>
     public void CancelParryAttempt()
     {
+        _automaticCounterPending = false;
         _queuedAttack = false;
         _queuedTargetedAttack = false;
         _queuedOpeningAttack = false;
@@ -493,6 +509,7 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
     /// <summary>마지막 타수·연계·반격·납도 대기 상태를 비운다. 기존 Controller의 행동 상태는 변경하지 않는다.</summary>
     private void ResetChain()
     {
+        _automaticCounterPending = false;
         _strike = 0;
         _queuedTargetedAttack = false;
         _counterUntil = 0f;
@@ -709,6 +726,8 @@ public sealed class KatanaCombatCoordinator : MonoBehaviour
         {
             Publish(KatanaStage.ParrySucceeded, incoming.PatternId, true);
             ParrySucceeded?.Invoke(new KatanaParryResult(incoming, 1));
+            _automaticCounterPending = true;
+            _automaticCounterReadyAt = Time.time + Mathf.Min(_automaticCounterDelay, _counterWindow * 0.5f);
         }
         return true;
     }
