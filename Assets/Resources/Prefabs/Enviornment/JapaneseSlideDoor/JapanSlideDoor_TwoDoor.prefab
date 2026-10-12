@@ -465,7 +465,7 @@ GameObject:
   - component: {fileID: 4919781189916895599}
   - component: {fileID: 6371278784824638807}
   m_Layer: 0
-  m_Name: JapanSlideDoor_Small
+  m_Name: JapanSlideDoor_TwoDoor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

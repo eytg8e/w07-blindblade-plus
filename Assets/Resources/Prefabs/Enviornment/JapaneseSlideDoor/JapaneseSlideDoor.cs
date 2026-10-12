@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>Moves the two shoji leaves without depending on player input or scene managers.</summary>
+/// <summary>Moves one or two assigned shoji leaves through the shared interaction contract.</summary>
 public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
 {
     [Header("Door Leaves")]
@@ -66,7 +66,9 @@ public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
         if (!Application.isPlaying)
         {
 #if UNITY_EDITOR
-            UnityEditor.Undo.RecordObjects(new Object[] { this, _leftLeaf, _rightLeaf }, "Preview Shoji Door");
+            UnityEditor.Undo.RecordObject(this, "Preview Shoji Door");
+            if (_leftLeaf != null) UnityEditor.Undo.RecordObject(_leftLeaf, "Preview Shoji Door");
+            if (_rightLeaf != null) UnityEditor.Undo.RecordObject(_rightLeaf, "Preview Shoji Door");
 #endif
             _progress = open ? 1f : 0f;
             ApplyPose(_progress);
@@ -77,7 +79,7 @@ public sealed class JapaneseSlideDoor : MonoBehaviour, IInteractable
     private void ApplyPose(float progress)
     {
         Vector3 offset = _slideDirection.normalized * (_slideDistance * Mathf.SmoothStep(0f, 1f, progress));
-        _leftLeaf.localPosition = _leftClosedPosition - offset;
-        _rightLeaf.localPosition = _rightClosedPosition + offset;
+        if (_leftLeaf != null) _leftLeaf.localPosition = _leftClosedPosition - offset;
+        if (_rightLeaf != null) _rightLeaf.localPosition = _rightClosedPosition + offset;
     }
 }
