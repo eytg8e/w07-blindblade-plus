@@ -9,16 +9,20 @@ public sealed class PlayerDashVignette : MonoBehaviour
 {
     [Header("대시 집중선")]
     [SerializeField] private Color _lineColor = new Color(1f, 1f, 1f, 0.6f);
-    [SerializeField, Range(16, 128)] private int _lineCount = 64;
-    [SerializeField, Range(0.2f, 0.9f), Tooltip("집중선이 시작되는 화면 중심으로부터의 비율")] private float _innerRadius = 0.85f;
+    [SerializeField, Range(16, 128)] private int _lineCount = 48;
+    [SerializeField, Range(0.2f, 0.9f), Tooltip("집중선이 시작되는 화면 중심으로부터의 비율")] private float _innerRadius = 0.24f;
     [SerializeField, Min(0.01f), Tooltip("전체 비네팅이 나타나는 시간(초)")] private float _fadeInDuration = 0.06f;
     [SerializeField, Min(0.01f), Tooltip("전체 비네팅이 사라지는 시간(초)")] private float _fadeOutDuration = 0.15f;
+    [SerializeField, Range(0.1f, 1f), Tooltip("집중선의 기본 길이(화면 반경 비율)")] private float _strokeLength = 0.6f;
+    [SerializeField, Min(0.01f), Tooltip("집중선이 한 번 바깥으로 뻗는 시간(초)")] private float _travelDuration = 0.25f;
     private PlayerMotor _motor;
     private PlayerController _player;
     private GameObject _canvasObject;
     private Image _image;
     private Material _material;
     private float _intensity;
+    private float _travel;
+    private bool _wasMoving;
 
     void Awake()
     {
@@ -35,6 +39,7 @@ public sealed class PlayerDashVignette : MonoBehaviour
         _material.SetColor("_Color", _lineColor);
         _material.SetFloat("_LineCount", _lineCount);
         _material.SetFloat("_InnerRadius", _innerRadius);
+        _material.SetFloat("_StrokeLength", _strokeLength);
         _canvasObject = new GameObject("DashVignetteCanvas", typeof(RectTransform), typeof(Canvas));
         _canvasObject.transform.SetParent(transform, false);
         Canvas canvas = _canvasObject.GetComponent<Canvas>();
@@ -56,6 +61,8 @@ public sealed class PlayerDashVignette : MonoBehaviour
     void OnEnable()
     {
         _intensity = 0f;
+        _travel = 0f;
+        _wasMoving = false;
         _canvasObject.SetActive(true);
     }
 
@@ -64,16 +71,28 @@ public sealed class PlayerDashVignette : MonoBehaviour
         bool blocked = _player.CurrentState == PlayerActionState.Dead
             || _player.CurrentState == PlayerActionState.Paused;
         bool moving = !blocked && (_motor.IsDashing || _motor.IsDodging);
+        if (moving && !_wasMoving)
+        {
+            _travel = 0f;
+        }
+        if (moving)
+        {
+            _travel = Mathf.Clamp01(_travel + Time.unscaledDeltaTime / Mathf.Max(0.01f, _travelDuration));
+        }
+        _wasMoving = moving;
         float duration = moving ? _fadeInDuration : _fadeOutDuration;
         _intensity = blocked ? 0f : Mathf.MoveTowards(
             _intensity, moving ? 1f : 0f, Time.unscaledDeltaTime / Mathf.Max(0.01f, duration));
         _image.enabled = _intensity > 0f;
         _material.SetFloat("_Intensity", _intensity);
+        _material.SetFloat("_Travel", _travel);
     }
 
     void OnDisable()
     {
         _intensity = 0f;
+        _travel = 0f;
+        _wasMoving = false;
         if (_canvasObject != null)
         {
             _canvasObject.SetActive(false);
