@@ -47,6 +47,8 @@ Game.Instance.UIManager.Hide<MonologueUI>();
 
 #### 2026-10-12 6단계 최종 점검
 
+- 원격 dev 씬 선택 이후 Stage_3에서 공통 UIManager가 빠진 상태를 확인하여 Assets/Scenes/LevelDesign_HP/Stage_3.unity에 UIManager.prefab 한 개를 재배치했다. 기존 Player·GameSceneInitializer·EventSystem은 재사용한다. Canvas·EventSystem·입력 모듈 참조와 독백·문 안내·게임오버 세 화면 연결을 에디터에서 확인했다. UI 배치 외 씬 변경은 분리하여 보존했으며 이번 재배치의 Play 검증은 미실행이다.
+
 - 최종 프리팹의 본문·삼각형 직렬화 참조, CanvasRenderer, 배경 스타일, 지정 폰트, 1400×224 패널·1280×168 본문 영역 및 raycastTarget=false를 재확인했다. UIDesignTest에는 공통 화면 세 타입이 배치되어 있고 씬은 미저장 변경 없이 유지된다.
 - 기존 Play 검증으로 화면 조회·표시·숨김·재초기화·게임오버·재시작·방향·깜빡임을 확인했고 5단계에서 문구 길이와 해상도를 점검했다. 이번 단계는 프리팹 참조와 문서·차이 점검만 수행했으며 테스트 코드를 생성하지 않았다.
 - Unity는 컴파일 실패 없이 편집 상태다. 기존 FMOD ERR_MEMORY 때문에 Play 검증을 반복하지 않았다. 실제 물리 버튼 입력·오디오 재생·다른 씬의 전체 플레이와 네 줄 이상 문구 넘침은 남은 제한이다. 누락 적 프리팹·NavMesh·FMOD 문제는 UI 작업 범위에서 수정하지 않았다.
