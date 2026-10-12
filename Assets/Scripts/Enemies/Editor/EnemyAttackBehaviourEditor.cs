@@ -18,8 +18,12 @@ public sealed class EnemyAttackBehaviourEditor : Editor
         InspectorElement.FillDefaultInspector(root, serializedObject, this);
         foreach (PropertyField field in root.Query<PropertyField>().ToList())
         {
-            if (field.bindingPath == "_minimumHeartbeatTelegraph") field.label = "최소 준비 시간 (초)";
-            else if (field.bindingPath == "_maximumHeartbeatTelegraph") field.label = "최대 준비 시간 (초)";
+            if (field.bindingPath == "_useHeartbeatTelegraph") field.label = "박동 사용";
+            else if (field.bindingPath == "_firstHeartbeatDelay") field.label = "첫 박동 전 대기 (초)";
+            else if (field.bindingPath == "_heartbeatCount") field.label = "박동 횟수";
+            else if (field.bindingPath == "_minimumHeartbeatInterval") field.label = "박동 간격 최소 (초)";
+            else if (field.bindingPath == "_maximumHeartbeatInterval") field.label = "박동 간격 최대 (초)";
+            else if (field.bindingPath == "_postHeartbeatAttackDelay") field.label = "마지막 박동 후 공격 지연 (초)";
         }
         var interval = new Label { name = "expectedAttackInterval" };
         var rhythm = new Label { name = "heartbeatTiming" };
@@ -44,11 +48,11 @@ public sealed class EnemyAttackBehaviourEditor : Editor
         Vector2 expected = attack.ExpectedAttackInterval;
         interval.text = (targets.Length > 1 ? "첫 선택 대상의 " : "") + $"예상 반복 공격 간격: {expected.x:F2} ~ {expected.y:F2}초";
         rhythm.text = attack.UsesHeartbeatTelegraph
-            ? "첫 박동 → 준비 시간의 절반 뒤 두 번째 박동 → 같은 간격 뒤 공격"
+            ? $"첫 박동 전 고정 대기 → 박동 {attack.HeartbeatCount}회 → 마지막 박동 후 고정 지연 → 공격"
             : "기존 고정 전조 사용";
         float duration = attack.Context.TelegraphDuration;
         chosen.text = duration > 0f
-            ? $"최근 선택 전조: {duration:F2}초" + (attack.UsesHeartbeatTelegraph ? $" / 박동 간격: {duration * 0.5f:F2}초" : "")
+            ? $"최근 선택 전조: {duration:F2}초" + (attack.UsesHeartbeatTelegraph ? $" / 박동 간격: {attack.LastHeartbeatInterval:F2}초" : "")
             : (attack.Context.Pattern != null ? "최근 공격: 추격 도착 즉시 공격 (박동 생략)" : "최근 선택 전조: 공격 시작 후 표시");
     }
 }
