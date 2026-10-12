@@ -199,13 +199,17 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float firstDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, firstUv).r;
                 float secondDepth = SAMPLE_TEXTURE2D_X(_OutlineTransparentDepth, sampler_PointClamp, secondUv).r;
                 float edge = saturate(abs(first - second) * 1.5);
-                float3 alwaysVisible = max(
-                    abs(SAMPLE_TEXTURE2D_X(_OutlineAlwaysVisibleVfxColor, sampler_LinearClamp, firstUv).rgb),
-                    abs(SAMPLE_TEXTURE2D_X(_OutlineAlwaysVisibleVfxColor, sampler_LinearClamp, secondUv).rgb));
-                if (max(alwaysVisible.r, max(alwaysVisible.g, alwaysVisible.b)) > _TransparentThreshold)
-                    return edge * _LineColor.rgb * _LineColor.a;
                 return edge * max(PerceptionColor(firstUv, firstDepth, first, 0.0),
                     PerceptionColor(secondUv, secondDepth, second, 0.0));
+            }
+
+            // 인지 예외 VFX만 별도로 검출하여 일반 VFX의 색상과 깊이가 섞이지 않게 한다.
+            float AlwaysVisibleCoverage(float2 uv)
+            {
+                float3 source = abs(SAMPLE_TEXTURE2D_X(
+                    _OutlineAlwaysVisibleVfxColor, sampler_LinearClamp, uv).rgb);
+                return smoothstep(_TransparentThreshold, _TransparentThreshold * 2.0,
+                    max(source.r, max(source.g, source.b)));
             }
 
             // 불투명 경계와 투명 이펙트 경계를 합성하고 모든 면과 배경은 검게 출력한다.
@@ -225,6 +229,11 @@ Shader "Hidden/BlindBlade/ScreenSpaceOutline"
                 float3 transparentEdge = max(TransparentEdgeBetween(firstUv, secondUv),
                     TransparentEdgeBetween(thirdUv, fourthUv));
                 edge = max(edge, transparentEdge);
+                edge *= 1.0 - AlwaysVisibleCoverage(uv);
+                float foregroundEdge = saturate(max(
+                    abs(AlwaysVisibleCoverage(firstUv) - AlwaysVisibleCoverage(secondUv)),
+                    abs(AlwaysVisibleCoverage(thirdUv) - AlwaysVisibleCoverage(fourthUv))) * 1.5);
+                edge = max(edge, foregroundEdge * _LineColor.rgb * _LineColor.a);
                 return half4(edge, 1.0);
             }
             ENDHLSL
