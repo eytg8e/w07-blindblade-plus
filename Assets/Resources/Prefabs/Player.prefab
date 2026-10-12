@@ -1297,7 +1297,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _lineColor: {r: 1, g: 1, b: 1, a: 0.6}
-  _lineCount: 48
+  _lineCount: 24
   _innerRadius: 0.24
   _fadeInDuration: 0.06
   _fadeOutDuration: 0.15

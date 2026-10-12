@@ -9,7 +9,7 @@ public sealed class PlayerDashVignette : MonoBehaviour
 {
     [Header("대시 집중선")]
     [SerializeField] private Color _lineColor = new Color(1f, 1f, 1f, 0.6f);
-    [SerializeField, Range(16, 128)] private int _lineCount = 48;
+    [SerializeField, Range(16, 128)] private int _lineCount = 24;
     [SerializeField, Range(0.2f, 0.9f), Tooltip("집중선이 시작되는 화면 중심으로부터의 비율")] private float _innerRadius = 0.24f;
     [SerializeField, Min(0.01f), Tooltip("전체 비네팅이 나타나는 시간(초)")] private float _fadeInDuration = 0.06f;
     [SerializeField, Min(0.01f), Tooltip("전체 비네팅이 사라지는 시간(초)")] private float _fadeOutDuration = 0.15f;
@@ -23,6 +23,8 @@ public sealed class PlayerDashVignette : MonoBehaviour
     private float _intensity;
     private float _travel;
     private bool _wasMoving;
+    private Vector3 _previousPosition;
+    private Vector2 _dashDirection = Vector2.up;
 
     void Awake()
     {
@@ -63,6 +65,7 @@ public sealed class PlayerDashVignette : MonoBehaviour
         _intensity = 0f;
         _travel = 0f;
         _wasMoving = false;
+        _previousPosition = transform.position;
         _canvasObject.SetActive(true);
     }
 
@@ -71,12 +74,21 @@ public sealed class PlayerDashVignette : MonoBehaviour
         bool blocked = _player.CurrentState == PlayerActionState.Dead
             || _player.CurrentState == PlayerActionState.Paused;
         bool moving = !blocked && (_motor.IsDashing || _motor.IsDodging);
+        Vector3 displacement = transform.position - _previousPosition;
+        _previousPosition = transform.position;
         if (moving && !_wasMoving)
         {
             _travel = 0f;
         }
         if (moving)
         {
+            Vector3 direction = _motor.IsDodging ? displacement : _motor.DashDirection;
+            Vector3 localDirection = transform.InverseTransformDirection(direction);
+            Vector2 planarDirection = new Vector2(localDirection.x, localDirection.z);
+            if (planarDirection.sqrMagnitude > 0.000001f)
+            {
+                _dashDirection = planarDirection.normalized;
+            }
             _travel = Mathf.Clamp01(_travel + Time.unscaledDeltaTime / Mathf.Max(0.01f, _travelDuration));
         }
         _wasMoving = moving;
@@ -86,6 +98,7 @@ public sealed class PlayerDashVignette : MonoBehaviour
         _image.enabled = _intensity > 0f;
         _material.SetFloat("_Intensity", _intensity);
         _material.SetFloat("_Travel", _travel);
+        _material.SetVector("_DashDirection", new Vector4(_dashDirection.x, _dashDirection.y, 0f, 0f));
     }
 
     void OnDisable()
@@ -93,6 +106,7 @@ public sealed class PlayerDashVignette : MonoBehaviour
         _intensity = 0f;
         _travel = 0f;
         _wasMoving = false;
+        _previousPosition = transform.position;
         if (_canvasObject != null)
         {
             _canvasObject.SetActive(false);
