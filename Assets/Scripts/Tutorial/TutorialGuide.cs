@@ -20,6 +20,7 @@ public sealed class TutorialLesson
     [Header("안내 문구")]
     [SerializeField] private string _name;
     [SerializeField] private string _keys;
+    [SerializeField, Tooltip("비어 있으면 Keys의 단축키를 패드 표기로 자동 변환합니다.")] private string _gamepadKeys;
     [SerializeField, TextArea(2, 3)] private string[] _monologue;
     [SerializeField] private TutorialObjective _objective;
     [SerializeField] private TutorialResumeInput _resumeInput;
@@ -34,6 +35,7 @@ public sealed class TutorialLesson
 
     public string Name => _name;
     public string Keys => _keys;
+    public string DisplayKeys => InputDeviceDisplay.FormatKeys(_keys, _gamepadKeys);
     public string[] Monologue => _monologue;
     public TutorialObjective Objective => _objective;
     public TutorialResumeInput ResumeInput => _resumeInput;
@@ -118,15 +120,18 @@ public sealed class TutorialGuide : MonoBehaviour
     private float _lastGuardEnd = float.NegativeInfinity;
     private float _lastAttack = float.NegativeInfinity;
     private bool _bound;
+    private bool _keysUseGamepad;
 
     public TutorialLesson[] Lessons => _lessons;
 
     void Start()
     {
+        _keysUseGamepad = InputDeviceDisplay.IsGamepad;
         _lastVisited = new float[_lessons.Length];
         for (int i = 0; i < _lastVisited.Length; i++) _lastVisited[i] = float.NegativeInfinity;
         foreach (TutorialLesson lesson in _lessons)
         {
+<<<<<<< Updated upstream
             if (lesson.KeyLabel != null)
             {
                 lesson.KeyLabel.text = lesson.Keys;
@@ -134,11 +139,21 @@ public sealed class TutorialGuide : MonoBehaviour
             }
             foreach (LineRenderer ring in lesson.Rings)
                 if (ring != null) ring.sharedMaterial = _ringMaterial;
+=======
+            lesson.KeyLabel.text = lesson.DisplayKeys;
+            lesson.KeyLabel.color = _keyColor;
+            foreach (LineRenderer ring in lesson.Rings) ring.sharedMaterial = _ringMaterial;
+>>>>>>> Stashed changes
         }
     }
 
     void Update()
     {
+        if (_keysUseGamepad != InputDeviceDisplay.IsGamepad)
+        {
+            _keysUseGamepad = InputDeviceDisplay.IsGamepad;
+            foreach (TutorialLesson lesson in _lessons) lesson.KeyLabel.text = lesson.DisplayKeys;
+        }
         if (!_bound && !TryBind()) return;
         if (_waitingForInput)
         {

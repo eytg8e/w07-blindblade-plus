@@ -226,7 +226,12 @@ private Vector3 _attackLungeDirection;
         _crouchRequested = isCrouching;
     }
 
-    /// <summary>시점 변화량을 누적해 다음 Tick에서 카메라 회전에 반영합니다.</summary>
+    /// <summary>스틱 input을 degreesPerSecond와 deltaTime으로 회전량에 변환한다. 마우스 감도를 보정해 패드 회전 속도를 유지한다.</summary>
+    public void AddGamepadLookInput(Vector2 input, float degreesPerSecond, float deltaTime)
+    {
+        AddLookDelta(input * (degreesPerSecond * deltaTime / Mathf.Max(0.001f, _lookSensitivity)));
+    }
+    /// <summary>delta 시점 변화량을 누적해 다음 Tick에서 카메라 회전에 반영합니다.</summary>
     public void AddLookDelta(Vector2 delta)
     {
         _pendingLookDelta += delta;

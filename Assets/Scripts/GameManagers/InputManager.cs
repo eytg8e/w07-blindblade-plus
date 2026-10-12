@@ -11,6 +11,9 @@ public sealed class InputManager : MonoBehaviour
     [Header("커서")]
     [SerializeField] private bool _lockCursorOnClick = true;
 
+    [Header("패드 시점")]
+    [SerializeField, Min(1f)] private float _gamepadLookDegreesPerSecond = 180f;
+
     [Header("입력 상태")]
     private GameStateManager _state;
     private KatanaCombatCoordinator _combat;
@@ -35,20 +38,28 @@ public sealed class InputManager : MonoBehaviour
         _crouchToggle = new InputAction("CrouchToggle", InputActionType.Button, "<Keyboard>/c");
         _guard = new InputAction("Guard", InputActionType.Button, "<Mouse>/rightButton");
         _dodge = new InputAction("Dodge", InputActionType.Button, "<Keyboard>/space");
+        _crouchToggle.AddBinding("<Gamepad>/buttonEast");
+        _guard.AddBinding("<Gamepad>/leftShoulder");
+        _dodge.AddBinding("<Gamepad>/buttonSouth");
+        InputAction attack = _actions.Player.Attack;
+        for (int i = 0; i < attack.bindings.Count; i++)
+            if (attack.bindings[i].path.StartsWith("<Gamepad>"))
+                attack.ApplyBindingOverride(i, "<Gamepad>/rightShoulder");
     }
 
     void Update()
     {
+        InputDeviceDisplay.PollButtons();
         PlayerController player = Game.Player;
         if (!IsGameplayInputEnabled || player == null || player.IsPaused) return;
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        if (InputDeviceDisplay.CancelPressed)
         {
             ClearHeldInput();
             SetCursor(false);
             return;
         }
         if (!Application.isFocused) return;
-        if (_lockCursorOnClick && Cursor.lockState != CursorLockMode.Locked)
+        if (_lockCursorOnClick && !InputDeviceDisplay.IsGamepad && Cursor.lockState != CursorLockMode.Locked)
         {
             if (_actions.Player.Attack.WasPressedThisFrame() || _guard.WasPressedThisFrame()) SetCursor(true);
             return;
@@ -56,7 +67,11 @@ public sealed class InputManager : MonoBehaviour
         if (_crouchToggle.WasPressedThisFrame()) _crouchToggled = !_crouchToggled;
         player.SetCrouchInput(_crouchHold.IsPressed() || _crouchToggled);
         player.SetMovementInput(_actions.Player.Move.ReadValue<Vector2>());
-        player.AddLookInput(_actions.Player.Look.ReadValue<Vector2>());
+        Vector2 look = _actions.Player.Look.ReadValue<Vector2>();
+        if (_actions.Player.Look.activeControl != null && _actions.Player.Look.activeControl.device is Gamepad)
+            _motor.AddGamepadLookInput(look, _gamepadLookDegreesPerSecond, Time.deltaTime);
+        else
+            player.AddLookInput(look);
 
         // 새 우클릭은 공격을 가드로 전환하고, 계속 누르는 우클릭은 공격 완료 뒤 가드로 복귀시킨다.
         if (_guard.WasPressedThisFrame() && !player.IsGuarding)

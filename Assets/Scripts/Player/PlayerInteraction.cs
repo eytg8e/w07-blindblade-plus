@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(PlayerController))]
 public sealed class PlayerInteraction : MonoBehaviour
@@ -40,9 +39,7 @@ public sealed class PlayerInteraction : MonoBehaviour
             _promptUI.ShowFor(
                 this, target.CanInteract, target.InteractionPrompt);
 
-        if (target.CanInteract &&
-            Keyboard.current != null &&
-            Keyboard.current.fKey.wasPressedThisFrame)
+        if (target.CanInteract && InputDeviceDisplay.InteractPressed)
         {
             target.Interact();
         }

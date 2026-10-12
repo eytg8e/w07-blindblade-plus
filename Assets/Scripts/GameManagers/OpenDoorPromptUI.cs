@@ -18,7 +18,7 @@ public sealed class OpenDoorPromptUI : GameUI
     /// <summary>owner의 unlocked 상태와 prompt를 사용해 상호작용 안내 문구와 표시 대상을 갱신한다.</summary>
     public void ShowFor(UnityEngine.Object owner, bool unlocked, string prompt = "[F] OPEN DOOR")
     {
-        string message = unlocked ? prompt : "DEFEAT ALL ENEMIES";
+        string message = unlocked ? InputDeviceDisplay.FormatKeys(prompt) : "DEFEAT ALL ENEMIES";
         if (_text.text != message)
             _text.text = message;
         _owner = owner;
