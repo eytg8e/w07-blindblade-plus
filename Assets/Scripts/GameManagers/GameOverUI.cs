@@ -8,7 +8,6 @@ public sealed class GameOverUI : GameUI
     [Header("게임오버 UI")]
     [SerializeField] private GameObject _panel;
     [SerializeField] private Button _restartButton;
-    [SerializeField] private Button _stayButton;
     private GameStateManager _state;
 
     /// <summary>Game의 상태 매니저를 캐싱하고 상태 구독과 버튼 및 초기 표시를 연결한다.</summary>
@@ -18,7 +17,6 @@ public sealed class GameOverUI : GameUI
         _state = Game.Instance.GameStateManager;
         _state.StateChanged += HandleState;
         _restartButton.onClick.AddListener(Restart);
-        _stayButton.onClick.AddListener(Stay);
         HandleState(_state.State);
     }
 
@@ -54,7 +52,6 @@ public sealed class GameOverUI : GameUI
         if (_state == null) return;
         _state.StateChanged -= HandleState;
         _restartButton.onClick.RemoveListener(Restart);
-        _stayButton.onClick.RemoveListener(Stay);
         _state = null;
     }
 
