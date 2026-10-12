@@ -2,12 +2,16 @@ using System;
 
 using UnityEngine;
 
+using UnityEngine.InputSystem;
+
 using TMPro;
 
 public enum TutorialObjective
 {
     Read, Move, Look, Crouch, Dodge, Attack, Combo, Guard, Parry, GuardAttack, AttackGuard, TargetedAttack, Door
 }
+
+public enum TutorialResumeInput { None, Attack, Defense, Dodge, Crouch, Door }
 
 /// <summary>한 안내 구간의 독백, 키 표시 및 확인할 행동을 보관한다.</summary>
 [Serializable]
@@ -18,6 +22,7 @@ public sealed class TutorialLesson
     [SerializeField] private string _keys;
     [SerializeField, TextArea(2, 3)] private string[] _monologue;
     [SerializeField] private TutorialObjective _objective;
+    [SerializeField] private TutorialResumeInput _resumeInput;
 
     [Header("씬 연결")]
     [SerializeField] private Transform _anchor;
@@ -31,9 +36,10 @@ public sealed class TutorialLesson
     public string Keys => _keys;
     public string[] Monologue => _monologue;
     public TutorialObjective Objective => _objective;
+    public TutorialResumeInput ResumeInput => _resumeInput;
     public Transform Anchor => _anchor;
     public TMP_Text KeyLabel => _keyLabel;
-    public LineRenderer[] Rings => _rings;
+    public LineRenderer[] Rings => _rings ?? Array.Empty<LineRenderer>();
     public JapaneseSlideDoor Door => _door;
     public bool Completed => _completed;
 
@@ -88,6 +94,12 @@ public sealed class TutorialGuide : MonoBehaviour
     private float _nextLineTime;
     private float[] _lastVisited;
     private bool _ownsMonologue;
+    private bool _waitingForInput;
+    private float _timeScaleBeforePause;
+    private bool _inputEnabledBeforePause;
+    private int _pauseFrame;
+    private InputManager _input;
+    private GameStateManager _state;
 
     [Header("홀로그램")]
     [SerializeField, Min(1f)] private float _visibilityDistance = 6f;
@@ -115,15 +127,38 @@ public sealed class TutorialGuide : MonoBehaviour
         for (int i = 0; i < _lastVisited.Length; i++) _lastVisited[i] = float.NegativeInfinity;
         foreach (TutorialLesson lesson in _lessons)
         {
-            lesson.KeyLabel.text = lesson.Keys;
-            lesson.KeyLabel.color = _keyColor;
-            foreach (LineRenderer ring in lesson.Rings) ring.sharedMaterial = _ringMaterial;
+            if (lesson.KeyLabel != null)
+            {
+                lesson.KeyLabel.text = lesson.Keys;
+                lesson.KeyLabel.color = _keyColor;
+            }
+            foreach (LineRenderer ring in lesson.Rings)
+                if (ring != null) ring.sharedMaterial = _ringMaterial;
         }
     }
 
     void Update()
     {
         if (!_bound && !TryBind()) return;
+        if (_waitingForInput)
+        {
+            if (_player.CurrentState == PlayerActionState.Dead || _state.State != GameplayState.Playing)
+            {
+                HideMonologue();
+                return;
+            }
+            if (Application.isFocused && Time.frameCount != _pauseFrame && IsResumeInputPressed())
+            {
+                TutorialResumeInput command = _hintLesson.ResumeInput;
+                HideMonologue();
+                if (command == TutorialResumeInput.Door)
+                {
+                    if (_hintLesson.Door != null) _hintLesson.Door.Open();
+                }
+                else _input.ApplyTutorialInput(command);
+            }
+            return;
+        }
         if (_player.IsPaused || _player.CurrentState == PlayerActionState.Dead)
         {
             HideMonologue();
@@ -163,7 +198,8 @@ public sealed class TutorialGuide : MonoBehaviour
 
     void LateUpdate()
     {
-        if (_bound && _hideScreenDoorKeys && _doorPrompt.gameObject.activeSelf)
+        if (!_bound || _doorPrompt == null) return;
+        if (_hideScreenDoorKeys && _doorPrompt.gameObject.activeSelf)
             _doorPrompt.SetVisible(false);
     }
 
@@ -198,6 +234,8 @@ public sealed class TutorialGuide : MonoBehaviour
         _combat = _player.GetComponent<KatanaCombatCoordinator>();
         _camera = _player.GetComponentInChildren<Camera>();
         _doorPrompt = Game.Instance.UIManager.Get<OpenDoorPromptUI>();
+        _input = Game.Instance.InputManager;
+        _state = Game.Instance.GameStateManager;
         _initialView = _camera.transform.rotation;
         _player.ActionEvent += HandleAction;
         _combat.EventRaised += HandleCombat;
@@ -219,18 +257,65 @@ public sealed class TutorialGuide : MonoBehaviour
         return result;
     }
 
-    /// <summary>현재 독백 페이지를 기존 UI에 표시하고 다음 페이지 시각을 설정한다. 입력과 게임 시간을 변경하지 않는다.</summary>
+    /// <summary>현재 독백 페이지를 표시한다. 입력 대기 구간이면 지정 입력까지 정지하고, 일반 구간은 다음 페이지 시각을 설정한다.</summary>
     private void ShowLine()
     {
         if (_hintLesson.Monologue.Length == 0) return;
         _monologueUI.Show(_hintLesson.Monologue[_lineIndex], _lineIndex == _hintLesson.Monologue.Length - 1);
         _ownsMonologue = true;
         _nextLineTime = Time.time + _lineDuration;
+        if (_hintLesson.ResumeInput != TutorialResumeInput.None) PauseForLessonInput();
+    }
+
+    /// <summary>시간 배율과 입력 허용 상태를 보관하고 게임 및 플레이어를 지정 명령 입력까지 일시정지한다.</summary>
+    private void PauseForLessonInput()
+    {
+        if (_waitingForInput || _player.IsPaused || Time.timeScale <= 0f) return;
+        _timeScaleBeforePause = Time.timeScale;
+        _inputEnabledBeforePause = _input.IsGameplayInputEnabled;
+        _pauseFrame = Time.frameCount;
+        _waitingForInput = true;
+        _input.SetGameplayInputEnabled(false);
+        _player.SetPaused(true);
+        Time.timeScale = 0f;
+    }
+
+    /// <summary>현재 안내에 지정한 새 좌클릭·우클릭·Space·Ctrl·F 입력이 발생했으면 true를 반환한다.</summary>
+    private bool IsResumeInputPressed()
+    {
+        switch (_hintLesson.ResumeInput)
+        {
+            case TutorialResumeInput.Attack:
+                return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+            case TutorialResumeInput.Defense:
+                return Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
+            case TutorialResumeInput.Dodge:
+                return Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
+            case TutorialResumeInput.Crouch:
+                return Keyboard.current != null && (Keyboard.current.leftCtrlKey.wasPressedThisFrame
+                    || Keyboard.current.rightCtrlKey.wasPressedThisFrame);
+            case TutorialResumeInput.Door:
+                return Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>이 안내가 소유한 일시정지를 해제한다. 게임오버의 시간 정지는 유지하며 종료 중 새 매니저를 만들지 않는다.</summary>
+    private void RestoreLessonPause()
+    {
+        if (!_waitingForInput) return;
+        _waitingForInput = false;
+        if (_state == null || (_state.State != GameplayState.GameOver && _state.State != GameplayState.Restarting))
+            Time.timeScale = _timeScaleBeforePause;
+        if (_player != null) _player.SetPaused(false);
+        if (_input != null) _input.SetGameplayInputEnabled(_inputEnabledBeforePause);
     }
 
     /// <summary>이 안내가 표시한 독백을 숨기고 표시 소유 상태를 해제한다.</summary>
     private void HideMonologue()
     {
+        RestoreLessonPause();
         if (!_ownsMonologue) return;
         if (_monologueUI != null) _monologueUI.SetVisible(false);
         _ownsMonologue = false;
@@ -242,11 +327,14 @@ public sealed class TutorialGuide : MonoBehaviour
         for (int i = 0; i < _lessons.Length; i++)
         {
             TutorialLesson lesson = _lessons[i];
+            if (lesson.Anchor == null) continue;
             bool visible = (lesson.Anchor.position - _player.transform.position).sqrMagnitude
                 <= _visibilityDistance * _visibilityDistance;
-            if (lesson.KeyLabel.gameObject.activeSelf != visible) lesson.KeyLabel.gameObject.SetActive(visible);
-            foreach (LineRenderer ring in lesson.Rings) ring.enabled = visible;
-            if (!visible) continue;
+            if (lesson.KeyLabel != null && lesson.KeyLabel.gameObject.activeSelf != visible)
+                lesson.KeyLabel.gameObject.SetActive(visible);
+            foreach (LineRenderer ring in lesson.Rings)
+                if (ring != null) ring.enabled = visible;
+            if (!visible || lesson.KeyLabel == null) continue;
             Vector3 local = Vector3.up * (_keyHeight + Mathf.Sin(Time.time * _floatSpeed + i) * _floatAmplitude);
             lesson.KeyLabel.transform.localPosition = local;
             Vector3 toCamera = _camera.transform.position - lesson.KeyLabel.transform.position;
@@ -310,7 +398,8 @@ public sealed class TutorialGuide : MonoBehaviour
     {
         if (lesson.Completed) return;
         lesson.Complete();
-        lesson.KeyLabel.color = _completedColor;
-        foreach (LineRenderer ring in lesson.Rings) ring.sharedMaterial = _completedRingMaterial;
+        if (lesson.KeyLabel != null) lesson.KeyLabel.color = _completedColor;
+        foreach (LineRenderer ring in lesson.Rings)
+            if (ring != null) ring.sharedMaterial = _completedRingMaterial;
     }
 }
