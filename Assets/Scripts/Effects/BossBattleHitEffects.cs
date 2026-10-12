@@ -36,6 +36,7 @@ public sealed class BossBattleHitEffects : MonoBehaviour
 
     void Start()
     {
+        _playerHealth.GetComponent<PlayerAttackSlashVfx>().SetUseOutlineShader(true);
         _effects = Game.Instance.EffectManager;
         if (!_effects.IsReady) _effects.Initialize();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

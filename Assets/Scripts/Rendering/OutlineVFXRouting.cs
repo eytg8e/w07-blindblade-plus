@@ -9,6 +9,7 @@ internal sealed class OutlineVFXRouting
 {
     internal const uint SELECTED_MASK = 1u << 31;
     internal const uint ALWAYS_VISIBLE_MASK = 1u << 30;
+    private static readonly int _cameraOpaqueTextureId = Shader.PropertyToID("_CameraOpaqueTexture");
     private readonly HashSet<Renderer> _selected = new HashSet<Renderer>();
     private readonly HashSet<Renderer> _alwaysVisible = new HashSet<Renderer>();
     private readonly Dictionary<Renderer, Route> _cache = new Dictionary<Renderer, Route>();
@@ -90,6 +91,11 @@ internal sealed class OutlineVFXRouting
                     route.Copies[i] = new Material(original) { hideFlags = HideFlags.HideAndDontSave };
                 route.Copies[i].shader = original.shader;
                 route.Copies[i].CopyPropertiesFromMaterial(original);
+                if (selected)
+                {
+                    // 배경을 읽는 왜곡 셰이더가 월드 경계를 VFX 윤곽선으로 가져오지 않게 한다.
+                    route.Copies[i].SetTexture(_cameraOpaqueTextureId, Texture2D.blackTexture);
+                }
                 route.Copies[i].renderQueue = selected ? 2500
                     : (original.renderQueue <= 2500 ? 3000 : original.renderQueue);
                 if (selected && original.renderQueue > 2500)
@@ -102,9 +108,10 @@ internal sealed class OutlineVFXRouting
             }
             renderer.sharedMaterials = route.Copies;
         }
-        renderer.renderingLayerMask = selected ? route.Mask | SELECTED_MASK : route.Mask;
-        if (selected && _alwaysVisible.Contains(renderer))
-            renderer.renderingLayerMask |= ALWAYS_VISIBLE_MASK;
+        renderer.renderingLayerMask = selected
+            ? (route.Mask & ~(SELECTED_MASK | ALWAYS_VISIBLE_MASK))
+                | (_alwaysVisible.Contains(renderer) ? ALWAYS_VISIBLE_MASK : SELECTED_MASK)
+            : route.Mask;
         _changed.Add(route);
     }
 
