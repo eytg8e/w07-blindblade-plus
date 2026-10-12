@@ -157,7 +157,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b256b4bb12560a41a0634808047e235, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 300
+  _maxHealth: 80
   _dieOnAnyHit: 0
   _hitCollider: {fileID: 205}
   _cancelAttackOnHit: 0
@@ -448,7 +448,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b256b4bb12560a41a0634808047e235, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _maxHealth: 300
+  _maxHealth: 80
   _dieOnAnyHit: 0
   _hitCollider: {fileID: 305}
   _cancelAttackOnHit: 0
@@ -520,7 +520,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _riderSeat: {fileID: 321}
   _orbitRadius: 6
-  _orbitSpeed: 5
+  _orbitSpeed: 3
   _orbitDestinationInterval: 0.2
   _chargePreparation: 0.5
   _chargeSpeed: 16

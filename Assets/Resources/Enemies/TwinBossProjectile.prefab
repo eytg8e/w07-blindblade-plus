@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3425044508056989765}
   - component: {fileID: 4234400790079293820}
   - component: {fileID: 2285517556864344112}
+  - component: {fileID: 2285517556864344113}
   m_Layer: 0
   m_Name: TwinBossProjectile
   m_TagString: Untagged
@@ -65,7 +66,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 50f2868d0f0d3dd4697bd089db690ed0, type: 2}
+  - {fileID: 2100000, guid: 82dd4de908b2b4a019043a44cdbf350d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -105,3 +106,16 @@ MonoBehaviour:
   _collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &2285517556864344113
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9035632415214600233}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db16b22a0bc65e848923ce4a72f46787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _ignorePerception: 1
