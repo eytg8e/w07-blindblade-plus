@@ -15,6 +15,15 @@ public sealed class EnemyDamageAudio : MonoBehaviour
     [SerializeField, Range(0.25f, 4f)] private float _pitch = 1f;
     private EnemyHealth _health;
 
+    [Header("사망음 랜덤 피치")]
+    [SerializeField, Range(-12f, 0f), Tooltip("낮아지는 피치의 최소 반음입니다. 0은 원래 피치입니다.")]
+    private float _minimumDeathPitchSemitones = -4f;
+    [SerializeField, Range(-12f, 0f), Tooltip("낮아지는 피치의 최대 반음입니다. 양수 피치는 사용하지 않습니다.")]
+    private float _maximumDeathPitchSemitones = -1f;
+    [SerializeField, Range(0f, 1f), Tooltip("피치를 바꾸지 않고 원래 음성을 재생할 확률입니다.")]
+    private float _originalDeathPitchChance = 0.3f;
+    private float _deathPitch = 1f;
+
     [Header("적 상태 연결")]
     private EnemyController _controller;
     private EnemySensor _sensor;
@@ -35,6 +44,7 @@ public sealed class EnemyDamageAudio : MonoBehaviour
         _health.Damaged += HandleDamage;
         _health.Died += HandleDeath;
         _deathPlayed = false;
+        _deathPitch = 1f;
         _discoveryPlayed = false;
         _hasDamagePoint = false;
         if (_controller != null)
@@ -60,7 +70,10 @@ public sealed class EnemyDamageAudio : MonoBehaviour
         _lastDamagePoint = context.Point;
         _hasDamagePoint = true;
         if (_health.CurrentHealth <= 0f)
-            Managers.Sound.PlayCue(CombatSoundCue.EnemyFinished, context.Point, context.Instigator);
+        {
+            _deathPitch = GetDeathPitch();
+            Managers.Sound.PlayCue(CombatSoundCue.EnemyFinished, context.Point, context.Instigator, pitch: _deathPitch);
+        }
         else
         {
             Managers.Sound.Play(_damageSound, context.Point, _volume, context.Instigator, pitch: _pitch);
@@ -71,13 +84,26 @@ public sealed class EnemyDamageAudio : MonoBehaviour
 
     /// <summary>
     /// health의 사망 확정에 마지막 피해 지점 또는 적 위치에서 사망음을 한 번 재생한다.
-    /// 소유자를 지정하지 않아 이어지는 적 루트 비활성화에도 사망음의 끝을 유지한다.
+    /// 치명타격과 같은 피치를 사용하고 소유자를 지정하지 않아 적 비활성화 후에도 사망음의 끝을 유지한다.
     /// </summary>
     private void HandleDeath(EnemyHealth health)
     {
         if (_deathPlayed) return;
         _deathPlayed = true;
-        Managers.Sound.PlayCue(CombatSoundCue.EnemyDie, _hasDamagePoint ? _lastDamagePoint : health.transform.position);
+        if (!_hasDamagePoint) _deathPitch = GetDeathPitch();
+        Managers.Sound.PlayCue(CombatSoundCue.EnemyDie, _hasDamagePoint ? _lastDamagePoint : health.transform.position, pitch: _deathPitch);
+    }
+
+    /// <summary>
+    /// 원래 피치 확률과 최소·최대 반음 범위로 이번 사망의 피치 배율을 반환한다.
+    /// 0반음은 1배이며 음수를 2의 반음/12승으로 변환해 피치를 낮추고 양수 변주는 제한한다.
+    /// </summary>
+    private float GetDeathPitch()
+    {
+        if (Random.value < Mathf.Clamp01(_originalDeathPitchChance)) return 1f;
+        float minimum = Mathf.Clamp(_minimumDeathPitchSemitones, -12f, 0f);
+        float maximum = Mathf.Clamp(_maximumDeathPitchSemitones, minimum, 0f);
+        return Mathf.Pow(2f, Random.Range(minimum, maximum) / 12f);
     }
 
     /// <summary>

@@ -145,31 +145,31 @@ public class SoundManager
 
     /// <summary>
     /// entry의 중앙 설정을 source 또는 position에 적용해 효과음을 재생한다.
-    /// 직접 이벤트·음량·pitch를 사용하고 변형 선택은 FMOD에 맡기며 재생 성공 여부를 반환한다.
+    /// 직접 이벤트·음량과 entry.Pitch에 pitch 배율을 적용하며 재생 성공 여부를 반환한다.
     /// </summary>
-    public bool PlayCombatCue(CombatSoundEntry entry, GameObject source, Vector3 position, bool attach)
+    public bool PlayCombatCue(CombatSoundEntry entry, GameObject source, Vector3 position, bool attach, float pitch = 1f)
     {
         if (!entry.Enabled || (attach && source == null)) return false;
         return PlayEffect(entry.SoundId, attach ? source.transform.position : position, source, attach, entry.Volume,
-            pitch: entry.Pitch,
+            pitch: entry.Pitch * pitch,
             eventOverride: entry.EventOverride.IsNull ? null : entry.EventOverride, cueName: entry.Cue.ToString());
     }
 
     /// <summary>
     /// cue·position·owner·attach로 등록된 상황의 중앙 사운드 설정을 재생하거나 예약한다.
-    /// 호출부별 음량·pitch 대신 프로필 값을 사용하고 활성 항목의 재생 또는 예약 성공 여부를 반환한다.
+    /// 프로필 값에 pitch 배율을 곱하며 지연 예약에도 같은 배율을 저장하고 재생 또는 예약 성공 여부를 반환한다.
     /// </summary>
-    public bool PlayCue(CombatSoundCue cue, Vector3 position, GameObject owner = null, bool attach = false)
+    public bool PlayCue(CombatSoundCue cue, Vector3 position, GameObject owner = null, bool attach = false, float pitch = 1f)
     {
         if (_combatProfile == null) return false;
         bool accepted = false;
         foreach (CombatSoundEntry entry in _combatProfile.Entries)
         {
             if (entry.Cue != cue || !entry.Enabled) continue;
-            if (entry.TimeOffset <= 0f) accepted |= PlayCombatCue(entry, owner, position, attach);
+            if (entry.TimeOffset <= 0f) accepted |= PlayCombatCue(entry, owner, position, attach, pitch);
             else
             {
-                _pendingCues.Add(new PendingCue(entry, owner, position, attach, Time.time + entry.TimeOffset));
+                _pendingCues.Add(new PendingCue(entry, owner, position, attach, Time.time + entry.TimeOffset, pitch));
                 accepted = true;
             }
         }
@@ -196,7 +196,7 @@ public class SoundManager
                 }
                 if (Time.time < pending.DueTime) { i++; continue; }
                 _pendingCues.RemoveAt(i);
-                PlayCombatCue(pending.Entry, pending.Owner, pending.Position, pending.Attach);
+                PlayCombatCue(pending.Entry, pending.Owner, pending.Position, pending.Attach, pending.Pitch);
             }
         }
         finally { _processingCues = false; }
@@ -577,6 +577,7 @@ public class SoundManager
         private readonly Vector3 _position;
         private readonly bool _attach;
         private readonly float _dueTime;
+        private readonly float _pitch;
 
         internal CombatSoundEntry Entry => _entry;
         internal GameObject Owner => _owner;
@@ -584,12 +585,13 @@ public class SoundManager
         internal Vector3 Position => _position;
         internal bool Attach => _attach;
         internal float DueTime => _dueTime;
+        internal float Pitch => _pitch;
 
         /// <summary>
-        /// entry·owner·position·attach·dueTime으로 상황별 음원의 예약과 소유 여부를 저장한다.
+        /// entry·owner·position·attach·dueTime·pitch로 상황별 음원의 예약과 소유 여부 및 피치를 저장한다.
         /// 게임의 피해 상태는 변경하지 않고 매니저가 재생할 입력만 보관한다.
         /// </summary>
-        internal PendingCue(CombatSoundEntry entry, GameObject owner, Vector3 position, bool attach, float dueTime)
+        internal PendingCue(CombatSoundEntry entry, GameObject owner, Vector3 position, bool attach, float dueTime, float pitch)
         {
             _entry = entry;
             _owner = owner;
@@ -597,6 +599,7 @@ public class SoundManager
             _position = position;
             _attach = attach;
             _dueTime = dueTime;
+            _pitch = pitch;
         }
     }
 
