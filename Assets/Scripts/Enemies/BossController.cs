@@ -208,7 +208,7 @@ public sealed class BossController : MonoBehaviour
         RestoreAfterDisappearance();
     }
 
-    /// <summary>설정 횟수만큼 발사 전 소리와 준비 시간을 두고 플레이어 방향으로 기존 투사체를 발사한다.</summary>
+    /// <summary>설정 횟수와 준비 시간을 사용하여 발사 시 플레이어의 반동 없는 시점보다 0.1m 아래로 투사체를 직선 발사한다.</summary>
     private IEnumerator Ranged()
     {
         ChangeState(BossState.Ranged);
@@ -219,7 +219,7 @@ public sealed class BossController : MonoBehaviour
             yield return PrepareAttack(GetPreparationDuration(_rangedPreparation));
             if (!_preparationSucceeded) yield break;
             Vector3 origin = transform.position + Vector3.up;
-            Vector3 direction = (_player.transform.position + Vector3.up - origin).normalized;
+            Vector3 direction = (_playerMotor.ViewOrigin - Vector3.up * 0.1f - origin).normalized;
             if (direction.sqrMagnitude < 0.0001f) yield break;
             transform.rotation = Quaternion.LookRotation(direction);
             RangedFiring?.Invoke();
