@@ -420,13 +420,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _player: {fileID: 6616511219798166873}
   _normalSheatheDelay: 0.8
-  _onlyFirstAttack: 0
   _comboBufferWindow: 0.2
   _comboFollowThrough: 0.12
   _comboResetDelay: 0.65
   _targetedAttackMinimumDuration: 0.45
   _parryWindow: 0.18
   _blockInputRecovery: 0.18
+  _guardPushDistance: 0.9
+  _guardPushDuration: 0.12
   _counterWindow: 0.5
   _automaticCounterDelay: 0.12
   _parryStaggerDuration: 0.9
@@ -466,8 +467,8 @@ MonoBehaviour:
   _combat: {fileID: 5663976393034796336}
   _actionDriver: {fileID: 1993857972930843498}
   _animator: {fileID: 8362338574495906464}
-  _counterAttackClip: {fileID: 7400000, guid: 56a37a9bb1fcea74dae1b73f0c0c3fb2, type: 2}
   _idleClip: {fileID: 7400000, guid: 8c03e20cc5701384195e95a718f911ce, type: 2}
+  _counterAttackClip: {fileID: 7400000, guid: 56a37a9bb1fcea74dae1b73f0c0c3fb2, type: 2}
   _firstAttackClip: {fileID: 7400000, guid: c83264164fb7e824ab09176b14e72719, type: 2}
   _firstAttackReturnsToIdle: 1
   _secondAttackClip: {fileID: 7400000, guid: 56a37a9bb1fcea74dae1b73f0c0c3fb2, type: 2}
@@ -483,6 +484,9 @@ MonoBehaviour:
   _openingImpactProgress: 0.5
   _openingEndProgress: 0.65
   _comboBlendTime: 0.08
+  _attackDeflectionDuration: 0.22
+  _attackDeflectionOffset: {x: 0.05, y: 0.08, z: -0.16}
+  _attackDeflectionAngles: {x: -25, y: 0, z: 35}
 --- !u!114 &7106073490442552728
 MonoBehaviour:
   m_ObjectHideFlags: 0
