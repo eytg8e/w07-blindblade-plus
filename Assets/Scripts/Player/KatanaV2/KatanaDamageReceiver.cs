@@ -35,6 +35,8 @@ public sealed class KatanaDamageReceiver : PlayerHealth
     /// </summary>
     public override void TakeDamage(DamageContext context)
     {
+        DefensePocPlayer defensePoc = GetComponent<DefensePocPlayer>();
+        if (defensePoc != null && defensePoc.IsInvulnerable) return;
         if (!isActiveAndEnabled || context.Amount <= 0f || _combat.Player.IsPaused
             || Time.timeScale <= 0f || _combat.Player.CurrentState == PlayerActionState.Dead) return;
         if (_combat.TryDefendIncoming(context, IsFrontMelee(context) || IsFrontBossCharge(context) || IsFrontBossRanged(context))) return;

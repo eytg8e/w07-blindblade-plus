@@ -18,6 +18,15 @@ public sealed class EnemyAttackSelector : MonoBehaviour
     public float StaggerRemaining => Mathf.Max(0f, _staggerUntil - Time.time);
     public bool MeleeOnly => _meleeOnly;
 
+    /// <summary>
+    /// meleeOnly로 활성 공격 패턴을 근접 공격만으로 제한한다.
+    /// DefenseTest에서 생성한 근거리 적의 접근·공격 선택에만 적용한다.
+    /// </summary>
+    public void SetMeleeOnly(bool meleeOnly)
+    {
+        _meleeOnly = meleeOnly;
+    }
+
     void OnDisable()
     {
         CancelCurrentAttack();

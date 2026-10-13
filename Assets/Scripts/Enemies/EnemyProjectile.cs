@@ -30,6 +30,8 @@ public class EnemyProjectile : MonoBehaviour
 
     protected DamageContext Damage => _damage;
     protected Vector3 FlightDirection => _direction;
+    public bool IsFlying => _isFlying;
+    public GameObject Instigator => _damage.Instigator;
 
     void Update()
     {

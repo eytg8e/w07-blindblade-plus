@@ -64,6 +64,13 @@ public sealed class InputManager : MonoBehaviour
             if (_actions.Player.Attack.WasPressedThisFrame() || _guard.WasPressedThisFrame()) SetCursor(true);
             return;
         }
+        DefensePocPlayer defensePoc = player.GetComponent<DefensePocPlayer>();
+        if (defensePoc != null && defensePoc.isActiveAndEnabled)
+        {
+            defensePoc.HandleInput(_actions.Player.Look.ReadValue<Vector2>(),
+                _actions.Player.Attack.WasPressedThisFrame());
+            return;
+        }
         if (_crouchToggle.WasPressedThisFrame()) _crouchToggled = !_crouchToggled;
         player.SetCrouchInput(_crouchHold.IsPressed() || _crouchToggled);
         player.SetMovementInput(_actions.Player.Move.ReadValue<Vector2>());

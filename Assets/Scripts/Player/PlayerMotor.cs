@@ -40,6 +40,7 @@ public sealed class PlayerMotor : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _acceleration = 8f;
     [SerializeField, Min(0f)] private float _deceleration = 12f;
     [SerializeField, Min(0f)] private float _gravity = 20f;
+    private bool _positionLocked;
 
     [Header("Crouch")]
     [SerializeField, Min(0f)] private float _crouchWalkSpeed = 0.7f;
@@ -174,6 +175,7 @@ private Vector3 _attackLungeDirection;
     public bool IsCrouching => _crouchBlend > 0.001f;
     public bool IsDashing => _isDashing;
     public bool IsDodging => _isDodging;
+    public bool IsPositionLocked => _positionLocked;
     public float DodgeCooldownRemaining => Mathf.Max(0f, _nextDodgeTime - Time.time);
 
     private void Awake()
@@ -237,6 +239,28 @@ private Vector3 _attackLungeDirection;
         _pendingLookDelta += delta;
     }
 
+    /// <summary>
+    /// locked로 DefenseTest 플레이어의 평면 이동과 대시·회피 시작을 차단한다.
+    /// 잠금 시 진행 중인 이동 입력과 속도를 초기화한다.
+    /// </summary>
+    public void SetPositionLocked(bool locked)
+    {
+        _positionLocked = locked;
+        if (locked)
+            ClearInput();
+    }
+
+    /// <summary>
+    /// yaw를 플레이어의 수평 시점에 즉시 적용한다.
+    /// DefenseTest의 실제 시간 기준 수동·자동 카메라 회전에서 현재 방향을 변경한다.
+    /// </summary>
+    public void SetHorizontalFacing(float yaw)
+    {
+        _yaw = yaw;
+        _pendingLookDelta = Vector2.zero;
+        transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
+    }
+
     /// <summary>이동과 시점 입력, 현재 평면 속도를 초기화합니다.</summary>
     public void ClearInput()
     {
@@ -266,6 +290,14 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
             ApplyLook();
         else
             _pendingLookDelta = Vector2.zero;
+
+        if (_positionLocked)
+        {
+            _planarVelocity = Vector3.zero;
+            _lastHorizontalSpeed = 0f;
+            ResetWalkStep();
+            return;
+        }
 
         if (_combatPushDistance > 0f)
         {
@@ -397,7 +429,7 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
     /// </summary>
     public bool TryBeginDodge(Vector2 input)
     {
-        if (_isDodging || !_characterController.enabled || !HasRecentGroundContact()
+        if (_positionLocked || _isDodging || !_characterController.enabled || !HasRecentGroundContact()
             || Time.time < _nextDodgeTime) return false;
         if (_characterController.isGrounded)
             _lastGroundedTime = Time.time;
@@ -442,6 +474,7 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
     /// </summary>
     public void ApplyCombatPush(Vector3 direction, float distance, float duration)
     {
+        if (_positionLocked) return;
         CancelDodge();
         _combatPushDirection = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
         _combatPushDistance = Mathf.Max(0f, distance);
@@ -455,7 +488,7 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
     /// <summary>공격 시작 시 일정 방향으로 짧게 전진하고 이동 입력을 이어갈 상태를 준비한다. 기존 속도로 도약 곡선의 시작 기울기를 계산한다.</summary>
     public void BeginAttackLunge(Vector3 direction)
     {
-        if (_characterController == null || !_characterController.enabled)
+        if (_positionLocked || _characterController == null || !_characterController.enabled)
             return;
 
         direction = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
@@ -595,6 +628,7 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
     /// </summary>
     public bool CanDashToTarget(PlayerCombatTarget target)
     {
+        if (_positionLocked) return false;
         Vector3 delta = Vector3.ProjectOnPlane(target.WorldPosition - transform.position, Vector3.up);
         if (delta.sqrMagnitude <= 0.0001f)
             return true;
@@ -614,7 +648,7 @@ public void Tick(PlayerLocomotionMode locomotionMode, bool movementLocked, bool 
         float maxDistance,
         float standOffDistance)
     {
-        if (_isDashing || _characterController == null || !_characterController.enabled)
+        if (_positionLocked || _isDashing || _characterController == null || !_characterController.enabled)
             return false;
 
         Vector3 toTarget = targetPosition - transform.position;

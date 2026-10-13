@@ -10,6 +10,7 @@ public sealed class EnemySensor : MonoBehaviour
     [SerializeField] private Vector3 _eyeOffset = new Vector3(0f, 1.5f, 0f);
     [SerializeField] private Vector3 _targetOffset = new Vector3(0f, 1f, 0f);
     [SerializeField] private LayerMask _obstacleMask = Physics.DefaultRaycastLayers;
+    private bool _alwaysTrackTarget;
 
     [Header("소리 감지")]
     [SerializeField, Min(0f), Tooltip("시야 탐지와 독립적인 검 소음 감지 거리입니다. NavMesh 경로 길이를 사용하며 0이면 소음에 반응하지 않습니다.")]
@@ -35,6 +36,15 @@ public sealed class EnemySensor : MonoBehaviour
     }
 
     /// <summary>
+    /// alwaysTrackTarget으로 거리와 장애물에 관계없이 지정 대상을 감지한다.
+    /// DefenseTest에서 생성한 적에게만 적용하며 기존 프리팹 설정은 유지한다.
+    /// </summary>
+    public void SetAlwaysTrackTarget(bool alwaysTrackTarget)
+    {
+        _alwaysTrackTarget = alwaysTrackTarget;
+    }
+
+    /// <summary>
     /// 지정한 대상과 감지 거리, 시야 위치, 장애물 레이어를 사용하여 가시성을 검사한다.
     /// 활성 대상이 범위 안에 있고 시야가 열려 있으면 true를 반환한다.
     /// </summary>
@@ -42,6 +52,9 @@ public sealed class EnemySensor : MonoBehaviour
     {
         if (_target == null || !_target.gameObject.activeInHierarchy)
             return false;
+
+        if (_alwaysTrackTarget)
+            return true;
 
         if ((_target.position - transform.position).sqrMagnitude > _detectionRange * _detectionRange)
             return false;

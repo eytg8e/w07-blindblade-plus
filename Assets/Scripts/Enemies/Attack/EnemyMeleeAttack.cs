@@ -53,6 +53,15 @@ public class EnemyMeleeAttack : EnemyAttackBehaviour
     protected override float ActiveDuration => _swingDuration;
     protected override EnemySoundAction SoundAction => EnemySoundAction.Melee;
 
+    /// <summary>
+    /// attackRange를 근접 공격 진입 거리로 설정한다.
+    /// DefenseTest 생성 적의 접근 거리만 바꾸며 다른 프리팹은 유지한다.
+    /// </summary>
+    public void SetAttackRange(float attackRange)
+    {
+        _attackRange = Mathf.Max(0.1f, attackRange);
+    }
+
     /// <summary>context의 전조 시작마다 두 대각선 내려치기 중 하나를 같은 확률로 선택하고 베기 종료까지 유지한다.</summary>
     protected override void PrepareTelegraph(EnemyAttackContext context)
     {
